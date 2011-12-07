@@ -1,0 +1,5 @@
+*.o
+octave-core
+core
+main
+tags
