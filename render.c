@@ -18,16 +18,21 @@ const GLfloat light_diff[] = {1.0, 1.0, 1.0, 0.0};
 const GLfloat light_spec[] = {1.0, 0.0, 0.0, 0.0};
 const GLfloat light_ambi[] = {0.8, 0.8, 0.8, 0.0};
 
+const GLfloat red[]   = {1.0, 0.0, 0.0, 0.0};
+const GLfloat green[] = {0.0, 1.0, 0.0, 0.0};
+const GLfloat blue[]  = {0.0, 0.0, 1.0, 0.0};
+
 static int numVertices;
 static int numIndices;
 static Vertex3 *sphereVertex;
 static GLushort *sphereIndex;
 
 static SDL_Surface *surface;
-static double angle;
+static GLfloat view_angle;
 
 static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numInd,
 		GLushort **indices);
+static void drawLine(Vec3 *p1, Vec3 *p2);
 static void renderParticles(int num, Particle *ps);
 static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear, 
 		GLfloat zFar);
@@ -72,10 +77,10 @@ bool stepGraphics()
 				return false;
 				break;
 			case SDLK_LEFT:
-				angle--;
+				view_angle--;
 				break;
 			case SDLK_RIGHT:
-				angle++;
+				view_angle++;
 				break;
 			case SDLK_UP:
 				config.timeStep *= 1.2;
@@ -167,7 +172,7 @@ int initRender(void)
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
 
-	createSphere(4, &numVertices, &sphereVertex, &numIndices, &sphereIndex);
+	createSphere(6, &numVertices, &sphereVertex, &numIndices, &sphereIndex);
 	glVertexPointer(3, GL_FLOAT, sizeof(Vertex3), sphereVertex);
 	glNormalPointer(   GL_FLOAT, sizeof(Vertex3), sphereVertex);
 
@@ -187,20 +192,46 @@ int render(void)
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-/*	angle += 0.01;*/
+/*	view_angle += 0.01;*/
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glTranslatef(0, 0, -ws*2.5);
-	glRotatef(angle, 0, 1, 0);
+	glRotatef(view_angle, 0, 1, 0);
 
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, red);
 	renderParticles(config.numMonomers, world.Ss);
+
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, green);
 	renderParticles(config.numMonomers, world.As);
+
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, blue);
 	renderParticles(config.numMonomers, world.Ps);
+
+	glBegin(GL_LINES);
+		drawLine(&world.Ps[0].pos, &world.Ss[0].pos);
+		drawLine(&world.Ss[0].pos, &world.As[0].pos);
+		for(int i = 1; i < config.numMonomers; i++) {
+			drawLine(&world.Ps[i].pos, &world.Ss[i].pos);
+			drawLine(&world.Ss[i].pos, &world.As[i].pos);
+			drawLine(&world.Ss[i].pos, &world.Ps[i-1].pos);
+		}
+	glEnd();
+
+
 	SDL_GL_SwapBuffers();
 
 	return 0;
 }
+
+static void drawLine(Vec3 *p1, Vec3 *p2)
+{
+	double ws = config.worldSize;
+
+	glVertex3f(p1->x - ws/2, p1->y - ws/2, p1->z - ws/2);
+	glVertex3f(p2->x - ws/2, p2->y - ws/2, p2->z - ws/2);
+}
+
 
 static void renderParticles(int num, Particle *ps)
 {
