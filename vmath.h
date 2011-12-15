@@ -93,6 +93,16 @@ static __inline__ double distance(const Vec3 *a, const Vec3 *b)
 	return sqrt(distance2(a, b));
 }
 
+static __inline__ double cosAngle(const Vec3 *v, const Vec3 *w)
+{
+	return dot(v, w) / (length(v) * length (w));
+}
+
+static __inline__ double angle(const Vec3 *v, const Vec3 *w)
+{
+	return acos(cosAngle(v, w));
+}
+
 static __inline__ void periodic(double period, const Vec3 *v, Vec3 *dest)
 {
 	/* Fmod doesn't handle negative values the way we want it to, so we 

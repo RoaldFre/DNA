@@ -17,11 +17,37 @@
 #define D_S3P   3.559e-10
 #define D_SA    6.430e-10
 
+/* Bond stretch */
+#define TO_ANGSTROM_SQUARED 1e-20 /* Bond constants are given for angstrom */
+#define BOND_K1      (EPSILON / TO_ANGSTROM_SQUARED)
+#define BOND_K2      (100 * EPSILON / TO_ANGSTROM_SQUARED)
+/* Bond bend */
+#define BOND_Ktheta  (400 * EPSILON) /* per radian^2 */
+/* Bond twist */
+#define BOND_Kphi    (4 * EPSILON)
+
+#define EPSILON 1.81e-21 /* 0.26kcal/mol == 1.81 * 10^-21 J (per particle) */
+
+/* Bond angle */
+#define ANGLE_S5_P_3S	( 94.49 * TO_RADIANS)
+#define ANGLE_P_5S3_P	(120.15 * TO_RADIANS)
+#define ANGLE_P_5S_A	(113.13 * TO_RADIANS)
+#define ANGLE_P_3S_A	(108.38 * TO_RADIANS)
+#define TO_RADIANS	(M_PI / 180)
+
+#define ENERGY_FACTOR	(1/1.602177e-19) /* Energy in electronvolt */
+#define MOMENTUM_FACTOR	(1/1.602177e-19) /* Momentum factor */
+
 static void verlet(void);
-static void calculateAcceleration(void);
+static void calculateForces(void);
 
 static double randNorm(void);
-static void randNormVec(double stdev, Vec3 *vec);
+static void   randNormVec(double stdev, Vec3 *vec);
+
+static double Vbond(Particle *p1, Particle *p2, double d0);
+static void   Fbond(Particle *p1, Particle *p2, double d0);
+static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0);
+static void   Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0);
 
 
 /* GLOBALS */
@@ -32,8 +58,6 @@ Config config;
 double time = 0;
 
 
-/* UNDER THE BONNET STUFF */
-
 
 /* Allocates the world.
  * Precondition: config MUST be valid, and allocWorld must not already have 
@@ -42,20 +66,17 @@ double time = 0;
  * nothing will be allocated */
 bool allocWorld()
 {
-	assert(world.Ps == NULL);
-	assert(world.As == NULL);
-	assert(world.Ss == NULL);
+	assert(world.all == NULL);
 
-	world.Ps = calloc(config.numMonomers, sizeof(*world.Ps));
-	world.As = calloc(config.numMonomers, sizeof(*world.As));
-	world.Ss = calloc(config.numMonomers, sizeof(*world.Ss));
-	if (world.Ps == NULL || world.As == NULL || world.Ss == NULL) {
-		free(world.Ps);
-		free(world.As);
-		free(world.Ss);
+	/* Allocate one big continuous list */
+	world.all = calloc(3 * config.numMonomers, sizeof(*world.Ps));
+	if (world.all == NULL)
 		return false;
-	}
-
+	
+	/* Split the list in three sublists */
+	world.Ss = &world.all[0];
+	world.As = &world.all[1 * config.numMonomers];
+	world.Ps = &world.all[2 * config.numMonomers];
 	return true;
 }
 
@@ -113,8 +134,9 @@ void fillWorld()
 	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
 	double yoffset = (ws - n * spacing) / 2;
 	double xoffset = (ws - D_SA) / 2;
-	double posStdev = spacing / 1000;
-	double velStdev = sqrt(config.temperature); // TODO factor 1/3 (3D) somethere?
+	double posStdev = spacing / 100;
+	//XXX XXX
+	double velStdev = 0 * sqrt(config.temperature); // TODO factor 1/3 (3D) somethere?
 
 	for (int i = 0; i < n; i++) {
 		/* Positions */
@@ -145,10 +167,15 @@ void fillWorld()
 
 		scale(&world.Ss[i].vel, MASS_S, &tmp);
 		add(&totP, &tmp, &totP);
-		scale(&world.As[i].vel, MASS_S, &tmp);
+		scale(&world.As[i].vel, MASS_A, &tmp);
 		add(&totP, &tmp, &totP);
-		scale(&world.Ps[i].vel, MASS_S, &tmp);
+		scale(&world.Ps[i].vel, MASS_P, &tmp);
 		add(&totP, &tmp, &totP);
+
+		/* Mass */
+		world.Ss[i].m = MASS_S;
+		world.As[i].m = MASS_A;
+		world.Ps[i].m = MASS_P;
 	}
 	/* Correct for zero momentum */
 	scale(&totP, 1.0 / (3 * n), &avgP);
@@ -196,38 +223,217 @@ void dumpWorld()
 
 
 
+
+
+
+
 /* PHYSICS */
 
 static void verlet()
 {
 	double dt = config.timeStep;
-	// TODO
+
+	/* Velocity Verlet */
+	for (int i = 0; i < 3 * config.numMonomers; i++) {
+		Particle *p = &world.all[i];
+		Vec3 tmp;
+
+		/* vel(t + dt/2) = vel(t) + acc(t)*dt/2 */
+		scale(&p->F, dt / (2 * p->m), &tmp);
+		add(&p->vel, &tmp, &p->vel);
+
+		assert(!isnan(p->vel.x) && !isnan(p->vel.y) && !isnan(p->vel.z));
+
+		/* pos(t + dt) = pos(t) + vel(t + dt/2)*dt */
+		scale(&p->vel, dt, &tmp);
+		add(&p->pos, &tmp, &p->pos);
+	}
+	calculateForces(); /* acc(t + dt) */
+	for (int i = 0; i < 3 * config.numMonomers; i++) {
+		Particle *p = &world.all[i];
+		Vec3 tmp;
+
+		/* vel(t + dt) = vel(t + dt/2) + acc(t + dt)*dt/2 */
+		scale(&p->F, dt / (2 * p->m), &tmp);
+		add(&p->vel, &tmp, &p->vel);
+	}
 }
 
-static void calculateAcceleration()
+static void calculateForces()
 {
-	/* Reset acceleration */
-	for (int i = 0; i < config.numMonomers; i++) {
-		world.Ss[i].acc.x = 0;
-		world.Ss[i].acc.y = 0;
-		world.Ss[i].acc.z = 0;
-		world.As[i].acc.x = 0;
-		world.As[i].acc.y = 0;
-		world.As[i].acc.z = 0;
-		world.Ps[i].acc.x = 0;
-		world.Ps[i].acc.y = 0;
-		world.Ps[i].acc.z = 0;
+	World *w = &world;
+
+	/* Reset forces */
+	for (int i = 0; i < 3 * config.numMonomers; i++) {
+		w->all[i].F.x = 0;
+		w->all[i].F.y = 0;
+		w->all[i].F.z = 0;
 	}
-	// TODO
+
+	/* Bottom monomer */
+	Fbond(&w->Ss[0], &w->As[0], D_SA);
+	Fbond(&w->Ss[0], &w->Ps[0], D_S5P);
+	Fangle(&w->Ps[0], &w->Ss[0], &w->As[0], ANGLE_P_5S_A);
+	/* Rest of the monomers */
+	for (int i = 1; i < config.numMonomers; i++) {
+		Fbond(&w->Ss[i], &w->As[i],   D_SA);
+		Fbond(&w->Ss[i], &w->Ps[i],   D_S5P);
+		Fbond(&w->Ss[i], &w->Ps[i-1], D_S3P);
+		Fangle(&w->Ps[ i ], &w->Ss[ i ], &w->As[ i ], ANGLE_P_5S_A);
+		Fangle(&w->Ps[ i ], &w->Ss[ i ], &w->Ps[i-1], ANGLE_P_5S3_P);
+		Fangle(&w->Ps[i-1], &w->Ss[ i ], &w->As[ i ], ANGLE_P_3S_A);
+		Fangle(&w->Ss[i-1], &w->Ps[i-1], &w->Ss[ i ], ANGLE_S5_P_3S);
+	}
 }
+
+
+/* V = k1 * (dr - d0)^2  +  k2 * (d - d0)^4
+ * where dr is the distance between the particles */
+static double Vbond(Particle *p1, Particle *p2, double d0)
+{
+	double k1 = BOND_K1;
+	double k2 = BOND_K2;
+	double d = distance(&p1->pos, &p2->pos) - d0;
+	double d2 = d * d;
+	double d4 = d2 * d2;
+	return k1 * d2  +  k2 * d4;
+}
+static void Fbond(Particle *p1, Particle *p2, double d0)
+{
+	double k1 = BOND_K1;
+	double k2 = BOND_K2;
+	Vec3 drVec, drVecNormalized, F;
+	sub(&p2->pos, &p1->pos, &drVec);
+	double dr = length(&drVec);
+	double d  = dr - d0;
+	double d3 = d * d * d;
+
+	scale(&drVec, 1/dr, &drVecNormalized);
+	scale(&drVecNormalized, 2*k1*d + 4*k2*d3, &F);
+
+	add(&p1->F, &F, &p1->F);
+	sub(&p2->F, &F, &p2->F);
+}
+
+/* V = ktheta * (theta - theta0) 
+ *
+ * p1 \       /p3
+ *     \theta/
+ *      \   /
+ *       \ /
+ *        p2
+ */
+static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
+{
+	Vec3 a, b;
+	double ktheta = BOND_Ktheta;
+	sub(&p1->pos, &p2->pos, &a);
+	sub(&p3->pos, &p2->pos, &b);
+	double dtheta = angle(&a, &b) - theta0;
+	return ktheta/2 * dtheta*dtheta;
+}
+static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
+{
+	Vec3 a, b;
+	double ktheta = BOND_Ktheta;
+	sub(&p1->pos, &p2->pos, &a);
+	sub(&p3->pos, &p2->pos, &b);
+	double lal = length(&a);
+	double lbl = length(&b);
+	double adotb = dot(&a, &b);
+	double costheta = adotb / (lal * lbl);
+	double theta = acos(costheta);
+	double sintheta = sqrt(1 - costheta*costheta);
+
+	// TODO correct cut off?
+	if (fabs(sintheta) < 1e-30)
+		/* "No" force (unstable equilibrium), numerical instability 
+		 * otherwise */
+		return;
+
+	Vec3 tmp1, tmp2, F1, F2, F3;
+
+	scale(&b, 1/(lal * lbl), &tmp1);
+	scale(&a, adotb / (lal*lal*lal * lbl), &tmp2);
+	sub(&tmp1, &tmp2, &F1);
+	scale(&F1, ktheta * (theta - theta0) / sintheta, &F1);
+	add(&p1->F, &F1, &p1->F);	
+
+	scale(&a, 1/(lal * lbl), &tmp1);
+	scale(&b, adotb / (lbl*lbl*lbl * lal), &tmp2);
+	sub(&tmp1, &tmp2, &F3);
+	scale(&F3, ktheta * (theta - theta0) / sintheta, &F3);
+	add(&p3->F, &F3, &p3->F);	
+
+	add(&F1, &F3, &F2);
+	sub(&p2->F, &F2, &p2->F);	
+
+	assert(fabs(dot(&a, &F1) / length(&a) / length(&F1)) < 1e-5);
+	assert(fabs(dot(&b, &F3) / length(&b) / length(&F3)) < 1e-5);
+}
+
 
 void stepWorld(void)
 {
 	verlet();
+	assert(physicsCheck());
 	time += config.timeStep;
+}
+
+double kineticEnergy(void)
+{
+	double twiceK = 0;
+	for (int i = 0; i < 3 * config.numMonomers; i++)
+		twiceK += world.all[i].m * length2(&world.all[i].vel);
+	return twiceK/2;
+}
+		
+Vec3 momentum(void)
+{
+	Vec3 Ptot = {0, 0, 0};
+	for (int i = 0; i < 3 * config.numMonomers; i++) {
+		Vec3 P;
+		scale(&world.all[i].vel, world.all[i].m, &P);
+		add(&P, &Ptot, &Ptot);
+	}
+	return Ptot;
+}
+
+bool physicsCheck(void)
+{
+	Vec3 P = momentum();
+	return length(&P) < 1e-10;
 }
 
 void dumpStats()
 {
-	return;
+	World *w = &world;
+
+	double K = kineticEnergy();
+
+	/* Bond stretch */
+	double Vb = 0;
+	double Va = 0;
+	Vb += Vbond(&w->Ss[0], &w->As[0],   D_SA);
+	Vb += Vbond(&w->Ss[0], &w->Ps[0],   D_S5P);
+
+	Va += Vangle(&w->As[0], &w->Ss[0], &w->Ps[0], ANGLE_P_5S_A);
+	for (int i = 1; i < config.numMonomers; i++) {
+		Vb += Vbond(&w->Ss[i], &w->As[i],   D_SA);
+		Vb += Vbond(&w->Ss[i], &w->Ps[i],   D_S5P);
+		Vb += Vbond(&w->Ss[i], &w->Ps[i-1], D_S3P);
+
+		Va += Vangle(&w->Ps[ i ], &w->Ss[ i ], &w->As[ i ], ANGLE_P_5S_A);
+		Va += Vangle(&w->Ps[ i ], &w->Ss[ i ], &w->Ps[i-1], ANGLE_P_5S3_P);
+		Va += Vangle(&w->Ps[i-1], &w->Ss[ i ], &w->As[ i ], ANGLE_P_3S_A);
+		Va += Vangle(&w->Ss[i-1], &w->Ps[i-1], &w->Ss[ i ], ANGLE_S5_P_3S);
+	}
+
+	K  *= ENERGY_FACTOR;
+	Vb *= ENERGY_FACTOR;
+	Va *= ENERGY_FACTOR;
+
+	Vec3 P = momentum();
+	double normP = length(&P) * MOMENTUM_FACTOR;
+	printf("E = %e, K = %e, Vb = %e, Va = %e, |P| = %e\n", K+Vb+Va, K, Vb, Va, normP);
 }

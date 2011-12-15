@@ -14,7 +14,7 @@
 static void parseArguments(int argc, char **argv);
 
 /* Defaults */
-#define DEF_TIMESTEP 			0.001
+#define DEF_TIMESTEP 			1.0
 #define DEF_TEMPERATURE 		2.0
 #define DEF_MONOMER_WORLDSIZE_FACTOR    8.0
 #define DEF_PARTICLES_PER_RENDER 	10000
@@ -24,7 +24,7 @@ static void printUsage(void)
 {
 	printf("Usage: main <number of monomers> [flags]\n");
 	printf("Flags:\n");
-	printf(" -t <flt>  length of Time steps\n");
+	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
 	printf(" -T <flt>  Temperature\n");
 	printf("             default: %f\n", DEF_TEMPERATURE);
@@ -44,9 +44,9 @@ static void parseArguments(int argc, char **argv)
 
 	/* defaults */
 	config.verbose          = 0;
-	config.timeStep 	= DEF_TIMESTEP;
+	config.timeStep 	= DEF_TIMESTEP * TIME_FACTOR;
 	config.temperature	= DEF_TEMPERATURE;
-	config.radius		= DEF_RENDER_RADIUS * 1e-10;
+	config.radius		= DEF_RENDER_RADIUS * LENGTH_FACTOR;
 
 	/* guards */
 	config.renderSteps = -1;
@@ -57,41 +57,39 @@ static void parseArguments(int argc, char **argv)
 		switch (c)
 		{
 		case 't':
-			config.timeStep = atof(optarg);
+			config.timeStep = atof(optarg) * TIME_FACTOR;
 			if (config.timeStep <= 0)
-				die("Invalid timestep %f\n",
-						config.timeStep);
+				die("Invalid timestep %s\n", optarg);
 			break;
 		case 'T':
 			config.temperature = atof(optarg);
 			if (config.temperature < 0)
-				die("Invalid temperature %f\n",
-						config.temperature);
+				die("Invalid temperature %s\n", optarg);
 			break;
 		case 'j':
 			config.renderSteps = atol(optarg);
 			if (config.renderSteps < 0)
-				die("Invalid number of renderer steps %d\n",
-						config.renderSteps);
+				die("Invalid number of renderer steps %s\n",
+						optarg);
 			break;
 		case 'r':
 			config.render = true;
 			break;
 		case 'R':
-			config.radius = atof(optarg) * 1e-10;
+			config.radius = atof(optarg) * LENGTH_FACTOR;
 			if (config.radius <= 0)
-				die("Invalid radius %f\n", config.radius);
+				die("Invalid radius %s\n", optarg);
 			break;
 		case 'S':
 			config.worldSize = atof(optarg) * 1e-10;
 			if (config.worldSize <= 0)
-				die("Invalid world size %f\n", config.worldSize);
+				die("Invalid world size %s\n", optarg);
 			break;
 		case 'v':
 			config.verbose = atoi(optarg);
 			if (config.verbose <= 0)
-				die("Verbose: invalid number of iterations %d\n",
-						config.verbose);
+				die("Verbose: invalid number of iterations %s\n",
+						optarg);
 			break;
 		case 'h':
 			printUsage();
@@ -150,6 +148,7 @@ static bool stepSimulation(void) {
 	static int stepsSinceVerbose = 0;
 
 	stepWorld();
+	assert(physicsCheck());
 
 	if (config.verbose > 0) {
 		stepsSinceVerbose++;
@@ -173,6 +172,8 @@ static bool stepSimulation(void) {
 int main(int argc, char **argv)
 {
 	bool keepGoing = true;
+
+	srand(2); //seed random generator
 
 	parseArguments(argc, argv);
 

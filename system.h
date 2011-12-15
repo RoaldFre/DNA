@@ -19,9 +19,10 @@ typedef struct config
 
 typedef struct particle
 {
+	double m; /* Mass */
 	Vec3 pos; /* Position */
 	Vec3 vel; /* Velocity */
-	Vec3 acc; /* Acceleration */
+	Vec3 F;   /* Force */
 } Particle;
 
 
@@ -30,6 +31,7 @@ typedef struct world
 	Particle *Ps; /* Phosphates */
 	Particle *Ss; /* Sugars */
 	Particle *As; /* bases -- currently only Adenine */
+	Particle *all; /* List of *all* particles */
 } World;
 
 
@@ -65,7 +67,7 @@ void freeWorld(void);
 void stepWorld(void);
 void dumpWorld(void);
 void dumpStats(void);
-bool sanityCheck(void);
+bool physicsCheck(void);
 Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2); 
 
 extern World world;
