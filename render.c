@@ -6,8 +6,8 @@
 #include "render.h"
 #include "system.h"
 
-#define SCREEN_W 500
-#define SCREEN_H 500
+#define SCREEN_W 800
+#define SCREEN_H 800
 
 typedef struct {
 	GLfloat x, y, z;
@@ -84,11 +84,13 @@ bool stepGraphics()
 				break;
 			case SDLK_UP:
 				config.timeStep *= 1.2;
-				printf("Time step: %f\n", config.timeStep);
+				printf("Time step: %f\n", 
+						config.timeStep / TIME_FACTOR);
 				break;
 			case SDLK_DOWN:
 				config.timeStep /= 1.2;
-				printf("Time step: %f\n", config.timeStep);
+				printf("Time step: %f\n",
+						config.timeStep / TIME_FACTOR);
 				break;
 			case SDLK_RETURN:
 				SDL_WM_ToggleFullScreen(surface);
@@ -199,6 +201,7 @@ int render(void)
 	glTranslatef(0, 0, -ws*2.5);
 	glRotatef(view_angle, 0, 1, 0);
 
+	/* Constituents of the monomers */
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, red);
 	renderParticles(config.numMonomers, world.Ss);
 
@@ -208,6 +211,8 @@ int render(void)
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, blue);
 	renderParticles(config.numMonomers, world.Ps);
 
+	/* Connections */
+	glColor3f(0.1, 0.1, 0.1);
 	glBegin(GL_LINES);
 		drawLine(&world.Ps[0].pos, &world.Ss[0].pos);
 		drawLine(&world.Ss[0].pos, &world.As[0].pos);
@@ -217,6 +222,17 @@ int render(void)
 			drawLine(&world.Ss[i].pos, &world.Ps[i-1].pos);
 		}
 	glEnd();
+
+	/* Forces */
+	glColor3f(0.8, 0.0, 0.0);
+	glBegin(GL_LINES);
+		for(int i = 0; i < 3 * config.numMonomers; i++) {
+			Vec3 tmp;
+			add(&world.all[i].pos, &world.all[i].F, &tmp);
+			drawLine(&world.all[i].pos, &tmp);
+		}
+	glEnd();
+
 
 
 	SDL_GL_SwapBuffers();
