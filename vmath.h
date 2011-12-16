@@ -77,8 +77,8 @@ static __inline__ Vec3 cross(const Vec3 *v, const Vec3 *w)
 	x.y = v->z * w->x  -  v->x * w->z;
 	x.z = v->x * w->y  -  v->y * w->x;
 
-	assert(fabs(dot(v, &x) / length(&v) / length(&x)) < 1e-10);
-	assert(fabs(dot(w, &x) / length(&w) / length(&x)) < 1e-10);
+	assert(fabs(dot(v, &x) / length(v) / length(&x)) < 1e-10);
+	assert(fabs(dot(w, &x) / length(w) / length(&x)) < 1e-10);
 
 	return x;
 }
