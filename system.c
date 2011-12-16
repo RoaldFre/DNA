@@ -30,7 +30,9 @@
 #define BOND_Ktheta  (400 * EPSILON) /* per radian^2 */
 /* Bond twist */
 #define BOND_Kphi    (4 * EPSILON)
+/* Bond stack */
 #define BOND_STACK   EPSILON
+
 
 /* Bond angle */
 #define ANGLE_S5_P_3S	( 94.49 * TO_RADIANS)
@@ -426,8 +428,10 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	add(&F1, &F3, &F2);
 	sub(&p2->F, &F2, &p2->F);	
 
-	assert(fabs(dot(&a, &F1) / length(&a) / length(&F1)) < 1e-5);
-	assert(fabs(dot(&b, &F3) / length(&b) / length(&F3)) < 1e-5);
+	assert(ktheta == 0 
+		|| fabs(dot(&a, &F1) / length(&a) / length(&F1)) < 1e-5);
+	assert(ktheta == 0
+		|| fabs(dot(&b, &F3) / length(&b) / length(&F3)) < 1e-5);
 }
 
 static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
@@ -440,6 +444,7 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	sub(&p4->pos, &p3->pos, &r3);
 	
 	double phi = dihedral(&r1, &r2, &r3);
+	//printf("phi = %f\n",phi / TO_RADIANS);
 	return kphi * (1 - cos(phi - phi0));
 }
 static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
@@ -463,17 +468,17 @@ static void FdihedralParticle(Particle *target,
 
 	h = target->pos.x * hfactor;
 	target->pos.x += h;
-	F.x = (Vdihedral(p1, p2, p3, p4, phi0) - Vorig) / h;
+	F.x = (Vorig - Vdihedral(p1, p2, p3, p4, phi0)) / h;
 	target->pos.x -= h;
 
 	h = target->pos.y * hfactor;
 	target->pos.y += h;
-	F.y = (Vdihedral(p1, p2, p3, p4, phi0) - Vorig) / h;
+	F.y = (Vorig - Vdihedral(p1, p2, p3, p4, phi0)) / h;
 	target->pos.y -= h;
 
 	h = target->pos.z * hfactor;
 	target->pos.z += h;
-	F.z = (Vdihedral(p1, p2, p3, p4, phi0) - Vorig) / h;
+	F.z = (Vorig - Vdihedral(p1, p2, p3, p4, phi0)) / h;
 	target->pos.z -= h;
 
 	add(&target->F, &F, &target->F);

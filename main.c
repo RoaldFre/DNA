@@ -18,7 +18,7 @@ static void parseArguments(int argc, char **argv);
 #define DEF_TEMPERATURE 		300.0
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
 #define DEF_MONOMER_WORLDSIZE_FACTOR    8.0
-#define DEF_PARTICLES_PER_RENDER 	10000
+#define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_RENDER_RADIUS 		1.5
 
 static void printUsage(void)
@@ -32,7 +32,7 @@ static void printUsage(void)
 	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
 	printf("             default: %d * timestep\n", DEF_COUPLING_TIMESTEP_FACTOR);
 	printf(" -j <int>  perform <int> physics steps between rendering frames.\n");
-	printf("             default: %d/(number of monomers)\n", DEF_PARTICLES_PER_RENDER);
+	printf("             default: %d/(number of monomers)\n", DEF_MONOMERS_PER_RENDER);
 	printf(" -r        Render\n");
 	printf(" -R <flt>  Radius (in Angstrom) of the particles when rendering\n");
 	printf("             default: %f\n", DEF_RENDER_RADIUS);
@@ -138,7 +138,7 @@ static void parseArguments(int argc, char **argv)
 		config.thermostatTau = DEF_COUPLING_TIMESTEP_FACTOR
 						* config.timeStep;
 	if (config.renderSteps < 0)
-		config.renderSteps = 1 + DEF_PARTICLES_PER_RENDER 
+		config.renderSteps = 1 + DEF_MONOMERS_PER_RENDER 
 						/ config.numMonomers;
 }
 

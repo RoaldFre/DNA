@@ -188,7 +188,7 @@ int initRender(void)
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(35, SCREEN_W/(double)SCREEN_H, ws/2, 4*ws);
+	gluPerspective(35, SCREEN_W/(double)SCREEN_H, ws/2, 100*ws);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
