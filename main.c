@@ -15,7 +15,8 @@ static void parseArguments(int argc, char **argv);
 
 /* Defaults */
 #define DEF_TIMESTEP 			1.0
-#define DEF_TEMPERATURE 		2.0
+#define DEF_TEMPERATURE 		300.0
+#define DEF_COUPLING_TIMESTEP_FACTOR 	1000
 #define DEF_MONOMER_WORLDSIZE_FACTOR    8.0
 #define DEF_PARTICLES_PER_RENDER 	10000
 #define DEF_RENDER_RADIUS 		1.5
@@ -28,6 +29,8 @@ static void printUsage(void)
 	printf("             default: %f\n", DEF_TIMESTEP);
 	printf(" -T <flt>  Temperature\n");
 	printf("             default: %f\n", DEF_TEMPERATURE);
+	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
+	printf("             default: %d * timestep\n", DEF_COUPLING_TIMESTEP_FACTOR);
 	printf(" -j <int>  perform <int> physics steps between rendering frames.\n");
 	printf("             default: %d/(number of monomers)\n", DEF_PARTICLES_PER_RENDER);
 	printf(" -r        Render\n");
@@ -45,14 +48,15 @@ static void parseArguments(int argc, char **argv)
 	/* defaults */
 	config.verbose          = 0;
 	config.timeStep 	= DEF_TIMESTEP * TIME_FACTOR;
-	config.temperature	= DEF_TEMPERATURE;
+	config.thermostatTemp	= DEF_TEMPERATURE;
 	config.radius		= DEF_RENDER_RADIUS * LENGTH_FACTOR;
 
 	/* guards */
 	config.renderSteps = -1;
 	config.worldSize = -1;
+	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":t:T:j:rR:S:v:h")) != -1)
+	while ((c = getopt(argc, argv, ":t:T:c:j:rR:S:v:h")) != -1)
 	{
 		switch (c)
 		{
@@ -62,9 +66,15 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid timestep %s\n", optarg);
 			break;
 		case 'T':
-			config.temperature = atof(optarg);
-			if (config.temperature < 0)
+			config.thermostatTemp = atof(optarg);
+			if (config.thermostatTemp < 0)
 				die("Invalid temperature %s\n", optarg);
+			break;
+		case 'c':
+			config.thermostatTau = atof(optarg);
+			if (config.thermostatTau < 0)
+				die("Invalid thermostat relaxation time %s\n",
+						optarg);
 			break;
 		case 'j':
 			config.renderSteps = atol(optarg);
@@ -124,7 +134,9 @@ static void parseArguments(int argc, char **argv)
 	if (config.worldSize < 0)
 		config.worldSize = 1e-10 * config.numMonomers 
 					* DEF_MONOMER_WORLDSIZE_FACTOR;
-
+	if (config.thermostatTau < 0)
+		config.thermostatTau = DEF_COUPLING_TIMESTEP_FACTOR
+						* config.timeStep;
 	if (config.renderSteps < 0)
 		config.renderSteps = 1 + DEF_PARTICLES_PER_RENDER 
 						/ config.numMonomers;

@@ -38,6 +38,11 @@ static __inline__ void printVector(const Vec3 *v)
 	printf("%10f\t%10f\t%10f\t", v->x, v->y, v->z);
 }
 
+static __inline__ void printVectorExp(const Vec3 *v)
+{
+	printf("%15e %15e %15e", v->x, v->y, v->z);
+}
+
 static __inline__ void add(const Vec3 *a, const Vec3 *b, Vec3 *dest)
 {
 	dest->x = a->x + b->x;
@@ -63,6 +68,19 @@ static __inline__ void normalize(const Vec3 *v, Vec3 *w)
 {
 	double l = length(v);
 	scale(v, 1/l, w);
+}
+
+static __inline__ Vec3 cross(const Vec3 *v, const Vec3 *w)
+{
+	Vec3 x;
+	x.x = v->y * w->z  -  v->z * w->y;
+	x.y = v->z * w->x  -  v->x * w->z;
+	x.z = v->x * w->y  -  v->y * w->x;
+
+	assert(fabs(dot(v, &x) / length(&v) / length(&x)) < 1e-10);
+	assert(fabs(dot(w, &x) / length(&w) / length(&x)) < 1e-10);
+
+	return x;
 }
 
 static __inline__ double dot(const Vec3 *v, const Vec3 *w)
@@ -101,6 +119,13 @@ static __inline__ double cosAngle(const Vec3 *v, const Vec3 *w)
 static __inline__ double angle(const Vec3 *v, const Vec3 *w)
 {
 	return acos(cosAngle(v, w));
+}
+
+static __inline__ double dihedral(const Vec3 *v1, const Vec3 *v2, const Vec3 *v3)
+{
+	Vec3 v1xv2 = cross(v1, v2);
+	Vec3 v2xv3 = cross(v2, v3);
+	return atan2(length(v2) * dot(v1, &v2xv3), dot(&v1xv2, &v2xv3));
 }
 
 static __inline__ void periodic(double period, const Vec3 *v, Vec3 *dest)

@@ -8,7 +8,8 @@ typedef struct config
 {
 	double timeStep;        /* The timestep (dt) in the simulation */
 	int    numMonomers;     /* Number of monomers in the DNA strand */
-	double temperature;     /* The temperature timestep (dt) in the simulation */
+	double thermostatTemp;  /* Thermostat temperature. */
+	double thermostatTau;   /* Thermostat relaxation time. */
 	int    verbose;         /* Iterations between dumping info, <0 to disable */
 	double worldSize;       /* The world is a cube with edges of this length 
 				   (Only used for rendering) */

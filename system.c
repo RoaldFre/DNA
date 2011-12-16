@@ -28,15 +28,23 @@
 
 #define EPSILON 1.81e-21 /* 0.26kcal/mol == 1.81 * 10^-21 J (per particle) */
 
+#define TO_RADIANS	(M_PI / 180)
 /* Bond angle */
 #define ANGLE_S5_P_3S	( 94.49 * TO_RADIANS)
 #define ANGLE_P_5S3_P	(120.15 * TO_RADIANS)
 #define ANGLE_P_5S_A	(113.13 * TO_RADIANS)
 #define ANGLE_P_3S_A	(108.38 * TO_RADIANS)
-#define TO_RADIANS	(M_PI / 180)
+
+/* Dihedral angle */
+#define DIHEDRAL_P_5S3_P_5S	(-154.80 * TO_RADIANS)
+#define DIHEDRAL_S3_P_5S3_P	(-179.17 * TO_RADIANS)
+#define DIHEDRAL_A_S3_P_5S	( -22.60 * TO_RADIANS)
+#define DIHEDRAL_S3_P_5S_A	(  50.69 * TO_RADIANS)
 
 #define ENERGY_FACTOR	(1/1.602177e-19) /* Energy in electronvolt */
 #define MOMENTUM_FACTOR	(1/1.602177e-19) /* Momentum factor */
+
+#define BOLTZMANN_CONSTANT 1.38065e-23
 
 static void verlet(void);
 static void calculateForces(void);
@@ -44,10 +52,15 @@ static void calculateForces(void);
 static double randNorm(void);
 static void   randNormVec(double stdev, Vec3 *vec);
 
+static double kineticEnergy(void);
 static double Vbond(Particle *p1, Particle *p2, double d0);
 static void   Fbond(Particle *p1, Particle *p2, double d0);
 static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0);
 static void   Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0);
+static double Vdihedral(Particle*, Particle*, Particle*, Particle*, double);
+static void   Fdihedral(Particle*, Particle*, Particle*, Particle*, double);
+static void FdihedralParticle(Particle *target, Particle *p1, Particle *p2,
+			Particle *p3, Particle *p4, double Vorig, double phi0);
 
 
 /* GLOBALS */
@@ -136,7 +149,8 @@ void fillWorld()
 	double xoffset = (ws - D_SA) / 2;
 	double posStdev = spacing / 100;
 	//XXX XXX
-	double velStdev = 0 * sqrt(config.temperature); // TODO factor 1/3 (3D) somethere?
+	//TODO: boltzmann cte etc etc
+	double velStdev = 0 * sqrt(config.thermostatTemp); // TODO factor 1/3 (3D) somethere?
 
 	for (int i = 0; i < n; i++) {
 		/* Positions */
@@ -259,6 +273,30 @@ static void verlet()
 	}
 }
 
+static double temperature()
+{
+	return 2.0 / (3.0 * BOLTZMANN_CONSTANT)
+			* kineticEnergy() / (config.numMonomers * 3.0);
+}
+
+static void thermostat()
+{
+	if (config.thermostatTau <= 0)
+		return;
+
+	/* Mass and Boltzmann constant are 1 */ 
+	double Tk  = temperature();
+	double T0  = config.thermostatTemp;
+	double dt  = config.timeStep;
+	double tau = config.thermostatTau;
+	double lambda = sqrt(1 + dt/tau * (T0/Tk - 1));
+
+	for (int i = 0; i < config.numMonomers * 3; i++) {
+		Particle *p = &world.all[i];
+		scale(&p->vel, lambda, &p->vel);
+	}
+}
+
 static void calculateForces()
 {
 	World *w = &world;
@@ -279,10 +317,21 @@ static void calculateForces()
 		Fbond(&w->Ss[i], &w->As[i],   D_SA);
 		Fbond(&w->Ss[i], &w->Ps[i],   D_S5P);
 		Fbond(&w->Ss[i], &w->Ps[i-1], D_S3P);
+
 		Fangle(&w->Ps[ i ], &w->Ss[ i ], &w->As[ i ], ANGLE_P_5S_A);
 		Fangle(&w->Ps[ i ], &w->Ss[ i ], &w->Ps[i-1], ANGLE_P_5S3_P);
 		Fangle(&w->Ps[i-1], &w->Ss[ i ], &w->As[ i ], ANGLE_P_3S_A);
 		Fangle(&w->Ss[i-1], &w->Ps[i-1], &w->Ss[ i ], ANGLE_S5_P_3S);
+
+		Fdihedral(&w->Ps[ i ], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+							DIHEDRAL_P_5S3_P_5S);
+		Fdihedral(&w->As[ i ], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+							DIHEDRAL_A_S3_P_5S);
+		Fdihedral(&w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1], &w->As[i-1],
+							DIHEDRAL_S3_P_5S_A);
+		if (i >= 2)
+		Fdihedral(&w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1], &w->Ps[i-2],
+							DIHEDRAL_S3_P_5S3_P);
 	}
 }
 
@@ -351,7 +400,7 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 		 * otherwise */
 		return;
 
-	Vec3 tmp1, tmp2, F1, F2, F3;
+	Vec3 tmp1, tmp2, F1, F2, F3, F4;
 
 	scale(&b, 1/(lal * lbl), &tmp1);
 	scale(&a, adotb / (lal*lal*lal * lbl), &tmp2);
@@ -372,15 +421,66 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	assert(fabs(dot(&b, &F3) / length(&b) / length(&F3)) < 1e-5);
 }
 
+static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
+								double phi0)
+{
+	double kphi = BOND_Kphi;
+	Vec3 r1, r2, r3;
+	sub(&p2->pos, &p1->pos, &r1);
+	sub(&p3->pos, &p2->pos, &r2);
+	sub(&p4->pos, &p3->pos, &r3);
+	
+	double phi = dihedral(&r1, &r2, &r3);
+	return kphi * (1 - cos(phi - phi0));
+}
+static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
+								double phi0)
+{
+	/* This is a *mess* to do analytically, so we do a numerical 
+	 * differentiation instead. */
+	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
+	FdihedralParticle(p1, p1, p2, p3, p4, Vorig, phi0);
+	FdihedralParticle(p2, p1, p2, p3, p4, Vorig, phi0);
+	FdihedralParticle(p3, p1, p2, p3, p4, Vorig, phi0);
+	FdihedralParticle(p4, p1, p2, p3, p4, Vorig, phi0);
+}
+
+static void FdihedralParticle(Particle *target, 
+		Particle *p1, Particle *p2, Particle *p3, Particle *p4, 
+		double Vorig, double phi0)
+{
+	double hfactor = 1e-8; /* roughly sqrt(epsilon) for a double */
+	double h;
+	Vec3 F;
+
+	h = target->pos.x * hfactor;
+	target->pos.x += h;
+	F.x = (Vdihedral(p1, p2, p3, p4, phi0) - Vorig) / h;
+	target->pos.x -= h;
+
+	h = target->pos.y * hfactor;
+	target->pos.y += h;
+	F.y = (Vdihedral(p1, p2, p3, p4, phi0) - Vorig) / h;
+	target->pos.y -= h;
+
+	h = target->pos.z * hfactor;
+	target->pos.z += h;
+	F.z = (Vdihedral(p1, p2, p3, p4, phi0) - Vorig) / h;
+	target->pos.z -= h;
+
+	add(&target->F, &F, &target->F);
+}
 
 void stepWorld(void)
 {
 	verlet();
 	assert(physicsCheck());
+	thermostat();
+	assert(physicsCheck());
 	time += config.timeStep;
 }
 
-double kineticEnergy(void)
+static double kineticEnergy(void)
 {
 	double twiceK = 0;
 	for (int i = 0; i < 3 * config.numMonomers; i++)
@@ -388,7 +488,7 @@ double kineticEnergy(void)
 	return twiceK/2;
 }
 		
-Vec3 momentum(void)
+static Vec3 momentum(void)
 {
 	Vec3 Ptot = {0, 0, 0};
 	for (int i = 0; i < 3 * config.numMonomers; i++) {
@@ -411,9 +511,9 @@ void dumpStats()
 
 	double K = kineticEnergy();
 
-	/* Bond stretch */
 	double Vb = 0;
 	double Va = 0;
+	double Vd = 0;
 	Vb += Vbond(&w->Ss[0], &w->As[0],   D_SA);
 	Vb += Vbond(&w->Ss[0], &w->Ps[0],   D_S5P);
 
@@ -427,13 +527,27 @@ void dumpStats()
 		Va += Vangle(&w->Ps[ i ], &w->Ss[ i ], &w->Ps[i-1], ANGLE_P_5S3_P);
 		Va += Vangle(&w->Ps[i-1], &w->Ss[ i ], &w->As[ i ], ANGLE_P_3S_A);
 		Va += Vangle(&w->Ss[i-1], &w->Ps[i-1], &w->Ss[ i ], ANGLE_S5_P_3S);
+
+		Vd += Vdihedral(&w->Ps[ i ], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+							DIHEDRAL_P_5S3_P_5S);
+		Vd += Vdihedral(&w->As[ i ], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+							DIHEDRAL_A_S3_P_5S);
+		Vd += Vdihedral(&w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1], &w->As[i-1],
+							DIHEDRAL_S3_P_5S_A);
+		if (i >= 2)
+		Vd += Vdihedral(&w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1], &w->Ps[i-2],
+							DIHEDRAL_S3_P_5S3_P);
 	}
 
 	K  *= ENERGY_FACTOR;
 	Vb *= ENERGY_FACTOR;
 	Va *= ENERGY_FACTOR;
+	Vd *= ENERGY_FACTOR;
+
+	double T = temperature();
 
 	Vec3 P = momentum();
 	double normP = length(&P) * MOMENTUM_FACTOR;
-	printf("E = %e, K = %e, Vb = %e, Va = %e, |P| = %e\n", K+Vb+Va, K, Vb, Va, normP);
+	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, |P| = %e, T = %f\n",
+			K+Vb+Va+Vd, K, Vb, Va, Vd, normP, T);
 }
