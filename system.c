@@ -48,7 +48,6 @@
 
 
 #define ENERGY_FACTOR	(1/1.602177e-19) /* Energy in electronvolt */
-#define MOMENTUM_FACTOR	(1/1.602177e-19) /* Momentum factor */
 #define BOLTZMANN_CONSTANT    1.38065e-23
 #define FROM_ANGSTROM_SQUARED 1e20 /* Bond constants are given for angstrom */
 #define TO_RADIANS	      (M_PI / 180)
@@ -148,6 +147,7 @@ void fillWorld()
 	double xoffset = (ws - D_SA) / 2;
 	double posStdev = spacing / 100;
 
+	#pragma omp parallel for
 	for (int i = 0; i < n; i++) {
 		/* Positions */
 		world.Ss[i].pos.z = world.Ps[i].pos.z = world.As[i].pos.z = ws / 2;
@@ -220,6 +220,7 @@ static void verlet()
 	double dt = config.timeStep;
 
 	/* Velocity Verlet */
+	#pragma omp parallel for
 	for (int i = 0; i < 3 * config.numMonomers; i++) {
 		Particle *p = &world.all[i];
 		Vec3 tmp;
@@ -235,6 +236,7 @@ static void verlet()
 		add(&p->pos, &tmp, &p->pos);
 	}
 	calculateForces(); /* acc(t + dt) */
+	#pragma omp parallel for
 	for (int i = 0; i < 3 * config.numMonomers; i++) {
 		Particle *p = &world.all[i];
 		Vec3 tmp;
@@ -263,6 +265,7 @@ static void thermostat(void)
 	double tau = config.thermostatTau;
 	double lambda = sqrt(1 + dt/tau * (T0/Tk - 1));
 
+	#pragma omp parallel for
 	for (int i = 0; i < config.numMonomers * 3; i++) {
 		Particle *p = &world.all[i];
 		scale(&p->vel, lambda, &p->vel);
@@ -274,6 +277,7 @@ static void calculateForces()
 	World *w = &world;
 
 	/* Reset forces */
+	#pragma omp parallel for
 	for (int i = 0; i < 3 * config.numMonomers; i++) {
 		w->all[i].F.x = 0;
 		w->all[i].F.y = 0;
@@ -285,6 +289,7 @@ static void calculateForces()
 	Fbond(&w->Ss[0], &w->Ps[0], D_S5P);
 	Fangle(&w->Ps[0], &w->Ss[0], &w->As[0], ANGLE_P_5S_A);
 	/* Rest of the monomers */
+	#pragma omp parallel for
 	for (int i = 1; i < config.numMonomers; i++) {
 		Fbond(&w->Ss[i], &w->As[i],   D_SA);
 		Fbond(&w->Ss[i], &w->Ps[i],   D_S5P);
@@ -501,6 +506,7 @@ void stepWorld(void)
 static double kineticEnergy(void)
 {
 	double twiceK = 0;
+	#pragma omp parallel for
 	for (int i = 0; i < 3 * config.numMonomers; i++)
 		twiceK += world.all[i].m * length2(&world.all[i].vel);
 	return twiceK/2;
@@ -509,6 +515,7 @@ static double kineticEnergy(void)
 static Vec3 momentum(void)
 {
 	Vec3 Ptot = {0, 0, 0};
+	#pragma omp parallel for
 	for (int i = 0; i < 3 * config.numMonomers; i++) {
 		Vec3 P;
 		scale(&world.all[i].vel, world.all[i].m, &P);
@@ -520,14 +527,22 @@ static Vec3 momentum(void)
 bool physicsCheck(void)
 {
 	Vec3 P = momentum();
-	return length(&P) < 1e-10;
+	double PPM = length(&P) / config.numMonomers;
+	if (PPM > 1e-20) {
+		fprintf(stderr, "\nMOMENTUM CONSERVATION VIOLATED! "
+				"Momentum per monomer: |P| = %e\n", PPM);
+		return false;
+	}
+	return true;
 }
 
-void dumpStats()
+struct PotentialEnergies {
+	double bond, angle, dihedral, stack;
+};
+/* Return energy stats, in electronvolts. */
+static struct PotentialEnergies calcPotentialEnergies(void)
 {
 	World *w = &world;
-
-	double K = kineticEnergy();
 
 	double Vb = 0;
 	double Va = 0;
@@ -537,6 +552,7 @@ void dumpStats()
 	Vb += Vbond(&w->Ss[0], &w->Ps[0],   D_S5P);
 
 	Va += Vangle(&w->As[0], &w->Ss[0], &w->Ps[0], ANGLE_P_5S_A);
+	#pragma omp parallel for
 	for (int i = 1; i < config.numMonomers; i++) {
 		Vb += Vbond(&w->Ss[i], &w->As[i],   D_SA);
 		Vb += Vbond(&w->Ss[i], &w->Ps[i],   D_S5P);
@@ -560,16 +576,30 @@ void dumpStats()
 							DIHEDRAL_S3_P_5S3_P);
 	}
 
-	K  *= ENERGY_FACTOR;
-	Vb *= ENERGY_FACTOR;
-	Va *= ENERGY_FACTOR;
-	Vd *= ENERGY_FACTOR;
-	Vs *= ENERGY_FACTOR;
+	struct PotentialEnergies pe;
+	pe.bond     = Vb * ENERGY_FACTOR;
+	pe.angle    = Va * ENERGY_FACTOR;
+	pe.dihedral = Vd * ENERGY_FACTOR;
+	pe.stack    = Vs * ENERGY_FACTOR;
 
+	return pe;
+}
+void dumpStats()
+{
+	struct PotentialEnergies pe = calcPotentialEnergies();
+	double K = kineticEnergy();
 	double T = temperature();
+	double E = pe.bond + pe.angle + pe.dihedral + pe.stack;
 
-	Vec3 P = momentum();
-	double normP = length(&P) * MOMENTUM_FACTOR;
-	printf("E = %e, K = %e, Vb = %e, Vs = %e, Va = %e, Vd = %e, |P| = %e, T = %f\n",
-			K+Vb+Vs+Va+Vd, K, Vb, Vs, Va, Vd, normP, T);
+	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, T = %f\n",
+			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, T);
+}
+
+void dumpEnergies(FILE *stream)
+{
+	struct PotentialEnergies pe = calcPotentialEnergies();
+	double K = kineticEnergy();
+	double E = pe.bond + pe.angle + pe.dihedral + pe.stack;
+	fprintf(stream, "%e %e %e %e %e %e\n",
+			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack);
 }

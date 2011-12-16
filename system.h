@@ -68,6 +68,7 @@ void freeWorld(void);
 void stepWorld(void);
 void dumpWorld(void);
 void dumpStats(void);
+void dumpEnergies(FILE *stream);
 bool physicsCheck(void);
 Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2); 
 
