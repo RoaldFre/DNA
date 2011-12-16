@@ -55,7 +55,7 @@ static void calcFps()
 	if (tick - tock > 1000)
 	{
 		tock = tick;
-		sprintf(string, "%u FPS\n", frames);
+		sprintf(string, "%u FPS", frames);
 		SDL_WM_SetCaption(string, string);
 		frames = 0;
 	}
