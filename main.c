@@ -39,6 +39,7 @@ static void printUsage(void)
 	printf(" -S <flt>  Size of world (in Angstrom) (for rendering).\n");
 	printf("             default: (number of monomers) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
 	printf(" -v <int>  Verbose: dump statistics every <int> iterations\n");
+	printf(" -E <flt>  dump Energy statistics every <flt> femtoseconds\n");
 }
 
 static void parseArguments(int argc, char **argv)
@@ -55,8 +56,9 @@ static void parseArguments(int argc, char **argv)
 	config.renderSteps = -1;
 	config.worldSize = -1;
 	config.thermostatTau = -1;
+	config.measureInterval = -1;
 
-	while ((c = getopt(argc, argv, ":t:T:c:j:rR:S:v:h")) != -1)
+	while ((c = getopt(argc, argv, ":t:T:c:j:rR:S:v:E:h")) != -1)
 	{
 		switch (c)
 		{
@@ -101,6 +103,12 @@ static void parseArguments(int argc, char **argv)
 				die("Verbose: invalid number of iterations %s\n",
 						optarg);
 			break;
+		case 'E':
+			config.measureInterval = atoi(optarg) * TIME_FACTOR;
+			if (config.measureInterval <= 0)
+				die("Verbose: invalid measurement interval %s\n",
+						optarg);
+			break;
 		case 'h':
 			printUsage();
 			exit(0);
@@ -140,6 +148,18 @@ static void parseArguments(int argc, char **argv)
 	if (config.renderSteps < 0)
 		config.renderSteps = 1 + DEF_MONOMERS_PER_RENDER 
 						/ config.numMonomers;
+
+	if (config.measureInterval > 0 
+			&& config.measureInterval < config.timeStep)
+		die("Measurement interval %f smaller than timestep of %f!\n",
+				config.measureInterval / TIME_FACTOR,
+				config.timeStep / TIME_FACTOR);
+	if (config.measureInterval > 0 
+			&& config.measureInterval < 5 * config.timeStep)
+		printf("WARNING: Measurement interval %f not much larger than "
+				"timestep of %f! Exact timing will be off!\n",
+				config.measureInterval / TIME_FACTOR,
+				config.timeStep / TIME_FACTOR);
 }
 
 void die(const char *fmt, ...)
@@ -158,6 +178,7 @@ void die(const char *fmt, ...)
 static bool stepSimulation(void) {
 	static int stepsSinceRender = 0;
 	static int stepsSinceVerbose = 0;
+	static double timeSinceMeasurement = 0;
 
 	stepWorld();
 	assert(physicsCheck());
@@ -175,6 +196,14 @@ static bool stepSimulation(void) {
 		if (stepsSinceRender > config.renderSteps) {
 			stepsSinceRender = 0;
 			return stepGraphics();
+		}
+	}
+
+	if (config.measureInterval > 0) {
+		timeSinceMeasurement += config.timeStep;
+		if (timeSinceMeasurement > config.measureInterval) {
+			timeSinceMeasurement -= config.measureInterval;
+			dumpEnergies(stdout);
 		}
 	}
 

@@ -147,7 +147,6 @@ void fillWorld()
 	double xoffset = (ws - D_SA) / 2;
 	double posStdev = spacing / 100;
 
-	#pragma omp parallel for
 	for (int i = 0; i < n; i++) {
 		/* Positions */
 		world.Ss[i].pos.z = world.Ps[i].pos.z = world.As[i].pos.z = ws / 2;
@@ -289,7 +288,6 @@ static void calculateForces()
 	Fbond(&w->Ss[0], &w->Ps[0], D_S5P);
 	Fangle(&w->Ps[0], &w->Ss[0], &w->As[0], ANGLE_P_5S_A);
 	/* Rest of the monomers */
-	#pragma omp parallel for
 	for (int i = 1; i < config.numMonomers; i++) {
 		Fbond(&w->Ss[i], &w->As[i],   D_SA);
 		Fbond(&w->Ss[i], &w->Ps[i],   D_S5P);
@@ -506,7 +504,6 @@ void stepWorld(void)
 static double kineticEnergy(void)
 {
 	double twiceK = 0;
-	#pragma omp parallel for
 	for (int i = 0; i < 3 * config.numMonomers; i++)
 		twiceK += world.all[i].m * length2(&world.all[i].vel);
 	return twiceK/2;
@@ -515,7 +512,6 @@ static double kineticEnergy(void)
 static Vec3 momentum(void)
 {
 	Vec3 Ptot = {0, 0, 0};
-	#pragma omp parallel for
 	for (int i = 0; i < 3 * config.numMonomers; i++) {
 		Vec3 P;
 		scale(&world.all[i].vel, world.all[i].m, &P);
@@ -552,7 +548,6 @@ static struct PotentialEnergies calcPotentialEnergies(void)
 	Vb += Vbond(&w->Ss[0], &w->Ps[0],   D_S5P);
 
 	Va += Vangle(&w->As[0], &w->Ss[0], &w->Ps[0], ANGLE_P_5S_A);
-	#pragma omp parallel for
 	for (int i = 1; i < config.numMonomers; i++) {
 		Vb += Vbond(&w->Ss[i], &w->As[i],   D_SA);
 		Vb += Vbond(&w->Ss[i], &w->Ps[i],   D_S5P);
@@ -587,9 +582,9 @@ static struct PotentialEnergies calcPotentialEnergies(void)
 void dumpStats()
 {
 	struct PotentialEnergies pe = calcPotentialEnergies();
-	double K = kineticEnergy();
+	double K = kineticEnergy() * ENERGY_FACTOR;
 	double T = temperature();
-	double E = pe.bond + pe.angle + pe.dihedral + pe.stack;
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack;
 
 	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, T = %f\n",
 			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, T);
@@ -598,8 +593,8 @@ void dumpStats()
 void dumpEnergies(FILE *stream)
 {
 	struct PotentialEnergies pe = calcPotentialEnergies();
-	double K = kineticEnergy();
-	double E = pe.bond + pe.angle + pe.dihedral + pe.stack;
-	fprintf(stream, "%e %e %e %e %e %e\n",
-			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack);
+	double K = kineticEnergy() * ENERGY_FACTOR;
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack;
+	fprintf(stream, "%e %e %e %e %e %e %e\n",
+			time, E, K, pe.bond, pe.angle, pe.dihedral, pe.stack);
 }
