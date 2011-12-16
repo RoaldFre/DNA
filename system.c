@@ -57,7 +57,6 @@ static void verlet(void);
 static void calculateForces(void);
 
 static double randNorm(void);
-static void   randNormVec(double stdev, Vec3 *vec);
 
 static double kineticEnergy(void);
 static double Vbond(Particle *p1, Particle *p2, double d0);
@@ -106,12 +105,6 @@ bool allocWorld()
  * the world. Distances between sugar, base and phospate are the 
  * equilibrium lenghts with some small gaussian jitter added.
  *
- * TODO: not yet, now just simple gaussian sampling.
- * Initial velocities are sampled from a normal distribution to get a 
- * temperature of config.temperature 'per monomer'.
- * Velocities are then shifted to set the total momentum to zero. */
-
-/*
  * Indices work like this:
  *
  *        .  y
@@ -149,17 +142,11 @@ void fillWorld()
 {
 	int n = config.numMonomers;
 	double ws = config.worldSize;
-	Vec3 totP = {0, 0, 0}, avgP; /* momentum */
-	Vec3 tmp;
-	Vec3 corrVelS, corrVelA, corrVelP; /* correction on velocity to get P=0 */
 
 	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
 	double yoffset = (ws - n * spacing) / 2;
 	double xoffset = (ws - D_SA) / 2;
 	double posStdev = spacing / 100;
-	//XXX XXX
-	//TODO: boltzmann cte etc etc
-	double velStdev = 0 * sqrt(config.thermostatTemp); // TODO factor 1/3 (3D) somethere?
 
 	for (int i = 0; i < n; i++) {
 		/* Positions */
@@ -183,32 +170,15 @@ void fillWorld()
 		world.Ps[i].pos.y += posStdev * randNorm();
 		world.Ps[i].pos.z += posStdev * randNorm();
 
-		/* Velocities */
-		randNormVec(velStdev, &world.Ss[i].vel);
-		randNormVec(velStdev, &world.As[i].vel);
-		randNormVec(velStdev, &world.Ps[i].vel);
-
-		scale(&world.Ss[i].vel, MASS_S, &tmp);
-		add(&totP, &tmp, &totP);
-		scale(&world.As[i].vel, MASS_A, &tmp);
-		add(&totP, &tmp, &totP);
-		scale(&world.Ps[i].vel, MASS_P, &tmp);
-		add(&totP, &tmp, &totP);
+		/* Velocity */
+		world.Ss[i].vel.x = world.Ss[i].vel.y = world.Ss[i].vel.z = 0;
+		world.As[i].vel.x = world.As[i].vel.y = world.As[i].vel.z = 0;
+		world.Ps[i].vel.x = world.Ps[i].vel.y = world.Ps[i].vel.z = 0;
 
 		/* Mass */
 		world.Ss[i].m = MASS_S;
 		world.As[i].m = MASS_A;
 		world.Ps[i].m = MASS_P;
-	}
-	/* Correct for zero momentum */
-	scale(&totP, 1.0 / (3 * n), &avgP);
-	scale(&avgP, 1.0 / MASS_S, &corrVelS);
-	scale(&avgP, 1.0 / MASS_A, &corrVelA);
-	scale(&avgP, 1.0 / MASS_P, &corrVelP);
-	for (int i = 0; i < config.numMonomers; i++) {
-		sub(&world.Ss[i].vel, &corrVelS, &world.Ss[i].vel);
-		sub(&world.As[i].vel, &corrVelA, &world.As[i].vel);
-		sub(&world.Ps[i].vel, &corrVelP, &world.Ps[i].vel);
 	}
 }
 
@@ -220,13 +190,6 @@ static double randNorm()
 	double u2 = ((double) rand()) / RAND_MAX;
 
 	return sqrt(-2*log(u1)) * cos(2*M_PI*u2);
-}
-
-static void randNormVec(double stdev, Vec3 *vec)
-{
-	vec->x = stdev * randNorm();
-	vec->y = stdev * randNorm();
-	vec->z = stdev * randNorm();
 }
 
 void freeWorld()
