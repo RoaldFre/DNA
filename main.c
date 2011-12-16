@@ -17,7 +17,7 @@ static void parseArguments(int argc, char **argv);
 #define DEF_TIMESTEP 			1.0
 #define DEF_TEMPERATURE 		300.0
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
-#define DEF_MONOMER_WORLDSIZE_FACTOR    8.0
+#define DEF_MONOMER_WORLDSIZE_FACTOR    5.5
 #define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_RENDER_RADIUS 		1.5
 
@@ -183,8 +183,6 @@ static bool stepSimulation(void) {
 
 int main(int argc, char **argv)
 {
-	bool keepGoing = true;
-
 	srand(2); //seed random generator
 
 	parseArguments(argc, argv);
