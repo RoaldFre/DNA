@@ -3,3 +3,6 @@ octave-core
 core
 main
 tags
+*.aux
+*.pdf
+latex/images

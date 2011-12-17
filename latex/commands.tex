@@ -1,0 +1,46 @@
+\newcommand{\imgdir}{images}
+\graphicspath{{\imgdir//}}
+
+%Loosen up on figure placement restrictions
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\floatpagefraction}{0.8} 
+
+%\fig[htb]{width=width+unit}{name=label}{caption}
+\newcommand{\fig}[4][htb]{
+    \begin{figure}[#1]
+        \begin{center}
+	    \includegraphics[#2]{\imgdir/#3}\\
+	    \caption{#4\label{#3}}
+        \end{center}
+    \end{figure}}
+
+
+%\figOctave[htb]{name=label}{caption}
+\newcommand{\figOctave}[3][htb]{
+    \begin{figure}[#1]
+	\begin{center}
+		\scalebox{0.9}{
+			\nonstopmode
+			\input{\imgdir/#2.tex}
+			\errorstopmode
+				\rule[-0.5cm]{0cm}{0cm} %don't overlap x axis label with caption
+		}
+		\caption{#3\label{#2}}
+        \end{center}
+    \end{figure}}
+
+%\figOctaveNoCaption[htb]{name}
+\newcommand{\figOctaveNoCaption}[2][htb]{
+    \begin{figure}[#1]
+	\begin{center}
+		\scalebox{0.9}{
+			\nonstopmode
+			\input{\imgdir/#2.tex}
+			\errorstopmode
+				\rule[-0.5cm]{0cm}{0cm} %don't overlap x axis label with caption
+		}
+        \end{center}
+    \end{figure}}
+

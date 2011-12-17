@@ -1,3 +1,4 @@
+function plotEnergies(filename_prefix, caption_prefix)
 close all;
 data = load("/tmp/data.txt");
 
@@ -31,18 +32,36 @@ Vs = Vs(wndw:end);
 
 V  = Vb + Va + Vd + Vs;
 
+destdir   = 'latex/images';
+relImgDir = 'images';
+ylabrule  = '-1.5cm';
+xlab      = 'time (s)';
+ylab      = 'Energy (eV)';
+width     = '800';
+height    = '600';
+
 
 hold on;
-plot(t, E, 'k');
-plot(t, K, 'r');
-plot(t, V, 'b');
-axis([t(1), t(end), 0, 1.1*max(E)]);
+plot(t, E, 'k;Total;');
+plot(t, K, 'r;Kinetic;');
+plot(t, V, 'b;Potential;');
+axis([t(1), t(end), 0, 1.2*max(E)]);
+
+name      = [filename_prefix,'-EKV'];
+caption   = [caption_prefix,' Total, kinetic and potential energy.'];
+makeGraph(name,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
 hold off;
+
+
 figure;
 hold on;
-plot(t, Vb, 'k');
-plot(t, Va, 'r');
-plot(t, Vd, 'g');
-plot(t, Vs, 'b');
-axis([t(1), t(end), 0, 1.1 * max([Vb;Va;Vd;Vs])]);
+plot(t, Vb, 'k;Bond;');
+plot(t, Va, 'r;Angle;');
+plot(t, Vd, 'g;Dihedral;');
+plot(t, Vs, 'b;Stacking;');
+axis([t(1), t(end), 0, 1.2 * max([Vb;Va;Vd;Vs])]);
+
+name      = [filename_prefix,'-V'];
+caption   = [caption_prefix,' Different potential energies.'];
+makeGraph(name,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
 hold off;

@@ -29,3 +29,5 @@ main: $(OBJECTS)
 clean:
 	rm -f *.o
 
+tex:
+	cd latex; make
