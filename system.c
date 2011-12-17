@@ -75,7 +75,7 @@ static void   FdihedralParticle(Particle *target, Particle *p1, Particle *p2,
 World world;
 Config config;
 
-double time = 0;
+double sim_time = 0;
 
 
 
@@ -544,7 +544,7 @@ void stepWorld(void)
 	assert(physicsCheck());
 	thermostat();
 	assert(physicsCheck());
-	time += config.timeStep;
+	sim_time += config.timeStep;
 }
 
 static double kineticEnergy(void)
@@ -688,13 +688,13 @@ void dumpStats()
 
 void dumpEnergies(FILE *stream)
 {
-#if 1
+#if 0
 	assert(stream != NULL);
 	struct PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack;
 	fprintf(stream, "%e %e %e %e %e %e %e\n",
-			time, E, K, pe.bond, pe.angle, pe.dihedral, pe.stack);
+			sim_time, E, K, pe.bond, pe.angle, pe.dihedral, pe.stack);
 #else
 	/* DEBUG equipartition theorem */
 	dumpEquipartitionStats();

@@ -76,7 +76,7 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid temperature %s\n", optarg);
 			break;
 		case 'c':
-			config.thermostatTau = atof(optarg);
+			config.thermostatTau = atof(optarg) * TIME_FACTOR;
 			if (config.thermostatTau < 0)
 				die("Invalid thermostat relaxation time %s\n",
 						optarg);
@@ -216,7 +216,8 @@ static bool stepSimulation(FILE *stream) {
 			dumpEnergies(stream);
 
 			samples++;
-			if (samples >= config.measureSamples)
+			if (config.measureSamples > 0 &&
+					samples >= config.measureSamples)
 				return false;
 		}
 	}
@@ -226,7 +227,7 @@ static bool stepSimulation(FILE *stream) {
 
 int main(int argc, char **argv)
 {
-	srand(2); //seed random generator
+	srand(time(NULL)); //seed random generator
 
 	parseArguments(argc, argv);
 

@@ -78,6 +78,6 @@ extern World world;
 extern Config config;
 
 /* Current time in the simulation */
-extern double time;
+extern double sim_time;
 
 #endif
