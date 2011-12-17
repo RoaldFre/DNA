@@ -211,7 +211,7 @@ static bool stepSimulation(void) {
 
 	if (config.measureInterval > 0) {
 		timeSinceMeasurement += config.timeStep;
-		if (timeSinceMeasurement > config.measureInterval) {
+		if (timeSinceMeasurement >= config.measureInterval) {
 			timeSinceMeasurement -= config.measureInterval;
 			dumpEnergies(stdout);
 
