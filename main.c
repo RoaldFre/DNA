@@ -11,7 +11,7 @@
 #include "system.h"
 #include "render.h"
 
-static void parseArguments(int argc, char **argv);
+#define DATA_FILE_NAME "/tmp/data.txt"
 
 /* Defaults */
 #define DEF_TIMESTEP 			1.0
@@ -184,7 +184,7 @@ void die(const char *fmt, ...)
 
 /* Advance the simulation by one time step. Render and/or dump statistics 
  * if neccesary. Return false if the user wants to quit. */
-static bool stepSimulation(void) {
+static bool stepSimulation(FILE *stream) {
 	static int stepsSinceRender = 0;
 	static int stepsSinceVerbose = 0;
 	static double timeSinceMeasurement = 0;
@@ -213,7 +213,7 @@ static bool stepSimulation(void) {
 		timeSinceMeasurement += config.timeStep;
 		if (timeSinceMeasurement >= config.measureInterval) {
 			timeSinceMeasurement -= config.measureInterval;
-			dumpEnergies(stdout);
+			dumpEnergies(stream);
 
 			samples++;
 			if (samples >= config.measureSamples)
@@ -236,6 +236,10 @@ int main(int argc, char **argv)
 	if (config.render)
 		initRender();
 
-	while (stepSimulation());
+	FILE *outstream = NULL;
+	if (config.measureInterval > 0)
+		outstream = fopen(DATA_FILE_NAME, "w");
+
+	while (stepSimulation(outstream));
 }
 

@@ -592,6 +592,7 @@ void dumpStats()
 
 void dumpEnergies(FILE *stream)
 {
+	assert(stream != NULL);
 	struct PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack;
