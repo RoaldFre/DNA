@@ -9,6 +9,7 @@ typedef struct config
 	double timeStep;        /* The timestep (dt) in the simulation */
 	double measureInterval; /* Time between performing measurements */
 	long   measureSamples;  /* Number of samples to measure */
+	double measureWait;     /* Time to wait before starting measurement */
 	int    numMonomers;     /* Number of monomers in the DNA strand */
 	double thermostatTemp;  /* Thermostat temperature. */
 	double thermostatTau;   /* Thermostat relaxation time. */

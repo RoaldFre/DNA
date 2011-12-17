@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/time.h>
+#include <time.h>
 #include <sys/resource.h>
 #include "main.h"
 #include "vmath.h"
@@ -20,6 +20,7 @@
 #define DEF_MONOMER_WORLDSIZE_FACTOR    5.5
 #define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_RENDER_RADIUS 		1.5
+#define DEF_MEASUREMENT_WAIT 		4e4
 
 static void printUsage(void)
 {
@@ -42,6 +43,8 @@ static void printUsage(void)
 	printf(" -E <flt>  dump Energy statistics every <flt> femtoseconds\n");
 	printf(" -s <int>  accumulate <int> measurement Samples\n");
 	printf("             default: Don't sample, loop forever\n");
+	printf(" -w <flt>  Wait <flt> femtoseconds before starting the measurements\n");
+	printf("             default: %f\n", DEF_MEASUREMENT_WAIT);
 }
 
 static void parseArguments(int argc, char **argv)
@@ -51,6 +54,7 @@ static void parseArguments(int argc, char **argv)
 	/* defaults */
 	config.verbose          = 0;
 	config.measureSamples   = -1; /* loop indefinitely */
+	config.measureWait	= DEF_MEASUREMENT_WAIT * TIME_FACTOR;
 	config.timeStep 	= DEF_TIMESTEP * TIME_FACTOR;
 	config.thermostatTemp	= DEF_TEMPERATURE;
 	config.radius		= DEF_RENDER_RADIUS * LENGTH_FACTOR;
@@ -61,7 +65,7 @@ static void parseArguments(int argc, char **argv)
 	config.thermostatTau = -1;
 	config.measureInterval = -1;
 
-	while ((c = getopt(argc, argv, ":t:T:c:j:rR:S:v:E:s:h")) != -1)
+	while ((c = getopt(argc, argv, ":t:T:c:j:rR:S:v:E:s:w:h")) != -1)
 	{
 		switch (c)
 		{
@@ -117,6 +121,11 @@ static void parseArguments(int argc, char **argv)
 			if (config.measureSamples < 0)
 				die("Invalid number of samples %d\n",
 						config.measureSamples);
+			break;
+		case 'w':
+			config.measureWait = atof(optarg) * TIME_FACTOR;
+			if (config.measureWait < 0)
+				die("Invalid wait time %f\n", config.measureWait);
 			break;
 		case 'h':
 			printUsage();
@@ -184,14 +193,11 @@ void die(const char *fmt, ...)
 
 /* Advance the simulation by one time step. Render and/or dump statistics 
  * if neccesary. Return false if the user wants to quit. */
-static bool stepSimulation(FILE *stream) {
-	static int stepsSinceRender = 0;
-	static int stepsSinceVerbose = 0;
-	static double timeSinceMeasurement = 0;
-	static long samples = 0;
+static bool stepSimulation(void) {
+	static long stepsSinceRender = 0;
+	static int  stepsSinceVerbose = 0;
 
 	stepWorld();
-	assert(physicsCheck());
 
 	if (config.verbose > 0) {
 		stepsSinceVerbose++;
@@ -209,24 +215,13 @@ static bool stepSimulation(FILE *stream) {
 		}
 	}
 
-	if (config.measureInterval > 0) {
-		timeSinceMeasurement += config.timeStep;
-		if (timeSinceMeasurement >= config.measureInterval) {
-			timeSinceMeasurement -= config.measureInterval;
-			dumpEnergies(stream);
-
-			samples++;
-			if (config.measureSamples > 0 &&
-					samples >= config.measureSamples)
-				return false;
-		}
-	}
-
 	return true;
 }
 
 int main(int argc, char **argv)
 {
+	bool keepGoing = true;
+
 	srand(time(NULL)); //seed random generator
 
 	parseArguments(argc, argv);
@@ -237,10 +232,48 @@ int main(int argc, char **argv)
 	if (config.render)
 		initRender();
 
-	FILE *outstream = NULL;
-	if (config.measureInterval > 0)
-		outstream = fopen(DATA_FILE_NAME, "w");
+	if (config.measureSamples < 0) {
+		/* Loop forever, or until the user quits the renderer */
+		while (stepSimulation());
+	} else {
+		printf("Waiting for system to relax.\n");
+		for (double t = 0; keepGoing && t < config.measureWait; t += config.timeStep) {
+			keepGoing = stepSimulation();
+			if (fmod(t, config.measureWait / 100) < config.timeStep) {
+				printf("\rRelax time %13f of %f",
+						(t + config.measureWait/100) / TIME_FACTOR, 
+						config.measureWait / TIME_FACTOR);
+				fflush(stdout);
+			}
+		}
 
-	while (stepSimulation(outstream));
+		/* Perform the measurements */
+		printf("\nStarting measurement.\n");
+		FILE *outstream = fopen(DATA_FILE_NAME, "w");
+		//plotHeader(outstream);
+		double intervalTime = 0;
+		for (long sample = 0; keepGoing && sample < config.measureSamples; sample++) {
+			while (keepGoing && intervalTime <= config.measureInterval) {
+				keepGoing = stepSimulation();
+				intervalTime += config.timeStep;
+			}
+			if (!keepGoing)
+				break;
+
+			/* Check for numerical drift (or bugs) before 
+			 * commiting measurement. */
+			if (!physicsCheck())
+				die("You broke physics!\n");
+
+			dumpEnergies(outstream);
+			printf("\rMeasured sample %ld/%ld", sample + 1, config.measureSamples);
+			fflush(stdout);
+			intervalTime -= config.measureInterval;
+		}
+		printf("\n");
+		fclose(outstream);
+	}
+
+	freeWorld();
+	return 0;
 }
-

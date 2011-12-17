@@ -491,8 +491,8 @@ static double Vstack(Particle *p1, Particle *p2)
 	double r6 = r2 * r2 * r2;
 	double r12 = r6 * r6;
 
-	//return kStack * (sigma12/r12 - 2*sigma6/r6 + 1);
-	return kStack * (sigma12/r12 - 2*sigma6/r6);
+	return kStack * (sigma12/r12 - 2*sigma6/r6 + 1);
+	//return kStack * (sigma12/r12 - 2*sigma6/r6);
 }
 static void Fstack(Particle *p1, Particle *p2)
 {
