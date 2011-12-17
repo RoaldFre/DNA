@@ -40,6 +40,8 @@ static void printUsage(void)
 	printf("             default: (number of monomers) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
 	printf(" -v <int>  Verbose: dump statistics every <int> iterations\n");
 	printf(" -E <flt>  dump Energy statistics every <flt> femtoseconds\n");
+	printf(" -s <int>  accumulate <int> measurement Samples\n");
+	printf("             default: Don't sample, loop forever\n");
 }
 
 static void parseArguments(int argc, char **argv)
@@ -48,6 +50,7 @@ static void parseArguments(int argc, char **argv)
 
 	/* defaults */
 	config.verbose          = 0;
+	config.measureSamples   = -1; /* loop indefinitely */
 	config.timeStep 	= DEF_TIMESTEP * TIME_FACTOR;
 	config.thermostatTemp	= DEF_TEMPERATURE;
 	config.radius		= DEF_RENDER_RADIUS * LENGTH_FACTOR;
@@ -58,7 +61,7 @@ static void parseArguments(int argc, char **argv)
 	config.thermostatTau = -1;
 	config.measureInterval = -1;
 
-	while ((c = getopt(argc, argv, ":t:T:c:j:rR:S:v:E:h")) != -1)
+	while ((c = getopt(argc, argv, ":t:T:c:j:rR:S:v:E:s:h")) != -1)
 	{
 		switch (c)
 		{
@@ -108,6 +111,12 @@ static void parseArguments(int argc, char **argv)
 			if (config.measureInterval <= 0)
 				die("Verbose: invalid measurement interval %s\n",
 						optarg);
+			break;
+		case 's':
+			config.measureSamples = atol(optarg);
+			if (config.measureSamples < 0)
+				die("Invalid number of samples %d\n",
+						config.measureSamples);
 			break;
 		case 'h':
 			printUsage();
@@ -179,6 +188,7 @@ static bool stepSimulation(void) {
 	static int stepsSinceRender = 0;
 	static int stepsSinceVerbose = 0;
 	static double timeSinceMeasurement = 0;
+	static long samples = 0;
 
 	stepWorld();
 	assert(physicsCheck());
@@ -204,6 +214,10 @@ static bool stepSimulation(void) {
 		if (timeSinceMeasurement > config.measureInterval) {
 			timeSinceMeasurement -= config.measureInterval;
 			dumpEnergies(stdout);
+
+			samples++;
+			if (samples >= config.measureSamples)
+				return false;
 		}
 	}
 
