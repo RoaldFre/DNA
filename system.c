@@ -340,6 +340,15 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
 	add(&p1->F, &F, &p1->F);
 	sub(&p2->F, &F, &p2->F);
 }
+static double EPbond(Particle *p1, Particle *p2, double d0)
+{
+	double k1 = BOND_K1;
+	double k2 = BOND_K2;
+	double d = distance(&p1->pos, &p2->pos) - d0;
+	double d2 = d * d;
+	double d4 = d2 * d2;
+	return 2*k1 * d2  +  4*k2 * d4;
+}
 
 /* V = ktheta * (theta - theta0) 
  *
@@ -399,6 +408,15 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	assert(ktheta == 0
 		|| fabs(dot(&b, &F3) / length(&b) / length(&F3)) < 1e-5);
 }
+static double EPangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
+{
+	Vec3 a, b;
+	double ktheta = BOND_Ktheta;
+	sub(&p1->pos, &p2->pos, &a);
+	sub(&p3->pos, &p2->pos, &b);
+	double dtheta = angle(&a, &b) - theta0;
+	return ktheta * dtheta*dtheta;
+}
 
 static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 								double phi0)
@@ -449,6 +467,21 @@ static void FdihedralParticle(Particle *target,
 
 	add(&target->F, &F, &target->F);
 }
+static double EPdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
+								double phi0)
+{
+	double kphi = BOND_Kphi;
+	Vec3 r1, r2, r3;
+	sub(&p2->pos, &p1->pos, &r1);
+	sub(&p3->pos, &p2->pos, &r2);
+	sub(&p4->pos, &p3->pos, &r3);
+
+	double phi = dihedral(&r1, &r2, &r3);
+	//printf("phi = %f\n",phi / TO_RADIANS);
+	double dphi = phi - phi0;
+	dphi = fmod(dphi + 5*M_PI, 2*M_PI) + M_PI;
+	return dphi * kphi * sin(dphi);
+}
 
 static double Vstack(Particle *p1, Particle *p2)
 {
@@ -490,6 +523,19 @@ static void Fstack(Particle *p1, Particle *p2)
 	add(&p1->F, &Fi, &p1->F);
 	sub(&p2->F, &Fi, &p2->F);
 }
+static double EPstack(Particle *p1, Particle *p2)
+{
+	double kStack = BOND_STACK;
+	double sigma = STACK_SIGMA;
+	double sigma2 = sigma * sigma;
+	double sigma6 = sigma2 * sigma2 * sigma2;
+	double sigma12 = sigma6 * sigma6;
+	double r2 = distance2(&p1->pos, &p2->pos);
+	double r6 = r2 * r2 * r2;
+	double r12 = r6 * r6;
+
+	return -12 * kStack * (sigma12/r12 - sigma6/r6);
+}
 
 
 void stepWorld(void)
@@ -530,6 +576,56 @@ bool physicsCheck(void)
 		return false;
 	}
 	return true;
+}
+
+static void dumpEquipartitionStats(void)
+{
+	World *w = &world;
+
+	double EPb = 0;
+	double EPa = 0;
+	double EPd = 0;
+	double EPs = 0;
+	EPb += EPbond(&w->Ss[0], &w->As[0],   D_SA);
+	EPb += EPbond(&w->Ss[0], &w->Ps[0],   D_S5P);
+
+	EPa += EPangle(&w->As[0], &w->Ss[0], &w->Ps[0], ANGLE_P_5S_A);
+	for (int i = 1; i < config.numMonomers; i++) {
+		EPb += EPbond(&w->Ss[i], &w->As[i],   D_SA);
+		EPb += EPbond(&w->Ss[i], &w->Ps[i],   D_S5P);
+		EPb += EPbond(&w->Ss[i], &w->Ps[i-1], D_S3P);
+
+		EPs += EPstack(&w->As[i], &w->As[i-1]);
+
+		EPa += EPangle(&w->Ps[ i ], &w->Ss[ i ], &w->As[ i ], ANGLE_P_5S_A);
+		EPa += EPangle(&w->Ps[ i ], &w->Ss[ i ], &w->Ps[i-1], ANGLE_P_5S3_P);
+		EPa += EPangle(&w->Ps[i-1], &w->Ss[ i ], &w->As[ i ], ANGLE_P_3S_A);
+		EPa += EPangle(&w->Ss[i-1], &w->Ps[i-1], &w->Ss[ i ], ANGLE_S5_P_3S);
+
+		EPd += EPdihedral(&w->Ps[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+							DIHEDRAL_P_5S3_P_5S);
+		EPd += EPdihedral(&w->As[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+							DIHEDRAL_A_S3_P_5S);
+		EPd += EPdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->As[i-1],
+							DIHEDRAL_S3_P_5S_A);
+		if (i >= 2)
+		EPd += EPdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->Ps[i-2],
+							DIHEDRAL_S3_P_5S3_P);
+	}
+
+	EPb /= 3 * (config.numMonomers - 1) + 2;
+	EPa /= 4 * (config.numMonomers - 1) + 1;
+	EPs /= config.numMonomers - 1;
+	EPd /= 3 * (config.numMonomers - 2) + 1;
+
+	double kT = BOLTZMANN_CONSTANT * temperature();
+#if 0
+	printf("kT = %e, EPb = %e, EPa = %e, EPs = %e, EPd = %e\n",
+			kT, EPb, EPa, EPs, EPd);
+#else
+	printf("Nb = %f, Na = %f, Ns = %f, Nd = %f\n",
+			EPb/kT, EPa/kT, EPs/kT, EPd/kT);
+#endif
 }
 
 struct PotentialEnergies {
@@ -592,10 +688,16 @@ void dumpStats()
 
 void dumpEnergies(FILE *stream)
 {
+#if 1
 	assert(stream != NULL);
 	struct PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack;
 	fprintf(stream, "%e %e %e %e %e %e %e\n",
 			time, E, K, pe.bond, pe.angle, pe.dihedral, pe.stack);
+#else
+	/* DEBUG equipartition theorem */
+	dumpEquipartitionStats();
+#endif
 }
+
