@@ -2,11 +2,11 @@
 
 set -e
 
-numMonomers=50
-samples=300
-measInterval=100
-timestep=1
-thermostatCoupling=0
+numMonomers=30
+samples=1000
+timestep=3
+measInterval=200
+thermostatCoupling=2000
 
 ./main $numMonomers -E $measInterval -s $samples -t $timestep -c $thermostatCoupling -r
 

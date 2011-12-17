@@ -688,7 +688,7 @@ void dumpStats()
 
 void dumpEnergies(FILE *stream)
 {
-#if 0
+#if 1
 	assert(stream != NULL);
 	struct PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
