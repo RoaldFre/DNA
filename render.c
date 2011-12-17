@@ -6,9 +6,12 @@
 #include "render.h"
 #include "system.h"
 
+#define DRAWFORCES 0
+
 #define SCREEN_W 1000
 #define SCREEN_H 1000
 
+#define SPHERE_SLICES 10
 #define CILINDER_FACES 8
 #define CILINDER_RADIUS (config.radius / 4)
 
@@ -88,12 +91,12 @@ bool stepGraphics()
 				view_angle++;
 				break;
 			case SDLK_UP:
-				config.timeStep *= 1.2;
+				config.timeStep *= 1.1;
 				printf("Time step: %f\n", 
 						config.timeStep / TIME_FACTOR);
 				break;
 			case SDLK_DOWN:
-				config.timeStep /= 1.2;
+				config.timeStep /= 1.1;
 				printf("Time step: %f\n",
 						config.timeStep / TIME_FACTOR);
 				break;
@@ -104,6 +107,12 @@ bool stepGraphics()
 			case SDLK_BACKSPACE:
 				config.thermostatTemp /= 1.1;
 				printf("Temperature: %f\n", config.thermostatTemp);
+				break;
+			case SDLK_z:
+				if (SDL_GetModState() & KMOD_SHIFT)
+					config.worldSize *= 1.05;
+				else
+					config.worldSize /= 1.05;
 				break;
 			case SDLK_RETURN:
 				SDL_WM_ToggleFullScreen(surface);
@@ -187,13 +196,14 @@ int initRender(void)
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
 
-	createSphere(6, &numVertices, &sphereVertex, &numIndices, &sphereIndex);
+	createSphere(SPHERE_SLICES, &numVertices, &sphereVertex,
+			&numIndices, &sphereIndex);
 	glVertexPointer(3, GL_FLOAT, sizeof(Vertex3), sphereVertex);
 	glNormalPointer(   GL_FLOAT, sizeof(Vertex3), sphereVertex);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(35, SCREEN_W/(double)SCREEN_H, ws/2, 100*ws);
+	gluPerspective(35, SCREEN_W/(double)SCREEN_H, ws/1000, 100*ws);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -239,7 +249,7 @@ int render(void)
 					CILINDER_FACES, CILINDER_RADIUS);
 		}
 
-#if 0
+#if DRAWFORCES
 	/* Forces */
 	glColor3f(0.8, 0.0, 0.0);
 	glBegin(GL_LINES);
@@ -258,8 +268,7 @@ int render(void)
 
 static void drawPoint(Vec3 *p)
 {
-	double ws = config.worldSize;
-	glVertex3f(p->x - ws/2, p->y - ws/2, p->z - ws/2);
+	glVertex3f(p->x, p->y, p->z);
 }
 
 static void drawLine(Vec3 *p1, Vec3 *p2)
@@ -309,14 +318,10 @@ static void drawCilinder(Vec3 *p1, Vec3 *p2, int faces, double radius)
 
 static void renderParticles(int num, Particle *ps)
 {
-	double ws = config.worldSize;
-
 	for (int i = 0; i < num; i++)
 	{
 		glPushMatrix();
-			glTranslatef(ps[i].pos.x - ws/2, 
-				     ps[i].pos.y - ws/2, 
-				     ps[i].pos.z - ws/2);
+			glTranslatef(ps[i].pos.x, ps[i].pos.y, ps[i].pos.z);
 			glScalef(config.radius, config.radius, config.radius);
 			glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, sphereIndex);
 		glPopMatrix();

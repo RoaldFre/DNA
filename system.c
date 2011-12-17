@@ -143,13 +143,13 @@ void fillWorld()
 	double ws = config.worldSize;
 
 	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
-	double yoffset = (ws - n * spacing) / 2;
-	double xoffset = (ws - D_SA) / 2;
+	double yoffset = -n * spacing / 2;
+	double xoffset = -D_SA / 2;
 	double posStdev = spacing / 100;
 
 	for (int i = 0; i < n; i++) {
 		/* Positions */
-		world.Ss[i].pos.z = world.Ps[i].pos.z = world.As[i].pos.z = ws / 2;
+		world.Ss[i].pos.z = world.Ps[i].pos.z = world.As[i].pos.z = 0;
 
 		world.Ss[i].pos.x = xoffset;
 		world.As[i].pos.x = xoffset + D_SA;
