@@ -193,10 +193,7 @@ static double randNorm()
 
 void freeWorld()
 {
-	free(world.Ss);
-	free(world.As);
-	free(world.Ps);
-
+	free(world.all);
 	return;
 }
 
