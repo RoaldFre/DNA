@@ -15,7 +15,7 @@ thermostatCoupling=0
 measureWait=0
 ./main $numMonomers -E $measInterval -s $samples -t $timestep -c $thermostatCoupling -T $temperature -w $measureWait -r
 filename="fixedEnergy"
-caption="Fixed energy. Initial configuration in flat vertical column, spacing according to equilibrium distances. This corresponds to an initial temperature of approximately 9000\,K(!). Parameters: $info"
+caption="Fixed energy. Initial configuration in flat vertical column, spacing according to equilibrium distances. This corresponds to an initial temperature of approximately 9000\,K(!). Parameters: $info."
 octave --eval "plotEnergies('$filename', '$caption')"
 
 
