@@ -31,21 +31,22 @@ Vs = Vs(wndw:end);
 
 
 V  = Vb + Va + Vd + Vs;
+tns = t * 1e9; %got to nanoseconds
 
 destdir   = 'latex/images';
 relImgDir = 'images';
 ylabrule  = '-1.5cm';
-xlab      = 'time (s)';
+xlab      = 'time (ns)';
 ylab      = 'Energy (eV)';
-width     = '800';
-height    = '600';
+width     = '1000';
+height    = '800';
 
 
 hold on;
-plot(t, E, 'k;Total;');
-plot(t, K, 'r;Kinetic;');
-plot(t, V, 'b;Potential;');
-axis([t(1), t(end), 0, 1.2*max(E)]);
+plot(tns, E, 'k;Total;');
+plot(tns, K, 'r;Kinetic;');
+plot(tns, V, 'b;Potential;');
+axis([tns(1), tns(end), 0, 1.2*max(E)]);
 
 name      = [filename_prefix,'-EKV'];
 caption   = [caption_prefix,' Total, kinetic and potential energy.'];
@@ -55,11 +56,11 @@ hold off;
 
 figure;
 hold on;
-plot(t, Vb, 'k;Bond;');
-plot(t, Va, 'r;Angle;');
-plot(t, Vd, 'g;Dihedral;');
-plot(t, Vs, 'b;Stacking;');
-axis([t(1), t(end), 0, 1.2 * max([Vb;Va;Vd;Vs])]);
+plot(tns, Vb, 'k;Bond;');
+plot(tns, Va, 'r;Angle;');
+plot(tns, Vd, 'g;Dihedral;');
+plot(tns, Vs, 'b;Stacking;');
+axis([tns(1), tns(end), 0, 1.2 * max([Vb;Va;Vd;Vs])]);
 
 name      = [filename_prefix,'-V'];
 caption   = [caption_prefix,' Different potential energies.'];
