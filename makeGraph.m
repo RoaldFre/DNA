@@ -1,5 +1,6 @@
 function makeGraph(name,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
 	%This is such a hack, I don't even want to comment on it.
+	caption = strrep(caption, '\', '\\');
 	wrapper = [
 		'\\begin{figure}[htb]\n',...
 		'       \\begin{center}\n',...
@@ -11,6 +12,8 @@ function makeGraph(name,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,heigh
 		'                \\caption{',caption,'}\n',...
 		'        \\end{center}\n',...
 		'\\end{figure}\n'];
+	wrapper = strrep(wrapper, '\', '\\');
+	wrapper = strrep(wrapper, '$', '\$');
 
 	xlabel(xlab);
 	ylabel(['\rule{0pt}{',ylabrule,'}',ylab]);
@@ -23,6 +26,6 @@ function makeGraph(name,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,heigh
 
 	system(['cd ',destdir,'; ',...
 		'mv ',name,'{.tex,.dat.tex}; ',...
-		"echo -e '",wrapper,"' > ",name,'.tex; ']);
+		'echo -e "',wrapper,'" > ',name,'.tex;']);
 endfunction
 
