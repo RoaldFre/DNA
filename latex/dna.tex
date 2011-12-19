@@ -13,6 +13,10 @@
 \input{commands.tex}
 
 \begin{document}
+\author{Roald Frederickx}
+\title{A coarse-grained model of DNA}
+\date{}
+\maketitle
 
 \section{Fixed energy}
 \input{images/fixedEnergy-N4-EKV}
@@ -28,7 +32,9 @@
 
 \FloatBarrier
 
-\section{Fixed temperature}
+\section{Fixed temperature during relaxation}
+Here, the temperature is fixed with the Berendsen thermostat. The coupling is given by the relaxation timescale $\tau$ in the caption.
+
 \input{images/fixedTemperature-N4-EKV}
 \input{images/fixedTemperature-N4-V}
 \input{images/fixedTemperature-N10-EKV}
@@ -42,6 +48,7 @@
 
 \FloatBarrier
 
+\section{Fixed temperature after relaxation}
 \input{images/fixedTemperatureRelaxed-N4-EKV}
 \input{images/fixedTemperatureRelaxed-N4-V}
 \input{images/fixedTemperatureRelaxed-N10-EKV}
