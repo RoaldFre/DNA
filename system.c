@@ -216,7 +216,6 @@ static void verlet()
 	double dt = config.timeStep;
 
 	/* Velocity Verlet */
-	#pragma omp parallel for
 	for (int i = 0; i < 3 * config.numMonomers; i++) {
 		Particle *p = &world.all[i];
 		Vec3 tmp;
@@ -232,7 +231,6 @@ static void verlet()
 		add(&p->pos, &tmp, &p->pos);
 	}
 	calculateForces(); /* acc(t + dt) */
-	#pragma omp parallel for
 	for (int i = 0; i < 3 * config.numMonomers; i++) {
 		Particle *p = &world.all[i];
 		Vec3 tmp;
@@ -261,7 +259,6 @@ static void thermostat(void)
 	double tau = config.thermostatTau;
 	double lambda = sqrt(1 + dt/tau * (T0/Tk - 1));
 
-	#pragma omp parallel for
 	for (int i = 0; i < config.numMonomers * 3; i++) {
 		Particle *p = &world.all[i];
 		scale(&p->vel, lambda, &p->vel);
@@ -273,7 +270,6 @@ static void calculateForces()
 	World *w = &world;
 
 	/* Reset forces */
-	#pragma omp parallel for
 	for (int i = 0; i < 3 * config.numMonomers; i++) {
 		w->all[i].F.x = 0;
 		w->all[i].F.y = 0;
