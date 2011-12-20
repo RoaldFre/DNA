@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <sys/time.h>
 #include <sys/resource.h>
 #include "main.h"
 #include "vmath.h"
@@ -21,6 +22,7 @@
 #define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_RENDER_RADIUS 		1.5
 #define DEF_MEASUREMENT_WAIT 		4e4
+#define DEF_RENDER_FRAMERATE 		30.0
 
 static void printUsage(void)
 {
@@ -32,9 +34,9 @@ static void printUsage(void)
 	printf("             default: %f\n", DEF_TEMPERATURE);
 	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
 	printf("             default: %d * timestep\n", DEF_COUPLING_TIMESTEP_FACTOR);
-	printf(" -j <int>  perform <int> physics steps between rendering frames.\n");
-	printf("             default: %d/(number of monomers)\n", DEF_MONOMERS_PER_RENDER);
 	printf(" -r        Render\n");
+	printf(" -f <flt>  desired Framerate when rendering.\n");
+	printf("             default: %f)\n", DEF_RENDER_FRAMERATE);
 	printf(" -R <flt>  Radius (in Angstrom) of the particles when rendering\n");
 	printf("             default: %f\n", DEF_RENDER_RADIUS);
 	printf(" -S <flt>  Size of world (in Angstrom) (for rendering).\n");
@@ -58,14 +60,14 @@ static void parseArguments(int argc, char **argv)
 	config.timeStep 	= DEF_TIMESTEP * TIME_FACTOR;
 	config.thermostatTemp	= DEF_TEMPERATURE;
 	config.radius		= DEF_RENDER_RADIUS * LENGTH_FACTOR;
+	config.framerate        = DEF_RENDER_FRAMERATE;
 
 	/* guards */
-	config.renderSteps = -1;
 	config.worldSize = -1;
 	config.thermostatTau = -1;
 	config.measureInterval = -1;
 
-	while ((c = getopt(argc, argv, ":t:T:c:j:rR:S:v:E:s:w:h")) != -1)
+	while ((c = getopt(argc, argv, ":t:T:c:f:rR:S:v:E:s:w:h")) != -1)
 	{
 		switch (c)
 		{
@@ -85,11 +87,10 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid thermostat relaxation time %s\n",
 						optarg);
 			break;
-		case 'j':
-			config.renderSteps = atol(optarg);
-			if (config.renderSteps < 0)
-				die("Invalid number of renderer steps %s\n",
-						optarg);
+		case 'f':
+			config.framerate = atof(optarg);
+			if (config.framerate < 0)
+				die("Invalid framerate %s\n", optarg);
 			break;
 		case 'r':
 			config.render = true;
@@ -163,9 +164,6 @@ static void parseArguments(int argc, char **argv)
 	if (config.thermostatTau < 0)
 		config.thermostatTau = DEF_COUPLING_TIMESTEP_FACTOR
 						* config.timeStep;
-	if (config.renderSteps < 0)
-		config.renderSteps = 1 + DEF_MONOMERS_PER_RENDER 
-						/ config.numMonomers;
 
 	if (config.measureInterval > 0 
 			&& config.measureInterval < config.timeStep)
@@ -191,10 +189,45 @@ void die(const char *fmt, ...)
 	exit(1);
 }
 
+
+
+typedef struct timer {
+	struct timeval prev; /* time at last invocation of tickTimer */
+	double interval;
+	double accum; /* accumulated time since last tick */
+} Timer;
+
+static Timer makeTimer(double interval)
+{
+	Timer timer;
+	gettimeofday(&timer.prev, NULL);
+	timer.interval = interval;
+	timer.accum = 0;
+	return timer;
+}
+
+static bool tickTimer(Timer *timer)
+{
+	time_t prev_sec       = timer->prev.tv_sec;
+	suseconds_t prev_usec = timer->prev.tv_usec;
+	gettimeofday(&timer->prev, NULL);
+	time_t sec       = timer->prev.tv_sec;
+	suseconds_t usec = timer->prev.tv_usec;
+
+	timer->accum += sec - prev_sec + ((double) (usec - prev_usec)) / 1e6;
+	if (timer->accum < timer->interval)
+		return false;
+
+	timer->accum = 0;
+	//timer->accum -= timer->interval;
+	//timer->accum = fmod(timer->accum, timer->interval);
+	return true;
+}
+
+
 /* Advance the simulation by one time step. Render and/or dump statistics 
  * if neccesary. Return false if the user wants to quit. */
-static bool stepSimulation(void) {
-	static long stepsSinceRender = 0;
+static bool stepSimulation(Timer *renderTimer) {
 	static int  stepsSinceVerbose = 0;
 
 	stepWorld();
@@ -207,13 +240,8 @@ static bool stepSimulation(void) {
 		}
 	}
 
-	if (config.render) {
-		stepsSinceRender++;
-		if (stepsSinceRender > config.renderSteps) {
-			stepsSinceRender = 0;
+	if (config.render && tickTimer(renderTimer))
 			return stepGraphics();
-		}
-	}
 
 	return true;
 }
@@ -229,16 +257,18 @@ int main(int argc, char **argv)
 	allocWorld();
 	fillWorld();
 	
+	Timer renderTimer = makeTimer(1.0 / config.framerate);
+
 	if (config.render)
 		initRender();
 
 	if (config.measureSamples < 0) {
 		/* Loop forever, or until the user quits the renderer */
-		while (stepSimulation());
+		while (stepSimulation(&renderTimer));
 	} else {
 		printf("Waiting for system to relax.\n");
 		for (double t = 0; keepGoing && t < config.measureWait; t += config.timeStep) {
-			keepGoing = stepSimulation();
+			keepGoing = stepSimulation(&renderTimer);
 			if (fmod(t, config.measureWait / 100) < config.timeStep) {
 				printf("\rRelax time %13f of %f",
 						(t + config.measureWait/100) / TIME_FACTOR, 
@@ -254,7 +284,7 @@ int main(int argc, char **argv)
 		double intervalTime = 0;
 		for (long sample = 0; keepGoing && sample < config.measureSamples; sample++) {
 			while (keepGoing && intervalTime <= config.measureInterval) {
-				keepGoing = stepSimulation();
+				keepGoing = stepSimulation(&renderTimer);
 				intervalTime += config.timeStep;
 			}
 			if (!keepGoing)

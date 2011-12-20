@@ -17,7 +17,7 @@ typedef struct config
 	double worldSize;       /* The world is a cube with edges of this length 
 				   (Only used for rendering) */
 	bool   render;          /* Whether or not to render the simulation */
-	int    renderSteps;     /* Physics steps between rendering frames. */
+	double framerate;       /* The desired framerate when rendering. */
 	double radius;          /* The radius of the particles to render */
 } Config;
 
