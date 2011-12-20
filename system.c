@@ -140,7 +140,6 @@ bool allocWorld()
 void fillWorld()
 {
 	int n = config.numMonomers;
-	double ws = config.worldSize;
 
 	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
 	double yoffset = -n * spacing / 2;
@@ -196,15 +195,6 @@ void freeWorld()
 	free(world.all);
 	return;
 }
-
-void dumpWorld()
-{
-	//TODO
-	return;
-}
-
-
-
 
 
 

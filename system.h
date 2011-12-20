@@ -69,7 +69,6 @@ bool allocWorld(void);
 void fillWorld(void);
 void freeWorld(void);
 void stepWorld(void);
-void dumpWorld(void);
 void dumpStats(void);
 void dumpEnergies(FILE *stream);
 bool physicsCheck(void);
