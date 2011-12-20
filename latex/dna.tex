@@ -6,6 +6,7 @@
 \usepackage{placeins}
 \usepackage{epstopdf}
 \usepackage{amsfonts, amsmath, amsthm}
+\usepackage{tabularx}
 \usepackage[font=small,format=plain,labelfont=bf,up,textfont=up]{caption}
 %\setlength\parindent{0pt}
 %\setlength\parskip{0.20in plus0.05in minus0.05in}
@@ -17,6 +18,22 @@
 \title{A coarse-grained model of DNA}
 \date{}
 \maketitle
+
+
+
+\section{Explanation of parameters}
+\begin{center}
+%\begin{tabular}{c|p}
+\begin{tabularx}{\linewidth}{c | X}
+$N$&	The number of monomers. (Hence the total number of `particles' is $3N$.)\\[5pt]
+$\Delta t$&	The time step.\\[5pt]
+$T$&		The temperature of the Berendsen thermostat.\\[5pt]
+$\tau$&		The coupling time scale of the Berendsen thermostat. At each timestep, velocities will be rescaled by a factor $\lambda = \sqrt{1 + \Delta t/\tau\left(T_0/T_{\mathrm{kin}} - 1\right)}.$\\[5pt]
+\end{tabularx}
+\end{center}
+
+
+
 
 \section{Fixed energy}
 \input{images/fixedEnergy-N4-EKV}
@@ -32,7 +49,7 @@
 
 \FloatBarrier
 
-\section{Fixed temperature during relaxation}
+\section{Fixed the temperature, relaxation phase}
 Here, the temperature is fixed with the Berendsen thermostat. The coupling is given by the relaxation timescale $\tau$ in the caption.
 
 \input{images/fixedTemperature-N4-EKV}
