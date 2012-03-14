@@ -1,0 +1,19 @@
+This is a coarse grained simulation of DNA to study hairpin formation.
+
+The model is based on the three beads per nucleotide model due to Knotts et 
+al [1], with extensions by the same group [2] and later by Florescu & 
+Joyeux [3]. 
+
+Authors:
+  Roald Frederickx
+  Thomas in't Veld
+
+
+[1] T. Knotts IV, N. Rathore, D. Schwartz, and J. De Pablo, "A coarse grain 
+    model for dna," p. 084901, 2007.
+[2] E. Sambriski, D. Schwartz, and J. De Pablo, "A mesoscale model of dna 
+    and its renaturation," Biophysical journal, vol. 96, no. 5, pp. 
+    1675–1690, 2009.
+[3] A. Florescu and M. Joyeux, "Thermal and mechanical denaturation 
+    properties of a dna model with three sites per nucleotide," Journal of 
+    Chemical Physics, vol. 135, p. 085105, 2011.
