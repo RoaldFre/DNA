@@ -21,20 +21,30 @@ typedef struct config
 	double radius;          /* The radius of the particles to render */
 } Config;
 
+typedef enum particleType
+{
+	PHOSPHATE,
+	SUGAR,
+	BASE_A,
+	BASE_T,
+	BASE_C,
+	BASE_G 
+} ParticleType;
+
 typedef struct particle
 {
 	double m; /* Mass */
 	Vec3 pos; /* Position */
 	Vec3 vel; /* Velocity */
 	Vec3 F;   /* Force */
+	ParticleType type;
 } Particle;
-
 
 typedef struct world
 {
 	Particle *Ps; /* Phosphates */
 	Particle *Ss; /* Sugars */
-	Particle *As; /* bases -- currently only Adenine */
+	Particle *Bs; /* Bases */
 	Particle *all; /* List of *all* particles */
 } World;
 
@@ -51,7 +61,7 @@ typedef struct world
  *    |      |
  *    |      |
  *    |    5'|
- *    |      Ss[1]------As[1]     <-- i=1
+ *    |      Ss[1]------Bs[1]     <-- i=1
  *    |    3'|
  *    |      |  . . . . . . . . . . . . . . . . . . . . 
  *    |      |                                       /|\
@@ -59,7 +69,7 @@ typedef struct world
  *    |      |                                        |   one
  *    |      |                                        |  monomer
  *    |    5'|                                        |  
- *    |      Ss[0]------As[0]     <-- i=0            \|/
+ *    |      Ss[0]------Bs[0]     <-- i=0            \|/
  *    |    3'   . . . . . . . . . . . . . . . . . . . .
  *    |  
  * 

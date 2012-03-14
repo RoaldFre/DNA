@@ -95,7 +95,7 @@ bool allocWorld()
 	
 	/* Split the list in three sublists */
 	world.Ss = &world.all[0];
-	world.As = &world.all[1 * config.numMonomers];
+	world.Bs = &world.all[1 * config.numMonomers];
 	world.Ps = &world.all[2 * config.numMonomers];
 	return true;
 }
@@ -115,7 +115,7 @@ bool allocWorld()
  *        |      |
  *        |      |
  *        |    5'|
- *        |      Ss[1]------As[1]     <-- i=1
+ *        |      Ss[1]------Bs[1]     <-- i=1
  *        |    3'|
  *        |      |  . . . . . . . . . . . . . . . . . . . . 
  *        |      |                                       /|\
@@ -123,7 +123,7 @@ bool allocWorld()
  *        |      |                                        |   one
  *        |      |                                        |  monomer
  *        |    5'|                                        |  
- *        |      Ss[0]------As[0]     <-- i=0            \|/
+ *        |      Ss[0]------Bs[0]     <-- i=0            \|/
  *        |    3'    . . . . . . . . . . . . . . . . . . .'
  *        |  
  *        |  
@@ -148,34 +148,34 @@ void fillWorld()
 
 	for (int i = 0; i < n; i++) {
 		/* Positions */
-		world.Ss[i].pos.z = world.Ps[i].pos.z = world.As[i].pos.z = 0;
+		world.Ss[i].pos.z = world.Ps[i].pos.z = world.Bs[i].pos.z = 0;
 
 		world.Ss[i].pos.x = xoffset;
-		world.As[i].pos.x = xoffset + D_SA;
+		world.Bs[i].pos.x = xoffset + D_SA;
 		world.Ps[i].pos.x = xoffset;
 
 		world.Ss[i].pos.y = yoffset + i*spacing;
-		world.As[i].pos.y = yoffset + i*spacing;
+		world.Bs[i].pos.y = yoffset + i*spacing;
 		world.Ps[i].pos.y = yoffset + i*spacing + D_S5P;
 
 		world.Ss[i].pos.x += posStdev * randNorm();
 		world.Ss[i].pos.y += posStdev * randNorm();
 		world.Ss[i].pos.z += posStdev * randNorm();
-		world.As[i].pos.x += posStdev * randNorm();
-		world.As[i].pos.y += posStdev * randNorm();
-		world.As[i].pos.z += posStdev * randNorm();
+		world.Bs[i].pos.x += posStdev * randNorm();
+		world.Bs[i].pos.y += posStdev * randNorm();
+		world.Bs[i].pos.z += posStdev * randNorm();
 		world.Ps[i].pos.x += posStdev * randNorm();
 		world.Ps[i].pos.y += posStdev * randNorm();
 		world.Ps[i].pos.z += posStdev * randNorm();
 
 		/* Velocity */
 		world.Ss[i].vel.x = world.Ss[i].vel.y = world.Ss[i].vel.z = 0;
-		world.As[i].vel.x = world.As[i].vel.y = world.As[i].vel.z = 0;
+		world.Bs[i].vel.x = world.Bs[i].vel.y = world.Bs[i].vel.z = 0;
 		world.Ps[i].vel.x = world.Ps[i].vel.y = world.Ps[i].vel.z = 0;
 
 		/* Mass */
 		world.Ss[i].m = MASS_S;
-		world.As[i].m = MASS_A;
+		world.Bs[i].m = MASS_A;
 		world.Ps[i].m = MASS_P;
 	}
 }
@@ -267,27 +267,27 @@ static void calculateForces()
 	}
 
 	/* Bottom monomer */
-	Fbond(&w->Ss[0], &w->As[0], D_SA);
+	Fbond(&w->Ss[0], &w->Bs[0], D_SA);
 	Fbond(&w->Ss[0], &w->Ps[0], D_S5P);
-	Fangle(&w->Ps[0], &w->Ss[0], &w->As[0], ANGLE_P_5S_A);
+	Fangle(&w->Ps[0], &w->Ss[0], &w->Bs[0], ANGLE_P_5S_A);
 	/* Rest of the monomers */
 	for (int i = 1; i < config.numMonomers; i++) {
-		Fbond(&w->Ss[i], &w->As[i],   D_SA);
+		Fbond(&w->Ss[i], &w->Bs[i],   D_SA);
 		Fbond(&w->Ss[i], &w->Ps[i],   D_S5P);
 		Fbond(&w->Ss[i], &w->Ps[i-1], D_S3P);
 
-		Fstack(&w->As[i], &w->As[i-1]);
+		Fstack(&w->Bs[i], &w->Bs[i-1]);
 
-		Fangle(&w->Ps[ i ], &w->Ss[ i ], &w->As[ i ], ANGLE_P_5S_A);
+		Fangle(&w->Ps[ i ], &w->Ss[ i ], &w->Bs[ i ], ANGLE_P_5S_A);
 		Fangle(&w->Ps[ i ], &w->Ss[ i ], &w->Ps[i-1], ANGLE_P_5S3_P);
-		Fangle(&w->Ps[i-1], &w->Ss[ i ], &w->As[ i ], ANGLE_P_3S_A);
+		Fangle(&w->Ps[i-1], &w->Ss[ i ], &w->Bs[ i ], ANGLE_P_3S_A);
 		Fangle(&w->Ss[i-1], &w->Ps[i-1], &w->Ss[ i ], ANGLE_S5_P_3S);
 
 		Fdihedral(&w->Ps[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
 							DIHEDRAL_P_5S3_P_5S);
-		Fdihedral(&w->As[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+		Fdihedral(&w->Bs[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
 							DIHEDRAL_A_S3_P_5S);
-		Fdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->As[i-1],
+		Fdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->Bs[i-1],
 							DIHEDRAL_S3_P_5S_A);
 		if (i >= 2)
 		Fdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->Ps[i-2],
@@ -527,27 +527,27 @@ static struct PotentialEnergies calcPotentialEnergies(void)
 	double Va = 0;
 	double Vd = 0;
 	double Vs = 0;
-	Vb += Vbond(&w->Ss[0], &w->As[0],   D_SA);
+	Vb += Vbond(&w->Ss[0], &w->Bs[0],   D_SA);
 	Vb += Vbond(&w->Ss[0], &w->Ps[0],   D_S5P);
 
-	Va += Vangle(&w->As[0], &w->Ss[0], &w->Ps[0], ANGLE_P_5S_A);
+	Va += Vangle(&w->Bs[0], &w->Ss[0], &w->Ps[0], ANGLE_P_5S_A);
 	for (int i = 1; i < config.numMonomers; i++) {
-		Vb += Vbond(&w->Ss[i], &w->As[i],   D_SA);
+		Vb += Vbond(&w->Ss[i], &w->Bs[i],   D_SA);
 		Vb += Vbond(&w->Ss[i], &w->Ps[i],   D_S5P);
 		Vb += Vbond(&w->Ss[i], &w->Ps[i-1], D_S3P);
 
-		Vs += Vstack(&w->As[i], &w->As[i-1]);
+		Vs += Vstack(&w->Bs[i], &w->Bs[i-1]);
 
-		Va += Vangle(&w->Ps[ i ], &w->Ss[ i ], &w->As[ i ], ANGLE_P_5S_A);
+		Va += Vangle(&w->Ps[ i ], &w->Ss[ i ], &w->Bs[ i ], ANGLE_P_5S_A);
 		Va += Vangle(&w->Ps[ i ], &w->Ss[ i ], &w->Ps[i-1], ANGLE_P_5S3_P);
-		Va += Vangle(&w->Ps[i-1], &w->Ss[ i ], &w->As[ i ], ANGLE_P_3S_A);
+		Va += Vangle(&w->Ps[i-1], &w->Ss[ i ], &w->Bs[ i ], ANGLE_P_3S_A);
 		Va += Vangle(&w->Ss[i-1], &w->Ps[i-1], &w->Ss[ i ], ANGLE_S5_P_3S);
 
 		Vd += Vdihedral(&w->Ps[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
 							DIHEDRAL_P_5S3_P_5S);
-		Vd += Vdihedral(&w->As[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+		Vd += Vdihedral(&w->Bs[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
 							DIHEDRAL_A_S3_P_5S);
-		Vd += Vdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->As[i-1],
+		Vd += Vdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->Bs[i-1],
 							DIHEDRAL_S3_P_5S_A);
 		if (i >= 2)
 		Vd += Vdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->Ps[i-2],

@@ -229,7 +229,7 @@ int render(void)
 	renderParticles(config.numMonomers, world.Ss);
 
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, green);
-	renderParticles(config.numMonomers, world.As);
+	renderParticles(config.numMonomers, world.Bs);
 
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, blue);
 	renderParticles(config.numMonomers, world.Ps);
@@ -238,12 +238,12 @@ int render(void)
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, gray);
 	drawCilinder(&world.Ps[0].pos, &world.Ss[0].pos,
 			CILINDER_FACES, CILINDER_RADIUS);
-	drawCilinder(&world.Ss[0].pos, &world.As[0].pos,
+	drawCilinder(&world.Ss[0].pos, &world.Bs[0].pos,
 			CILINDER_FACES, CILINDER_RADIUS);
 		for(int i = 1; i < config.numMonomers; i++) {
 			drawCilinder(&world.Ps[i].pos, &world.Ss[i].pos,
 					CILINDER_FACES, CILINDER_RADIUS);
-			drawCilinder(&world.Ss[i].pos, &world.As[i].pos,
+			drawCilinder(&world.Ss[i].pos, &world.Bs[i].pos,
 					CILINDER_FACES, CILINDER_RADIUS);
 			drawCilinder(&world.Ss[i].pos, &world.Ps[i-1].pos,
 					CILINDER_FACES, CILINDER_RADIUS);
