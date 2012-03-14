@@ -31,10 +31,10 @@ const GLfloat gray[]  = {0.2, 0.2, 0.2, 0.0};
 
 const GLfloat S_col[] = {1.0, 0.2, 0.0, 0.0}; 
 const GLfloat P_col[] = {1.0, 0.0, 0.2, 0.0};
-const GLfloat A_col[] = {0.2, 0.0, 1.0, 0,0};
-const GLfloat T_col[] = {0.0, 0.2, 1.0, 0,0};
-const GLfloat C_col[] = {0.2, 1.0, 0.0, 0,0};
-const GLfloat G_col[] = {0.0, 1.0, 0.2, 0,0};
+const GLfloat A_col[] = {0.2, 0.0, 1.0, 0.0};
+const GLfloat T_col[] = {0.0, 0.2, 1.0, 0.0};
+const GLfloat C_col[] = {0.2, 1.0, 0.0, 0.0};
+const GLfloat G_col[] = {0.0, 1.0, 0.2, 0.0};
 
 static int numVertices;
 static int numIndices;

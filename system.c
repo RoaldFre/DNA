@@ -193,7 +193,21 @@ void fillWorld()
 			/* Type */
 			strand.Ss[i].type = SUGAR;
 			strand.Ps[i].type = PHOSPHATE;
-			strand.Bs[i].type = BASE_A; //for now...
+			
+			int basetype_number = rand() % 4;
+			
+			switch(basetype_number)
+			{
+				case 0:
+					strand.Bs[i].type = BASE_A;
+				case 1:
+					strand.Bs[i].type = BASE_T;
+				case 2:
+					strand.Bs[i].type = BASE_C;
+				case 3:
+					strand.Bs[i].type = BASE_G;
+			}
+
 		}
 	}
 }
