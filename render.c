@@ -27,7 +27,14 @@ const GLfloat light_ambi[] = {0.8, 0.8, 0.8, 0.0};
 const GLfloat red[]   = {1.0, 0.0, 0.0, 0.0};
 const GLfloat green[] = {0.0, 1.0, 0.0, 0.0};
 const GLfloat blue[]  = {0.0, 0.0, 1.0, 0.0};
-const GLfloat gray[]  = {0.1, 0.1, 0.1, 0.0};
+const GLfloat gray[]  = {0.2, 0.2, 0.2, 0.0};
+
+const GLfloat S_col[] = {1.0, 0.2, 0.0, 0.0}; 
+const GLfloat P_col[] = {1.0, 0.0, 0.2, 0.0};
+const GLfloat A_col[] = {0.2, 0.0, 1.0, 0,0};
+const GLfloat T_col[] = {0.0, 0.2, 1.0, 0,0};
+const GLfloat C_col[] = {0.2, 1.0, 0.0, 0,0};
+const GLfloat G_col[] = {0.0, 1.0, 0.2, 0,0};
 
 static int numVertices;
 static int numIndices;
@@ -42,9 +49,12 @@ static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numI
 static void drawLine(Vec3 *p1, Vec3 *p2);
 static void drawCilinder(Vec3 *p1, Vec3 *p2, int faces, double radius);
 static void renderParticles(int num, Particle *ps);
+static void renderBase(Particle *p);
+static void renderStrand(Strand *s);
 static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear, 
 		GLfloat zFar);
 static void calcFps(void);
+static void render(void);
 
 static void calcFps()
 {
@@ -211,7 +221,45 @@ int initRender(void)
 	return 0;
 }
 
-int render(void)
+static void renderStrand(Strand *s) {
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, S_col);
+	renderParticles(s->numMonomers, s->Ss);
+
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, P_col);
+	renderParticles(s->numMonomers, s->Ps);
+
+	for (int i = 0; i < s->numMonomers; i++)
+		renderBase(&s->Bs[i]);
+
+	/* Connections */
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, gray);
+	drawCilinder(&s->Ps[0].pos, &s->Ss[0].pos,
+			CILINDER_FACES, CILINDER_RADIUS);
+	drawCilinder(&s->Ss[0].pos, &s->Bs[0].pos,
+			CILINDER_FACES, CILINDER_RADIUS);
+		for(int i = 1; i < s->numMonomers; i++) {
+			drawCilinder(&s->Ps[i].pos, &s->Ss[i].pos,
+					CILINDER_FACES, CILINDER_RADIUS);
+			drawCilinder(&s->Ss[i].pos, &s->Bs[i].pos,
+					CILINDER_FACES, CILINDER_RADIUS);
+			drawCilinder(&s->Ss[i].pos, &s->Ps[i-1].pos,
+					CILINDER_FACES, CILINDER_RADIUS);
+		}
+
+#if DRAWFORCES
+	/* Forces */
+	glColor3f(0.8, 0.0, 0.0);
+	glBegin(GL_LINES);
+		for(int i = 0; i < 3 * config.numMonomers; i++) {
+			Vec3 tmp;
+			add(&s->all[i].pos, &s->all[i].F, &tmp);
+			drawLine(&s->all[i].pos, &tmp);
+		}
+	glEnd();
+#endif
+}
+
+static void render(void)
 {
 	double ws = config.worldSize;
 
@@ -224,46 +272,10 @@ int render(void)
 	glTranslatef(0, 0, -ws*2.5);
 	glRotatef(view_angle, 0, 1, 0);
 
-	/* Constituents of the monomers */
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, red);
-	renderParticles(config.numMonomers, world.Ss);
-
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, green);
-	renderParticles(config.numMonomers, world.Bs);
-
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, blue);
-	renderParticles(config.numMonomers, world.Ps);
-
-	/* Connections */
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, gray);
-	drawCilinder(&world.Ps[0].pos, &world.Ss[0].pos,
-			CILINDER_FACES, CILINDER_RADIUS);
-	drawCilinder(&world.Ss[0].pos, &world.Bs[0].pos,
-			CILINDER_FACES, CILINDER_RADIUS);
-		for(int i = 1; i < config.numMonomers; i++) {
-			drawCilinder(&world.Ps[i].pos, &world.Ss[i].pos,
-					CILINDER_FACES, CILINDER_RADIUS);
-			drawCilinder(&world.Ss[i].pos, &world.Bs[i].pos,
-					CILINDER_FACES, CILINDER_RADIUS);
-			drawCilinder(&world.Ss[i].pos, &world.Ps[i-1].pos,
-					CILINDER_FACES, CILINDER_RADIUS);
-		}
-
-#if DRAWFORCES
-	/* Forces */
-	glColor3f(0.8, 0.0, 0.0);
-	glBegin(GL_LINES);
-		for(int i = 0; i < 3 * config.numMonomers; i++) {
-			Vec3 tmp;
-			add(&world.all[i].pos, &world.all[i].F, &tmp);
-			drawLine(&world.all[i].pos, &tmp);
-		}
-	glEnd();
-#endif
+	for (int s = 0; s < world.numStrands; s++)
+		renderStrand(&world.strands[s]);
 
 	SDL_GL_SwapBuffers();
-
-	return 0;
 }
 
 static void drawPoint(Vec3 *p)
@@ -316,16 +328,32 @@ static void drawCilinder(Vec3 *p1, Vec3 *p2, int faces, double radius)
 	glEnd();
 }
 
+static void renderParticle(Particle *p)
+{
+	glPushMatrix();
+		glTranslatef(p->pos.x, p->pos.y, p->pos.z);
+		glScalef(config.radius, config.radius, config.radius);
+		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, sphereIndex);
+	glPopMatrix();
+}
 static void renderParticles(int num, Particle *ps)
 {
 	for (int i = 0; i < num; i++)
-	{
-		glPushMatrix();
-			glTranslatef(ps[i].pos.x, ps[i].pos.y, ps[i].pos.z);
-			glScalef(config.radius, config.radius, config.radius);
-			glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, sphereIndex);
-		glPopMatrix();
+		renderParticle(&ps[i]);
+}
+static void renderBase(Particle *p)
+{
+	const GLfloat *col;
+	switch(p->type) {
+		case BASE_A: col = A_col; break;
+		case BASE_T: col = T_col; break;
+		case BASE_C: col = C_col; break;
+		case BASE_G: col = G_col; break;
+		default: /* not a base */
+		     assert(false);
 	}
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, col);
+	renderParticle(p);
 }
 
 static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numInd,

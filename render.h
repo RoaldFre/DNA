@@ -4,7 +4,6 @@
 #include <stdbool.h>
 
 int initRender(void);
-int render(void);
 bool stepGraphics(void);
 
 #endif

@@ -78,27 +78,37 @@ Config config;
 double sim_time = 0;
 
 
-
-/* Allocates the world.
- * Precondition: config MUST be valid, and allocWorld must not already have 
- * been called (unless followed by a freeWorld)
- * Returns true on success, false on failure. In the case of failure, 
- * nothing will be allocated */
-bool allocWorld()
+/* Allocates the world to hold the given number of strands, and sets this 
+ * value in world.
+ * Precondition: allocWorld must not already have been called (unless 
+ * followed by a freeWorld). */
+bool allocWorld(int numStrands)
 {
-	assert(world.all == NULL);
+	assert(world.strands == NULL);
+	world.strands = calloc(numStrands, sizeof(*world.strands));
+	if (world.strands == NULL)
+		return false;
+	world.numStrands = numStrands;
+	return true;
+}
 
+/* Returns true on success, false on failure. In the case of failure, 
+ * nothing will be allocated */
+bool allocStrand(Strand *s, int numMonomers) {
 	/* Allocate one big continuous list */
-	world.all = calloc(3 * config.numMonomers, sizeof(*world.Ps));
-	if (world.all == NULL)
+	s->all = calloc(3 * numMonomers, sizeof(*s->all));
+	if (s->all == NULL)
 		return false;
 	
 	/* Split the list in three sublists */
-	world.Ss = &world.all[0];
-	world.Bs = &world.all[1 * config.numMonomers];
-	world.Ps = &world.all[2 * config.numMonomers];
+	s->Ss = &s->all[0];
+	s->Bs = &s->all[1 * config.numMonomers];
+	s->Ps = &s->all[2 * config.numMonomers];
+
+	s->numMonomers = numMonomers;
 	return true;
 }
+
 
 /* Place monomers in a vertical column (in the x-y plane) in the center of 
  * the world. Distances between sugar, base and phospate are the 
@@ -146,37 +156,45 @@ void fillWorld()
 	double xoffset = -D_SA / 2;
 	double posStdev = spacing / 100;
 
-	for (int i = 0; i < n; i++) {
-		/* Positions */
-		world.Ss[i].pos.z = world.Ps[i].pos.z = world.Bs[i].pos.z = 0;
+	for (int s = 0; s < world.numStrands; s++) {
+		Strand strand = world.strands[s];
+		for (int i = 0; i < n; i++) {
+			/* Positions */
+			strand.Ss[i].pos.z = strand.Ps[i].pos.z = strand.Bs[i].pos.z = 0;
 
-		world.Ss[i].pos.x = xoffset;
-		world.Bs[i].pos.x = xoffset + D_SA;
-		world.Ps[i].pos.x = xoffset;
+			strand.Ss[i].pos.x = xoffset;
+			strand.Bs[i].pos.x = xoffset + D_SA;
+			strand.Ps[i].pos.x = xoffset;
 
-		world.Ss[i].pos.y = yoffset + i*spacing;
-		world.Bs[i].pos.y = yoffset + i*spacing;
-		world.Ps[i].pos.y = yoffset + i*spacing + D_S5P;
+			strand.Ss[i].pos.y = yoffset + i*spacing;
+			strand.Bs[i].pos.y = yoffset + i*spacing;
+			strand.Ps[i].pos.y = yoffset + i*spacing + D_S5P;
 
-		world.Ss[i].pos.x += posStdev * randNorm();
-		world.Ss[i].pos.y += posStdev * randNorm();
-		world.Ss[i].pos.z += posStdev * randNorm();
-		world.Bs[i].pos.x += posStdev * randNorm();
-		world.Bs[i].pos.y += posStdev * randNorm();
-		world.Bs[i].pos.z += posStdev * randNorm();
-		world.Ps[i].pos.x += posStdev * randNorm();
-		world.Ps[i].pos.y += posStdev * randNorm();
-		world.Ps[i].pos.z += posStdev * randNorm();
+			strand.Ss[i].pos.x += posStdev * randNorm();
+			strand.Ss[i].pos.y += posStdev * randNorm();
+			strand.Ss[i].pos.z += posStdev * randNorm();
+			strand.Bs[i].pos.x += posStdev * randNorm();
+			strand.Bs[i].pos.y += posStdev * randNorm();
+			strand.Bs[i].pos.z += posStdev * randNorm();
+			strand.Ps[i].pos.x += posStdev * randNorm();
+			strand.Ps[i].pos.y += posStdev * randNorm();
+			strand.Ps[i].pos.z += posStdev * randNorm();
 
-		/* Velocity */
-		world.Ss[i].vel.x = world.Ss[i].vel.y = world.Ss[i].vel.z = 0;
-		world.Bs[i].vel.x = world.Bs[i].vel.y = world.Bs[i].vel.z = 0;
-		world.Ps[i].vel.x = world.Ps[i].vel.y = world.Ps[i].vel.z = 0;
+			/* Velocity */
+			strand.Ss[i].vel.x = strand.Ss[i].vel.y = strand.Ss[i].vel.z = 0;
+			strand.Bs[i].vel.x = strand.Bs[i].vel.y = strand.Bs[i].vel.z = 0;
+			strand.Ps[i].vel.x = strand.Ps[i].vel.y = strand.Ps[i].vel.z = 0;
 
-		/* Mass */
-		world.Ss[i].m = MASS_S;
-		world.Bs[i].m = MASS_A;
-		world.Ps[i].m = MASS_P;
+			/* Mass */
+			strand.Ss[i].m = MASS_S;
+			strand.Bs[i].m = MASS_A;
+			strand.Ps[i].m = MASS_P;
+
+			/* Type */
+			strand.Ss[i].type = SUGAR;
+			strand.Ps[i].type = PHOSPHATE;
+			strand.Bs[i].type = BASE_A; //for now...
+		}
 	}
 }
 
@@ -192,44 +210,73 @@ static double randNorm()
 
 void freeWorld()
 {
-	free(world.all);
+	assert(world.strands != NULL);
+	for (int s = 0; s < world.numStrands; s++)
+		freeStrand(&world.strands[s]);
+	free(world.strands);
 	return;
 }
+void freeStrand(Strand *strand)
+{
+	free(strand->all);
+	strand->numMonomers = 0;
+}
 
-
+/* loop over every particle in the world */
+void forEveryParticle(void (*f)(Particle *p))
+{
+	for (int s = 0; s < world.numStrands; s++) {
+		Strand *strand = &world.strands[s];
+		for (int i = 0; i < 3*strand->numMonomers; i++)
+			f(&strand->all[i]);
+	}
+}
+/* loop over every particle in the world, pass [D]ata to the function */
+void forEveryParticleD(void (*f)(Particle *p, void *data), void *data)
+{
+	for (int s = 0; s < world.numStrands; s++) {
+		Strand *strand = &world.strands[s];
+		for (int i = 0; i < 3*strand->numMonomers; i++)
+			f(&strand->all[i], data);
+	}
+}
 
 
 /* PHYSICS */
 
-static void verlet()
+//TODO Verlet implementation is wrong, iirc; but needs to be changed by Langevin anyway.
+static void verletHelper1(Particle *p)
 {
 	double dt = config.timeStep;
+	Vec3 tmp;
 
-	/* Velocity Verlet */
-	for (int i = 0; i < 3 * config.numMonomers; i++) {
-		Particle *p = &world.all[i];
-		Vec3 tmp;
+	/* vel(t + dt/2) = vel(t) + acc(t)*dt/2 */
+	scale(&p->F, dt / (2 * p->m), &tmp);
+	add(&p->vel, &tmp, &p->vel);
 
-		/* vel(t + dt/2) = vel(t) + acc(t)*dt/2 */
-		scale(&p->F, dt / (2 * p->m), &tmp);
-		add(&p->vel, &tmp, &p->vel);
+	assert(!isnan(p->vel.x) && !isnan(p->vel.y) && !isnan(p->vel.z));
 
-		assert(!isnan(p->vel.x) && !isnan(p->vel.y) && !isnan(p->vel.z));
-
-		/* pos(t + dt) = pos(t) + vel(t + dt/2)*dt */
-		scale(&p->vel, dt, &tmp);
-		add(&p->pos, &tmp, &p->pos);
-	}
-	calculateForces(); /* acc(t + dt) */
-	for (int i = 0; i < 3 * config.numMonomers; i++) {
-		Particle *p = &world.all[i];
-		Vec3 tmp;
-
-		/* vel(t + dt) = vel(t + dt/2) + acc(t + dt)*dt/2 */
-		scale(&p->F, dt / (2 * p->m), &tmp);
-		add(&p->vel, &tmp, &p->vel);
-	}
+	/* pos(t + dt) = pos(t) + vel(t + dt/2)*dt */
+	scale(&p->vel, dt, &tmp);
+	add(&p->pos, &tmp, &p->pos);
 }
+static void verletHelper2(Particle *p) {
+	double dt = config.timeStep;
+	Vec3 tmp;
+
+	/* vel(t + dt) = vel(t + dt/2) + acc(t + dt)*dt/2 */
+	scale(&p->F, dt / (2 * p->m), &tmp);
+	add(&p->vel, &tmp, &p->vel);
+}
+static void verlet()
+{
+	// The compiler better inlines all of this. TODO if not: force it.
+	forEveryParticle(&verletHelper1);
+	calculateForces(); /* acc(t + dt) */
+	forEveryParticle(&verletHelper2);
+}
+
+
 
 static double temperature(void)
 {
@@ -237,6 +284,11 @@ static double temperature(void)
 			* kineticEnergy() / (config.numMonomers * 3.0);
 }
 
+static void thermostatHelper(Particle *p, void *data)
+{
+	double lambda = *(double*) data;
+	scale(&p->vel, lambda, &p->vel);
+}
 static void thermostat(void)
 {
 	if (config.thermostatTau <= 0)
@@ -249,51 +301,66 @@ static void thermostat(void)
 	double tau = config.thermostatTau;
 	double lambda = sqrt(1 + dt/tau * (T0/Tk - 1));
 
-	for (int i = 0; i < config.numMonomers * 3; i++) {
-		Particle *p = &world.all[i];
-		scale(&p->vel, lambda, &p->vel);
-	}
+	forEveryParticleD(&thermostatHelper, (void*) &lambda);
 }
 
-static void calculateForces()
-{
-	World *w = &world;
 
-	/* Reset forces */
-	for (int i = 0; i < 3 * config.numMonomers; i++) {
-		w->all[i].F.x = 0;
-		w->all[i].F.y = 0;
-		w->all[i].F.z = 0;
-	}
+static void resetForce(Particle *p)
+{
+	p->F.x = p->F.y = p->F.z = 0;
+}
+
+/* Calculate the forces on the particles of the strand that are attributed 
+ * to the structure of the strand itself. These are:
+ * Fbond, Fangle, Fdihedral, Fstack. */
+static void strandForces(Strand *s) {
+	if (s->numMonomers < 0)
+		return;
+	assert(s->Ss != NULL && s->Ps != NULL && s->Bs != NULL);
 
 	/* Bottom monomer */
-	Fbond(&w->Ss[0], &w->Bs[0], D_SA);
-	Fbond(&w->Ss[0], &w->Ps[0], D_S5P);
-	Fangle(&w->Ps[0], &w->Ss[0], &w->Bs[0], ANGLE_P_5S_A);
+	Fbond(&s->Ss[0], &s->Bs[0], D_SA);
+	Fbond(&s->Ss[0], &s->Ps[0], D_S5P);
+	Fangle(&s->Ps[0], &s->Ss[0], &s->Bs[0], ANGLE_P_5S_A);
 	/* Rest of the monomers */
-	for (int i = 1; i < config.numMonomers; i++) {
-		Fbond(&w->Ss[i], &w->Bs[i],   D_SA);
-		Fbond(&w->Ss[i], &w->Ps[i],   D_S5P);
-		Fbond(&w->Ss[i], &w->Ps[i-1], D_S3P);
+	for (int i = 1; i < s->numMonomers; i++) {
+		Fbond(&s->Ss[i], &s->Bs[i],   D_SA);
+		Fbond(&s->Ss[i], &s->Ps[i],   D_S5P);
+		Fbond(&s->Ss[i], &s->Ps[i-1], D_S3P);
 
-		Fstack(&w->Bs[i], &w->Bs[i-1]);
+		Fstack(&s->Bs[i], &s->Bs[i-1]);
 
-		Fangle(&w->Ps[ i ], &w->Ss[ i ], &w->Bs[ i ], ANGLE_P_5S_A);
-		Fangle(&w->Ps[ i ], &w->Ss[ i ], &w->Ps[i-1], ANGLE_P_5S3_P);
-		Fangle(&w->Ps[i-1], &w->Ss[ i ], &w->Bs[ i ], ANGLE_P_3S_A);
-		Fangle(&w->Ss[i-1], &w->Ps[i-1], &w->Ss[ i ], ANGLE_S5_P_3S);
+		Fangle(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_5S_A);
+		Fangle(&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
+		Fangle(&s->Ps[i-1], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_3S_A);
+		Fangle(&s->Ss[i-1], &s->Ps[i-1], &s->Ss[ i ], ANGLE_S5_P_3S);
 
-		Fdihedral(&w->Ps[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+		Fdihedral(&s->Ps[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
 							DIHEDRAL_P_5S3_P_5S);
-		Fdihedral(&w->Bs[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+		Fdihedral(&s->Bs[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
 							DIHEDRAL_A_S3_P_5S);
-		Fdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->Bs[i-1],
+		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1],
 							DIHEDRAL_S3_P_5S_A);
 		if (i >= 2)
-		Fdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->Ps[i-2],
+		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
 							DIHEDRAL_S3_P_5S3_P);
 	}
 }
+static void calculateForces()
+{
+	/* Reset forces */
+	forEveryParticle(&resetForce);
+
+	/* Strand-based forces */
+	for (int s = 0; s < world.numStrands; s++)
+		strandForces(&world.strands[s]);
+
+	/* Particle-based forces */
+	//forEveryPair(bp) TODO
+}
+
+
+
 
 
 /* V = k1 * (dr - d0)^2  +  k2 * (d - d0)^4
@@ -484,22 +551,29 @@ void stepWorld(void)
 	sim_time += config.timeStep;
 }
 
+static void kineticHelper(Particle *p, void *data)
+{
+	double *twiceK = (double*) data;
+	*twiceK += p->m * length2(&p->vel);
+}
 static double kineticEnergy(void)
 {
 	double twiceK = 0;
-	for (int i = 0; i < 3 * config.numMonomers; i++)
-		twiceK += world.all[i].m * length2(&world.all[i].vel);
+	forEveryParticleD(&kineticHelper, (void*) &twiceK);
 	return twiceK/2;
 }
-		
+
+static void momentumHelper(Particle *p, void *data)
+{
+	Vec3 *Ptot = (Vec3*) data;
+	Vec3 P;
+	scale(&p->vel, p->m, &P);
+	add(&P, Ptot, Ptot);
+}
 static Vec3 momentum(void)
 {
 	Vec3 Ptot = {0, 0, 0};
-	for (int i = 0; i < 3 * config.numMonomers; i++) {
-		Vec3 P;
-		scale(&world.all[i].vel, world.all[i].m, &P);
-		add(&P, &Ptot, &Ptot);
-	}
+	forEveryParticleD(&momentumHelper, (void*) &Ptot);
 	return Ptot;
 }
 
@@ -515,56 +589,61 @@ bool physicsCheck(void)
 	return true;
 }
 
-struct PotentialEnergies {
+typedef struct potentialEnergies {
 	double bond, angle, dihedral, stack;
-};
-/* Return energy stats, in electronvolts. */
-static struct PotentialEnergies calcPotentialEnergies(void)
-{
-	World *w = &world;
+} PotentialEnergies;
 
+/* Add energy stats of given strand, in electronvolts. */
+static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
+{
 	double Vb = 0;
 	double Va = 0;
 	double Vd = 0;
 	double Vs = 0;
-	Vb += Vbond(&w->Ss[0], &w->Bs[0],   D_SA);
-	Vb += Vbond(&w->Ss[0], &w->Ps[0],   D_S5P);
+	Vb += Vbond(&s->Ss[0], &s->Bs[0],   D_SA);
+	Vb += Vbond(&s->Ss[0], &s->Ps[0],   D_S5P);
 
-	Va += Vangle(&w->Bs[0], &w->Ss[0], &w->Ps[0], ANGLE_P_5S_A);
+	Va += Vangle(&s->Bs[0], &s->Ss[0], &s->Ps[0], ANGLE_P_5S_A);
 	for (int i = 1; i < config.numMonomers; i++) {
-		Vb += Vbond(&w->Ss[i], &w->Bs[i],   D_SA);
-		Vb += Vbond(&w->Ss[i], &w->Ps[i],   D_S5P);
-		Vb += Vbond(&w->Ss[i], &w->Ps[i-1], D_S3P);
+		Vb += Vbond(&s->Ss[i], &s->Bs[i],   D_SA);
+		Vb += Vbond(&s->Ss[i], &s->Ps[i],   D_S5P);
+		Vb += Vbond(&s->Ss[i], &s->Ps[i-1], D_S3P);
 
-		Vs += Vstack(&w->Bs[i], &w->Bs[i-1]);
+		Vs += Vstack(&s->Bs[i], &s->Bs[i-1]);
 
-		Va += Vangle(&w->Ps[ i ], &w->Ss[ i ], &w->Bs[ i ], ANGLE_P_5S_A);
-		Va += Vangle(&w->Ps[ i ], &w->Ss[ i ], &w->Ps[i-1], ANGLE_P_5S3_P);
-		Va += Vangle(&w->Ps[i-1], &w->Ss[ i ], &w->Bs[ i ], ANGLE_P_3S_A);
-		Va += Vangle(&w->Ss[i-1], &w->Ps[i-1], &w->Ss[ i ], ANGLE_S5_P_3S);
+		Va += Vangle(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_5S_A);
+		Va += Vangle(&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
+		Va += Vangle(&s->Ps[i-1], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_3S_A);
+		Va += Vangle(&s->Ss[i-1], &s->Ps[i-1], &s->Ss[ i ], ANGLE_S5_P_3S);
 
-		Vd += Vdihedral(&w->Ps[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+		Vd += Vdihedral(&s->Ps[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
 							DIHEDRAL_P_5S3_P_5S);
-		Vd += Vdihedral(&w->Bs[i], &w->Ss[ i ], &w->Ps[i-1], &w->Ss[i-1],
+		Vd += Vdihedral(&s->Bs[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
 							DIHEDRAL_A_S3_P_5S);
-		Vd += Vdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->Bs[i-1],
+		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1],
 							DIHEDRAL_S3_P_5S_A);
 		if (i >= 2)
-		Vd += Vdihedral(&w->Ss[i], &w->Ps[i-1], &w->Ss[i-1], &w->Ps[i-2],
+		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
 							DIHEDRAL_S3_P_5S3_P);
 	}
 
-	struct PotentialEnergies pe;
-	pe.bond     = Vb * ENERGY_FACTOR;
-	pe.angle    = Va * ENERGY_FACTOR;
-	pe.dihedral = Vd * ENERGY_FACTOR;
-	pe.stack    = Vs * ENERGY_FACTOR;
+	pe->bond     = Vb * ENERGY_FACTOR;
+	pe->angle    = Va * ENERGY_FACTOR;
+	pe->dihedral = Vd * ENERGY_FACTOR;
+	pe->stack    = Vs * ENERGY_FACTOR;
+}
 
+/* Return energy stats of world, in electronvolts. */
+static PotentialEnergies calcPotentialEnergies(void) {
+	PotentialEnergies pe = {0, 0, 0, 0};
+	for (int s = 0; s < world.numStrands; s++)
+		addPotentialEnergies(&world.strands[s], &pe);
 	return pe;
 }
+
 void dumpStats()
 {
-	struct PotentialEnergies pe = calcPotentialEnergies();
+	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double T = temperature();
 	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack;
@@ -577,7 +656,7 @@ void dumpEnergies(FILE *stream)
 {
 #if 1
 	assert(stream != NULL);
-	struct PotentialEnergies pe = calcPotentialEnergies();
+	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack;
 	fprintf(stream, "%e %e %e %e %e %e %e\n",
