@@ -42,7 +42,8 @@ static void printUsage(void)
 	printf(" -S <flt>  Size of world (in Angstrom) (for rendering).\n");
 	printf("             default: (number of monomers) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
 	printf(" -v <int>  Verbose: dump statistics every <int> iterations\n");
-	printf(" -E <flt>  dump Energy statistics every <flt> femtoseconds\n");
+	printf(" -E <flt>  dump Energy statistics every <flt> femtoseconds.\n");
+	printf("           Don't forget to set the number of samples with '-s'!\n");
 	printf(" -s <int>  accumulate <int> measurement Samples\n");
 	printf("             default: Don't sample, loop forever\n");
 	printf(" -w <flt>  Wait <flt> femtoseconds before starting the measurements\n");
@@ -280,7 +281,6 @@ int main(int argc, char **argv)
 		/* Perform the measurements */
 		printf("\nStarting measurement.\n");
 		FILE *outstream = fopen(DATA_FILE_NAME, "w");
-		//plotHeader(outstream);
 		double intervalTime = 0;
 		for (long sample = 0; keepGoing && sample < config.measureSamples; sample++) {
 			while (keepGoing && intervalTime <= config.measureInterval) {
