@@ -31,3 +31,5 @@ clean:
 
 tex:
 	cd latex; make
+
+
