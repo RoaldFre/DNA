@@ -270,6 +270,23 @@ static void render(void)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glTranslatef(0, 0, -ws*2.5);
+
+	glColor3f(0.0, 1.0, 0.0);
+	glBegin(GL_LINE_LOOP);
+		glVertex3f(-ws/2, -ws/2, -ws/2);
+		glVertex3f(-ws/2, -ws/2, +ws/2);
+		glVertex3f(-ws/2, +ws/2, +ws/2);
+		glVertex3f(-ws/2, +ws/2, -ws/2);
+	glEnd();
+
+	glBegin(GL_LINE_LOOP);
+		glVertex3f(+ws/2, -ws/2, -ws/2);
+		glVertex3f(+ws/2, -ws/2, +ws/2);
+		glVertex3f(+ws/2, +ws/2, +ws/2);
+		glVertex3f(+ws/2, +ws/2, -ws/2);
+	glEnd();
+
+	glTranslatef(-ws/2, -ws/2, -ws/2);
 	glRotatef(view_angle, 0, 1, 0);
 
 	for (int s = 0; s < world.numStrands; s++)

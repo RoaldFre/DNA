@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "vmath.h"
 #include "system.h"
+#include "vmath.h"
+#include "spgrid.h"
 
 /* Masses (in kg) */
 #define AU      1.660539e-27
@@ -82,13 +83,20 @@ double sim_time = 0;
  * value in world.
  * Precondition: allocWorld must not already have been called (unless 
  * followed by a freeWorld). */
-bool allocWorld(int numStrands)
+bool allocWorld(int numStrands, int numBoxes, double worldSize)
 {
 	assert(world.strands == NULL);
 	world.strands = calloc(numStrands, sizeof(*world.strands));
 	if (world.strands == NULL)
 		return false;
 	world.numStrands = numStrands;
+
+
+	if(!allocGrid(numBoxes, worldSize)) {
+		freeWorld();
+		return false;
+	}
+
 	return true;
 }
 
@@ -152,15 +160,16 @@ void fillWorld()
 	int n = config.numMonomers;
 
 	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
-	double yoffset = -n * spacing / 2;
-	double xoffset = -D_SA / 2;
+	double yoffset = -n * spacing / 2 + config.worldSize/2;
+	double xoffset = -D_SA / 2 + config.worldSize/2;
 	double posStdev = spacing / 100;
 
 	for (int s = 0; s < world.numStrands; s++) {
 		Strand strand = world.strands[s];
 		for (int i = 0; i < n; i++) {
 			/* Positions */
-			strand.Ss[i].pos.z = strand.Ps[i].pos.z = strand.Bs[i].pos.z = 0;
+			strand.Ss[i].pos.z = strand.Ps[i].pos.z = strand.Bs[i].pos.z 
+					= config.worldSize / 2;
 
 			strand.Ss[i].pos.x = xoffset;
 			strand.Bs[i].pos.x = xoffset + D_SA;
@@ -202,9 +211,11 @@ void fillWorld()
 				case 2: strand.Bs[i].type = BASE_C; break;
 				case 3: strand.Bs[i].type = BASE_G; break;
 			}
-
 		}
 	}
+
+	/* Add everything to the space partition grid */
+	forEveryParticle(&addToGrid);
 }
 
 /* Returns a number sampled from a standard normal distribution. */
@@ -223,6 +234,7 @@ void freeWorld()
 	for (int s = 0; s < world.numStrands; s++)
 		freeStrand(&world.strands[s]);
 	free(world.strands);
+	freeGrid();
 	return;
 }
 void freeStrand(Strand *strand)

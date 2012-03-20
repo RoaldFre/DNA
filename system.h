@@ -16,6 +16,7 @@ typedef struct config
 	int    verbose;         /* Iterations between dumping info, <0 to disable */
 	double worldSize;       /* The world is a cube with edges of this length 
 				   (Only used for rendering) */
+	int    numBoxes;	/* Number of boxes in each dimension */
 	bool   render;          /* Whether or not to render the simulation */
 	double framerate;       /* The desired framerate when rendering. */
 	double radius;          /* The radius of the particles to render */
@@ -38,6 +39,7 @@ typedef struct particle
 	Vec3 vel; /* Velocity */
 	Vec3 F;   /* Force */
 	ParticleType type;
+	struct particle *prev, *next; /* Previous/Next particle in box */
 } Particle;
 
 typedef struct strand
@@ -80,7 +82,7 @@ typedef struct world
 	Strand *strands;
 } World;
 
-bool allocWorld(int numStrands);
+bool allocWorld(int numStrands, int numBoxes, double worldSize);
 bool allocStrand(Strand *s, int numMonomers);
 void fillWorld(void);
 void freeWorld(void);
