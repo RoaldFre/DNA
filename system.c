@@ -366,31 +366,50 @@ static void strandForces(Strand *s) {
 
 static void basePairForce(Particle *p1, Particle *p2) {
 		
-		double rij2 = distance2(&p1->pos, &p2->pos);
+		double rij = distance(&p1->pos, &p2->pos);
 		double bp_coupling;
 		double bp_force_distance;
 		double force;
 		Vec3 force_vec;
 		
-		/* Apply right force constant for AT-bonding and GC-bonding, if not AT or GC then zero */
-		if ( (p1->type==BASE_A && p2->type==BASE_T) || (p1->type==BASE_T && p2->type==BASE_A)) {
+		/* Apply right force constant for AT-bonding and GC-bonding, 
+		 * if not AT or GC then zero */
+		
+		/* Leonard-Jones potential: force = bp_coupling 
+		 *  * 5*(r^0 / r)^12 - 6*(r^0/r)^10 + 1 ].
+		 * 
+		 * For the force we differentiate with respect to r,so we get
+		 * bp_coupling * 60*[ r^0^10 / r^11 - r^0^12/r^13 ] */	
+		
+		if ( (p1->type==BASE_A && p2->type==BASE_T) 
+							|| (p1->type==BASE_T && p2->type==BASE_A)) {
 			bp_coupling = COUPLING_BP_AT;
 			bp_force_distance = DISTANCE_r0_AT;
 			
-			/* Leonard-Jones potential: force = bp_coupling [ 5*(r^0 / r)^12 - 6*(r^0/r)^10 + 1 ], we use r^2 so multiply 6 and 5 times instead of 12 and 10 times. The bp_force_distance is not squared, correct for that */
+			double rfrac = bp_force_distance / rij;
+			double rfrac2 = rfrac * rfrac;
+			double rfrac4 = rfrac2 * rfrac2;
+			double rfrac8 = rfrac4 * rfrac4;
+			double rfrac10 = rfrac8 * rfrac2;
+			double rfrac12 = rfrac10 * rfrac2;
 						
-			force = bp_coupling * ( 5 * (bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)
-										- 6 * (bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2) + 1);
+			force = bp_coupling*60*( rfrac10 / rij - rfrac12 / rij );
 			
-		} else if ( (p1->type==BASE_G && p2->type==BASE_C) || (p1->type==BASE_C && p2->type==BASE_G)) {
+		} else if ( (p1->type==BASE_G && p2->type==BASE_C) 
+							|| (p1->type==BASE_C && p2->type==BASE_G)) {
 			bp_coupling = COUPLING_BP_GC;
 			bp_force_distance = DISTANCE_r0_GC;
-			
-			/* Leonard-Jones potential: force = bp_coupling [ 5*(r^0 / r)^12 - 6*(r^0/r)^10 + 1 ], we use r^2 so multiply 6 and 5 times instead of 12 and 10 times. The bp_force_distance is not squared, correct for that */
+		
+			double rfrac = bp_force_distance / rij;
+			double rfrac2 = rfrac * rfrac;
+			double rfrac4 = rfrac2 * rfrac2;
+			double rfrac8 = rfrac4 * rfrac4;
+			double rfrac10 = rfrac8 * rfrac2;
+			double rfrac12 = rfrac10 * rfrac2;
 						
-			force = bp_coupling * ( 5 * (bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)
-										- 6 * (bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2) + 1);
-			
+			force = bp_coupling*60*( rfrac10 / rij - rfrac12 / rij );
+		
+							
 		} else {
 			force = 0;
 		}
@@ -422,7 +441,7 @@ static void calculateForces()
 		strandForces(&world.strands[s]);
 
 	/* Particle-based forces */
-	//forEveryBasePair(&basePairForce);
+	//forEveryPair(&basePairForce);
 }
 
 
