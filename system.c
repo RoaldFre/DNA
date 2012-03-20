@@ -393,7 +393,7 @@ static void basePairForce(Particle *p1, Particle *p2) {
 			double rfrac10 = rfrac8 * rfrac2;
 			double rfrac12 = rfrac10 * rfrac2;
 						
-			force = bp_coupling*60*( rfrac10 / rij - rfrac12 / rij );
+			force = bp_coupling*60*(rfrac12 / rij -  rfrac10 / rij );
 			
 		} else if ( (p1->type==BASE_G && p2->type==BASE_C) 
 							|| (p1->type==BASE_C && p2->type==BASE_G)) {
@@ -407,7 +407,7 @@ static void basePairForce(Particle *p1, Particle *p2) {
 			double rfrac10 = rfrac8 * rfrac2;
 			double rfrac12 = rfrac10 * rfrac2;
 						
-			force = bp_coupling*60*( rfrac10 / rij - rfrac12 / rij );
+			force = bp_coupling*60*( rfrac12 / rij - rfrac10 / rij );
 		
 							
 		} else {
