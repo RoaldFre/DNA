@@ -196,16 +196,11 @@ void fillWorld()
 			
 			int basetype_number = rand() % 4;
 			
-			switch(basetype_number)
-			{
-				case 0:
-					strand.Bs[i].type = BASE_A;
-				case 1:
-					strand.Bs[i].type = BASE_T;
-				case 2:
-					strand.Bs[i].type = BASE_C;
-				case 3:
-					strand.Bs[i].type = BASE_G;
+			switch (basetype_number) {
+				case 0: strand.Bs[i].type = BASE_A; break;
+				case 1: strand.Bs[i].type = BASE_T; break;
+				case 2: strand.Bs[i].type = BASE_C; break;
+				case 3: strand.Bs[i].type = BASE_G; break;
 			}
 
 		}
