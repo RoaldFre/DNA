@@ -46,6 +46,10 @@
 #define DIHEDRAL_A_S3_P_5S	( -22.60 * TO_RADIANS)
 #define DIHEDRAL_S3_P_5S_A	(  50.69 * TO_RADIANS)
 
+/* Base-Pair couplings */
+#define COUPLING_BP_AT 	19.28e-21 /* 2.77 kcal/mol == 19.28e-21 J (per particle) */
+#define COUPLING_BP_GC	28.96e-21 /* 4.16 kcal/mol == 28.96e-21 J (per particle) */
+
 
 #define ENERGY_FACTOR	(1/1.602177e-19) /* Energy in electronvolt */
 #define BOLTZMANN_CONSTANT    1.38065e-23
