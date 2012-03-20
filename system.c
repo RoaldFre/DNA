@@ -47,6 +47,11 @@
 #define DIHEDRAL_A_S3_P_5S	( -22.60 * TO_RADIANS)
 #define DIHEDRAL_S3_P_5S_A	(  50.69 * TO_RADIANS)
 
+/* Base-Pair couplings */
+#define COUPLING_BP_AT 	19.28e-21 /* 2.77 kcal/mol == 19.28e-21 J (per particle) */
+#define COUPLING_BP_GC	28.96e-21 /* 4.16 kcal/mol == 28.96e-21 J (per particle) */
+#define DISTANCE_r0_AT	2.9002e-10	/* Knotts et al 2007, table III, 2.9002 Angstrom */
+#define DISTANCE_r0_GC	2.8694e-10	/* Knotts et al 2007, table III, 2.8694 Angstrom */
 
 #define ENERGY_FACTOR	(1/1.602177e-19) /* Energy in electronvolt */
 #define BOLTZMANN_CONSTANT    1.38065e-23
@@ -70,6 +75,7 @@ static void   Fdihedral(Particle*, Particle*, Particle*, Particle*, double);
 static void   FdihedralParticle(Particle *target, Particle *p1, Particle *p2,
 			Particle *p3, Particle *p4, double Vorig, double phi0);
 
+static void basePairForce(Particle *p1, Particle *p2);
 
 /* GLOBALS */
 
@@ -263,6 +269,8 @@ void forEveryParticleD(void (*f)(Particle *p, void *data), void *data)
 }
 
 
+
+
 /* PHYSICS */
 
 //TODO Verlet implementation is wrong, iirc; but needs to be changed by Langevin anyway.
@@ -367,6 +375,55 @@ static void strandForces(Strand *s) {
 							DIHEDRAL_S3_P_5S3_P);
 	}
 }
+
+static void basePairForce(Particle *p1, Particle *p2) {
+		
+		double rij2 = distance2(&p1->pos, &p2->pos);
+		double bp_coupling;
+		double bp_force_distance;
+		double force;
+		Vec3 force_vec;
+		
+		/* Apply right force constant for AT-bonding and GC-bonding, if not AT or GC then zero */
+		if ( (p1->type==BASE_A && p2->type==BASE_T) || (p1->type==BASE_T && p2->type==BASE_A)) {
+			bp_coupling = COUPLING_BP_AT;
+			bp_force_distance = DISTANCE_r0_AT;
+			
+			/* Leonard-Jones potential: force = bp_coupling [ 5*(r^0 / r)^12 - 6*(r^0/r)^10 + 1 ], we use r^2 so multiply 6 and 5 times instead of 12 and 10 times. The bp_force_distance is not squared, correct for that */
+						
+			force = bp_coupling * ( 5 * (bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)
+										- 6 * (bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2) + 1);
+			
+		} else if ( (p1->type==BASE_G && p2->type==BASE_C) || (p1->type==BASE_C && p2->type==BASE_G)) {
+			bp_coupling = COUPLING_BP_GC;
+			bp_force_distance = DISTANCE_r0_GC;
+			
+			/* Leonard-Jones potential: force = bp_coupling [ 5*(r^0 / r)^12 - 6*(r^0/r)^10 + 1 ], we use r^2 so multiply 6 and 5 times instead of 12 and 10 times. The bp_force_distance is not squared, correct for that */
+						
+			force = bp_coupling * ( 5 * (bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)
+										- 6 * (bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2)*(bp_force_distance * bp_force_distance / rij2) + 1);
+			
+		} else {
+			force = 0;
+		}
+		
+		/* calculate the direction of the force between the basepairs */
+		Vec3 direction;
+		Vec3 direction_nonnorm;
+		
+		/* subtract and normalize */
+		sub(&p1->pos, &p2->pos, &direction_nonnorm);
+		normalize(&direction_nonnorm, &direction);
+		
+		/* scale the direction with the calculated force */
+		scale(&direction, force, &force_vec);
+	
+		/* add force to particle objects */
+		add(&p1->F, &force_vec, &p1->F);
+		sub(&p2->F, &force_vec, &p2->F);
+}
+
+
 static void calculateForces()
 {
 	/* Reset forces */
@@ -377,7 +434,7 @@ static void calculateForces()
 		strandForces(&world.strands[s]);
 
 	/* Particle-based forces */
-	//forEveryPair(bp) TODO
+	//forEveryBasePair(&basePairForce);
 }
 
 
