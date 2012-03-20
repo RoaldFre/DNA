@@ -39,8 +39,10 @@ static void printUsage(void)
 	printf("             default: %f)\n", DEF_RENDER_FRAMERATE);
 	printf(" -R <flt>  Radius (in Angstrom) of the particles when rendering\n");
 	printf("             default: %f\n", DEF_RENDER_RADIUS);
-	printf(" -S <flt>  Size of world (in Angstrom) (for rendering).\n");
+	printf(" -S <flt>  Size of world (in Angstrom).\n");
 	printf("             default: (number of monomers) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
+	printf(" -b <num>  number of Boxes per dimension\n");
+	printf("             default: max so that boxsize >= largest potential truncation length\n");
 	printf(" -v <int>  Verbose: dump statistics every <int> iterations\n");
 	printf(" -E <flt>  dump Energy statistics every <flt> femtoseconds.\n");
 	printf("           Don't forget to set the number of samples with '-s'!\n");
@@ -67,8 +69,9 @@ static void parseArguments(int argc, char **argv)
 	config.worldSize = -1;
 	config.thermostatTau = -1;
 	config.measureInterval = -1;
+	config.numBoxes = -1;
 
-	while ((c = getopt(argc, argv, ":t:T:c:f:rR:S:v:E:s:w:h")) != -1)
+	while ((c = getopt(argc, argv, ":t:T:c:f:rR:S:b:v:E:s:w:h")) != -1)
 	{
 		switch (c)
 		{
@@ -105,6 +108,12 @@ static void parseArguments(int argc, char **argv)
 			config.worldSize = atof(optarg) * 1e-10;
 			if (config.worldSize <= 0)
 				die("Invalid world size %s\n", optarg);
+			break;
+		case 'b':
+			config.numBoxes = atoi(optarg);
+			if (config.numBoxes <= 0)
+				die("Invalid number of boxes %s\n",
+						optarg);
 			break;
 		case 'v':
 			config.verbose = atoi(optarg);
@@ -177,6 +186,31 @@ static void parseArguments(int argc, char **argv)
 				"timestep of %f! Exact timing will be off!\n",
 				config.measureInterval / TIME_FACTOR,
 				config.timeStep / TIME_FACTOR);
+
+#if 0
+	if (config.truncateLJ < 0) {
+		/* Disable truncation -> no space partitioning */
+		config.numBox = 1;
+		config.truncateLJ = worldSize / 2.0;
+		/* Worldsize/2 is necessary for correct pair correlations. 
+		 * Otherwise you get a 'tail' between ws/2 and ws/sqrt(2), 
+		 * which is an artefact from the periodic boundary 
+		 * conditions in a cubic box! */
+	} else if (config.truncateLJ > worldSize / 2.0)
+		config.truncateLJ = worldSize / 2.0; /* same reason */
+#endif
+
+	if (config.numBoxes == -1) {
+		config.numBoxes = config.worldSize / 20e-10; //TODO HARDCODED AT 20A FOR NOW
+		if (config.numBoxes  < 1)
+			config.numBoxes  = 1;
+	}
+
+#if 0
+	if (config.boxSize < config.truncateLJ && config.numBox > 1)
+		die("The boxsize (%f) is smaller than the L-J truncation "
+			"radius (%f)!\n", config.boxSize, config.truncateLJ);
+#endif
 }
 
 void die(const char *fmt, ...)
@@ -255,7 +289,7 @@ int main(int argc, char **argv)
 
 	parseArguments(argc, argv);
 
-	allocWorld(2); // TODO
+	allocWorld(2, config.numBoxes, config.worldSize); // TODO
 	allocStrand(&world.strands[0], config.numMonomers);
 	allocStrand(&world.strands[1], config.numMonomers);
 	fillWorld();
