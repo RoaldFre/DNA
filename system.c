@@ -64,6 +64,8 @@ static void calculateForces(void);
 static double randNorm(void);
 
 static double kineticEnergy(void);
+static void   basePairForce(Particle *p1, Particle *p2);
+static double basePairPotential(Particle *p1, Particle *p2);
 static double Vbond(Particle *p1, Particle *p2, double d0);
 static void   Fbond(Particle *p1, Particle *p2, double d0);
 static double Vstack(Particle *p1, Particle *p2);
@@ -74,8 +76,7 @@ static double Vdihedral(Particle*, Particle*, Particle*, Particle*, double);
 static void   Fdihedral(Particle*, Particle*, Particle*, Particle*, double);
 static void   FdihedralParticle(Particle *target, Particle *p1, Particle *p2,
 			Particle *p3, Particle *p4, double Vorig, double phi0);
-
-static void basePairForce(Particle *p1, Particle *p2);
+static void   addBpPotential(Particle *p1, Particle *p2, void *data);
 
 /* GLOBALS */
 
@@ -387,7 +388,7 @@ static void basePairForce(Particle *p1, Particle *p2)
 	/* Apply right force constant for AT-bonding and GC-bonding, 
 	 * if not AT or GC then zero */
 	
-	/* Leonard-Jones potential: force = bpCoupling 
+	/* Lennard-Jones potential: potential = bpCoupling 
 	 *  * 5*(r^0 / r)^12 - 6*(r^0/r)^10 + 1 ].
 	 * 
 	 * For the force we differentiate with respect to r,so we get
@@ -441,11 +442,46 @@ static void calculateForces()
 		strandForces(&world.strands[s]);
 
 	/* Particle-based forces */
-	//forEveryPair(&basePairForce);
+	forEveryPair(&basePairForce);
 }
 
+/* Lennard-Jones Potential */
+static double basePairPotential(Particle *p1, Particle *p2)
+{
+	double rij2 = distance2(&p1->pos, &p2->pos);
+	double bpCoupling;
+	double bpForceDist;
+	double bpPotential;
+	
+	/* Apply right potential constant for AT-bonding and GC-bonding, 
+	 * if not AT or GC then zero */
+	
+	/* Lennard-Jones potential: potential = bpCoupling 
+	 *  * 5*(r^0 / r)^12 - 6*(r^0/r)^10 + 1 ]. */
+	
+	if ((p1->type==BASE_A && p2->type==BASE_T) 
+			|| (p1->type==BASE_T && p2->type==BASE_A)) {
+		bpCoupling = COUPLING_BP_AT;
+		bpForceDist = DISTANCE_r0_AT;
+		
+	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
+			|| (p1->type==BASE_C && p2->type==BASE_G)) {
+		bpCoupling = COUPLING_BP_GC;
+		bpForceDist = DISTANCE_r0_GC;
+	} else {
+		return 0; /* return potential = 0 */
+	}
 
-
+	double rfrac2 = bpForceDist * bpForceDist / rij2;
+	double rfrac4 = rfrac2 * rfrac2;
+	double rfrac8 = rfrac4 * rfrac4;
+	double rfrac10 = rfrac8 * rfrac2;
+	double rfrac12 = rfrac8 * rfrac4;
+				
+	bpPotential = bpCoupling*(5*rfrac12 - 6*rfrac10 + 1);
+	
+	return bpPotential;
+}
 
 
 /* V = k1 * (dr - d0)^2  +  k2 * (d - d0)^4
@@ -675,7 +711,7 @@ bool physicsCheck(void)
 }
 
 typedef struct potentialEnergies {
-	double bond, angle, dihedral, stack;
+	double bond, angle, dihedral, stack, basepairing;
 } PotentialEnergies;
 
 /* Add energy stats of given strand, in electronvolts. */
@@ -718,11 +754,21 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 	pe->stack    = Vs * ENERGY_FACTOR;
 }
 
+static void addBpPotential(Particle *p1, Particle *p2, void *data)
+{
+	double *Vbp = (double*) data;
+	*Vbp += basePairPotential(p1, p2);
+}
+
+
 /* Return energy stats of world, in electronvolts. */
 static PotentialEnergies calcPotentialEnergies(void) {
-	PotentialEnergies pe = {0, 0, 0, 0};
+	PotentialEnergies pe = {0, 0, 0, 0, 0};
 	for (int s = 0; s < world.numStrands; s++)
 		addPotentialEnergies(&world.strands[s], &pe);
+		
+	forEveryPairD(&addBpPotential, &pe.basepairing);
+	
 	return pe;
 }
 
@@ -731,10 +777,10 @@ void dumpStats()
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double T = temperature();
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack;
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basepairing;
 
-	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, T = %f\n",
-			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, T);
+	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, T = %f\n",
+			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basepairing, T);
 }
 
 void dumpEnergies(FILE *stream)
