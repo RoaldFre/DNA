@@ -93,7 +93,6 @@ void dumpEnergies(FILE *stream);
 bool physicsCheck(void);
 void forEveryParticle(void (*f)(Particle *p));
 void forEveryParticleD(void (*f)(Particle *p, void *data), void *data);
-Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2); //TODO
 
 extern World world;
 extern Config config;

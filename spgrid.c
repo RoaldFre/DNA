@@ -398,3 +398,15 @@ bool sanityCheck(void)
 	return OK;
 }
 
+Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2)
+{
+	Vec3 diff;
+	double L = nb * boxSize;
+	/* +5*L/2 instead of simply +L/2 to make sure that the first 
+	 * argument of fmod is positive. Otherwise, this won't work! */
+	diff.x = fmod(v2->x - v1->x + 5*L/2, L)  -  L/2;
+	diff.y = fmod(v2->y - v1->y + 5*L/2, L)  -  L/2;
+	diff.z = fmod(v2->z - v1->z + 5*L/2, L)  -  L/2;
+	return diff;
+}
+

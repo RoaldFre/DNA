@@ -41,4 +41,12 @@ void forEveryPair(void (*f)(Particle *p1, Particle *p2));
 /* Check whether internal structure is still consistent. */
 bool sanityCheck(void);
 
+/* Returns the shortest vector that points from v1 to v2, taking into 
+ * account the periodic boundary conditions. The particle MUST be within 
+ * the correct bounds.
+ * Precondition: The given vectors are allowed to break out of the grid, 
+ * but they must be within one 'world-size' of the grid (ie in [-L, 2L] if 
+ * the grid is [0, L] in each dimension.)*/
+Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2);
+
 #endif
