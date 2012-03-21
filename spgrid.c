@@ -17,6 +17,7 @@ static Box *boxFromParticle(const Particle *p);
 static Box *boxFromNonPeriodicIndex(int ix, int iy, int iz);
 static void forEVERYpair(void (*f)(Particle *p1, Particle *p2, void *data), 
 			 void *data);
+static void pairWrapper(Particle *p1, Particle *p2, void *data);
 
 
 /* Globals */
@@ -200,13 +201,7 @@ static void addToBox(Particle *p, Box *b)
 	b->n++;
 }
 
-/* Execute a given function for every discinct pair of particles that are 
- * within the same box, or in adjacent boxes..
- * Arguments:
- *  - Function pointer to function that will be fed all the particle pairs.
- *  - Pointer to data that will be supplied to said function.
- */
-void forEveryPair(void (*f)(Particle *p1, Particle *p2, void *data), void *data)
+void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data)
 {
 	int n1, n2;
 
@@ -268,6 +263,26 @@ void forEveryPair(void (*f)(Particle *p1, Particle *p2, void *data), void *data)
 		assert(p == box->p);
 	}
 }
+
+void forEveryPair(void (*f)(Particle *p1, Particle *p2))
+{
+	/* I *hope* the compiler can optimize this deep chain of function 
+	 * pointer magic. TODO: Check this and deal with the ISO C warnings 
+	 * somehow. */
+	forEveryPairD(&pairWrapper, (void*) f);
+}
+
+/* This is a bit of a hack, but it works and avoids code duplication. Ask 
+ * the non-data function poiner as the data argument. */
+static void pairWrapper(Particle *p1, Particle *p2, void *data)
+{
+	/* Black function pointer casting magic */
+	void (*f)(Particle *p1, Particle *p2) = (void (*)(Particle *p1, Particle *p2)) data;
+	(*f)(p1, p2);
+}
+	
+
+
 
 /* Brute force over *every single* pair, including those that are more than 
  * a boxlength apart. */

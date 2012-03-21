@@ -35,7 +35,8 @@ void reboxParticles(void);
  *  - Function pointer to function that will be fed all the particle pairs.
  *  - Pointer to data that will be supplied to said function.
  */
-void forEveryPair(void (*f)(Particle *p1, Particle *p2, void *data), void *data);
+void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data);
+void forEveryPair(void (*f)(Particle *p1, Particle *p2));
 
 /* Check whether internal structure is still consistent. */
 bool sanityCheck(void);
