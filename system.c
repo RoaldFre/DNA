@@ -748,16 +748,17 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 							DIHEDRAL_S3_P_5S3_P);
 	}
 
-	pe->bond     = Vb * ENERGY_FACTOR;
-	pe->angle    = Va * ENERGY_FACTOR;
-	pe->dihedral = Vd * ENERGY_FACTOR;
-	pe->stack    = Vs * ENERGY_FACTOR;
+	pe->bond     = Vb;
+	pe->angle    = Va;
+	pe->dihedral = Vd;
+	pe->stack    = Vs;
 }
 
 static void addBpPotential(Particle *p1, Particle *p2, void *data)
 {
 	double *Vbp = (double*) data;
 	*Vbp += basePairPotential(p1, p2);
+	
 }
 
 
@@ -767,7 +768,16 @@ static PotentialEnergies calcPotentialEnergies(void) {
 	for (int s = 0; s < world.numStrands; s++)
 		addPotentialEnergies(&world.strands[s], &pe);
 		
+		
+		
 	forEveryPairD(&addBpPotential, &pe.basepairing);
+	
+	/* Convert to eV */
+	pe.bond     *= ENERGY_FACTOR;
+	pe.angle    *= ENERGY_FACTOR;
+	pe.dihedral *= ENERGY_FACTOR;
+	pe.stack    *= ENERGY_FACTOR;
+	pe.basepairing *= ENERGY_FACTOR;
 	
 	return pe;
 }
