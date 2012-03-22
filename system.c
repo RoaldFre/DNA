@@ -64,6 +64,8 @@ static void calculateForces(void);
 static double randNorm(void);
 
 static double kineticEnergy(void);
+static double calcLJForce(double coupling, double rij0, double rijVar);
+static double calcLJPotential(double coupling, double rij0, double rijVar2);
 static void   basePairForce(Particle *p1, Particle *p2);
 static double basePairPotential(Particle *p1, Particle *p2);
 static double Vbond(Particle *p1, Particle *p2, double d0);
@@ -84,6 +86,7 @@ World world;
 Config config;
 
 double sim_time = 0;
+
 
 
 /* Allocates the world to hold the given number of strands, and sets this 
@@ -377,12 +380,25 @@ static void strandForces(Strand *s) {
 	}
 }
 
+static double calcLJForce(double coupling, double rij0, double rijVar)
+{
+	double rfrac = rij0 / rijVar;
+	double rfrac2 = rfrac * rfrac;
+	double rfrac4 = rfrac2 * rfrac2;
+	double rfrac8 = rfrac4 * rfrac4;
+	double rfrac10 = rfrac8 * rfrac2;
+	double rfrac12 = rfrac10 * rfrac2;
+				
+	return coupling*60*( rfrac12 / rijVar - rfrac10 / rijVar );
+}
+
 static void basePairForce(Particle *p1, Particle *p2)
 {
 	double rij = distance(&p1->pos, &p2->pos);
 	double bpCoupling;
 	double bpForceDist;
 	double force;
+	double truncCorrection = 0;
 	Vec3 forceVec;
 	
 	/* Apply right force constant for AT-bonding and GC-bonding, 
@@ -406,21 +422,18 @@ static void basePairForce(Particle *p1, Particle *p2)
 	} else {
 		return; /* no force */
 	}
-
-	double rfrac = bpForceDist / rij;
-	double rfrac2 = rfrac * rfrac;
-	double rfrac4 = rfrac2 * rfrac2;
-	double rfrac8 = rfrac4 * rfrac4;
-	double rfrac10 = rfrac8 * rfrac2;
-	double rfrac12 = rfrac10 * rfrac2;
-				
-	force = bpCoupling*60*( rfrac12 / rij - rfrac10 / rij );
+	
+	/* calculate the correction by which the force should be lifted */
+	double boxSize = (config.worldSize / config.numBoxes);
+	truncCorrection = calcLJForce(bpCoupling, bpForceDist, boxSize);
+			
+	force = calcLJForce(bpCoupling, bpForceDist, rij) - truncCorrection;
 	
 	/* calculate the direction of the force between the basepairs */
 	Vec3 direction;
 	
 	/* subtract and normalize */
-	sub(&p1->pos, &p2->pos, &direction);
+	direction = nearestImageVector(&p1->pos, &p2->pos);
 	normalize(&direction, &direction);
 	
 	/* scale the direction with the calculated force */
@@ -445,6 +458,17 @@ static void calculateForces()
 	forEveryPair(&basePairForce);
 }
 
+static double calcLJPotential(double coupling, double rij0, double rijVar2)
+{
+	double rfrac2 = rij0 * rij0 / rijVar2;
+	double rfrac4 = rfrac2 * rfrac2;
+	double rfrac8 = rfrac4 * rfrac4;
+	double rfrac10 = rfrac8 * rfrac2;
+	double rfrac12 = rfrac8 * rfrac4;
+	
+	return coupling*(5*rfrac12 - 6*rfrac10 + 1);
+}
+
 /* Lennard-Jones Potential */
 static double basePairPotential(Particle *p1, Particle *p2)
 {
@@ -452,6 +476,7 @@ static double basePairPotential(Particle *p1, Particle *p2)
 	double bpCoupling;
 	double bpForceDist;
 	double bpPotential;
+	double truncCorrection = 0;
 	
 	/* Apply right potential constant for AT-bonding and GC-bonding, 
 	 * if not AT or GC then zero */
@@ -472,13 +497,11 @@ static double basePairPotential(Particle *p1, Particle *p2)
 		return 0; /* return potential = 0 */
 	}
 
-	double rfrac2 = bpForceDist * bpForceDist / rij2;
-	double rfrac4 = rfrac2 * rfrac2;
-	double rfrac8 = rfrac4 * rfrac4;
-	double rfrac10 = rfrac8 * rfrac2;
-	double rfrac12 = rfrac8 * rfrac4;
-				
-	bpPotential = bpCoupling*(5*rfrac12 - 6*rfrac10 + 1);
+	/* calculate the correction by which the force should be lifted */
+	double boxSize2 = (config.worldSize / config.numBoxes) * (config.worldSize / config.numBoxes);
+	truncCorrection = calcLJPotential(bpCoupling, bpForceDist, boxSize2);	
+		
+	bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
 	
 	return bpPotential;
 }
@@ -767,7 +790,6 @@ static PotentialEnergies calcPotentialEnergies(void) {
 	PotentialEnergies pe = {0, 0, 0, 0, 0};
 	for (int s = 0; s < world.numStrands; s++)
 		addPotentialEnergies(&world.strands[s], &pe);
-		
 		
 		
 	forEveryPairD(&addBpPotential, &pe.basepairing);
