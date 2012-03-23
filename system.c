@@ -511,7 +511,7 @@ static double Vbond(Particle *p1, Particle *p2, double d0)
 {
 	double k1 = BOND_K1;
 	double k2 = BOND_K2;
-	double d = distance(&p1->pos, &p2->pos) - d0;
+	double d = nearestImageDistance(&p1->pos, &p2->pos) - d0;
 	double d2 = d * d;
 	double d4 = d2 * d2;
 	return k1 * d2  +  k2 * d4;
@@ -521,7 +521,7 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
 	double k1 = BOND_K1;
 	double k2 = BOND_K2;
 	Vec3 drVec, drVecNormalized, F;
-	sub(&p2->pos, &p1->pos, &drVec);
+	drVec = nearestImageVector(&p1->pos, &p2->pos);
 	double dr = length(&drVec);
 	double d  = dr - d0;
 	double d3 = d * d * d;
@@ -545,8 +545,10 @@ static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 {
 	Vec3 a, b;
 	double ktheta = BOND_Ktheta;
-	sub(&p1->pos, &p2->pos, &a);
-	sub(&p3->pos, &p2->pos, &b);
+	
+	a = nearestImageVector(&p2->pos, &p1->pos);
+	b = nearestImageVector(&p2->pos, &p3->pos);
+
 	double dtheta = angle(&a, &b) - theta0;
 	return ktheta/2 * dtheta*dtheta;
 }
@@ -554,8 +556,10 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 {
 	Vec3 a, b;
 	double ktheta = BOND_Ktheta;
-	sub(&p1->pos, &p2->pos, &a);
-	sub(&p3->pos, &p2->pos, &b);
+	
+	a = nearestImageVector(&p2->pos, &p1->pos);
+	b = nearestImageVector(&p2->pos, &p3->pos);
+	
 	double lal = length(&a);
 	double lbl = length(&b);
 	double adotb = dot(&a, &b);
