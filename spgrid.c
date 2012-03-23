@@ -430,4 +430,3 @@ Vec3 nearestImageUnitVector(Vec3 *v1, Vec3 *v2)
 	return rijUnit;
 }
 
-

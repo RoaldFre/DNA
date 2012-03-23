@@ -289,9 +289,9 @@ int main(int argc, char **argv)
 
 	parseArguments(argc, argv);
 
-	allocWorld(2, config.numBoxes, config.worldSize); // TODO
+	allocWorld(1, config.numBoxes, config.worldSize); // TODO
 	allocStrand(&world.strands[0], config.numMonomers);
-	allocStrand(&world.strands[1], config.numMonomers);
+	//allocStrand(&world.strands[1], config.numMonomers);
 	fillWorld();
 
 	Timer renderTimer = makeTimer(1.0 / config.framerate);
