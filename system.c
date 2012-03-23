@@ -274,7 +274,6 @@ void forEveryParticleD(void (*f)(Particle *p, void *data), void *data)
 
 /* PHYSICS */
 
-//TODO Verlet implementation is wrong, iirc; but needs to be changed by Langevin anyway.
 static void verletHelper1(Particle *p)
 {
 	double dt = config.timeStep;
@@ -290,7 +289,8 @@ static void verletHelper1(Particle *p)
 	scale(&p->vel, dt, &tmp);
 	add(&p->pos, &tmp, &p->pos);
 }
-static void verletHelper2(Particle *p) {
+static void verletHelper2(Particle *p)
+{
 	double dt = config.timeStep;
 	Vec3 tmp;
 
@@ -304,6 +304,7 @@ static void verlet()
 	forEveryParticle(&verletHelper1);
 	calculateForces(); /* acc(t + dt) */
 	forEveryParticle(&verletHelper2);
+	reboxParticles(); //TODO only once every N iterations...
 }
 
 
