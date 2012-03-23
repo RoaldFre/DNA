@@ -34,6 +34,9 @@
 /* Bond stack */
 #define BOND_STACK   EPSILON
 
+/* Screw symmetry constants */
+#define SCREW_SYM_PHI	(36 * TO_RADIANS)
+// #define SCREW_SYM_Z		(3.38e-10) /* 3.38 angstrom */
 
 /* Bond angle */
 #define ANGLE_S5_P_3S	( 94.49 * TO_RADIANS)
@@ -170,24 +173,35 @@ void fillWorld()
 	int n = config.numMonomers;
 
 	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
+	double xoffset = -D_SA / 2;
+	double zoffset = -D_SA / 2;
 	double yoffset = -n * spacing / 2 + config.worldSize/2;
-	double xoffset = -D_SA / 2 + config.worldSize/2;
+	
 	double posStdev = spacing / 100;
 
 	for (int s = 0; s < world.numStrands; s++) {
 		Strand strand = world.strands[s];
 		for (int i = 0; i < n; i++) {
+			
+			//strand.Ss[i].pos.z = strand.Bs[i].pos.z = strand.Ps[i].pos.z = config.worldSize/2;
+			
+			/* screw factor */
+			double screwFactorCos = cos( i*SCREW_SYM_PHI );
+			double screwFactorSin = sin( i*SCREW_SYM_PHI );
+			
 			/* Positions */
-			strand.Ss[i].pos.z = strand.Ps[i].pos.z = strand.Bs[i].pos.z 
-					= config.worldSize / 2;
 
-			strand.Ss[i].pos.x = xoffset;
-			strand.Bs[i].pos.x = xoffset + D_SA;
-			strand.Ps[i].pos.x = xoffset;
+			strand.Ss[i].pos.x = config.worldSize/2 + (xoffset - D_SA) * screwFactorCos;
+			strand.Bs[i].pos.x = config.worldSize/2 + (xoffset)* screwFactorCos;
+			strand.Ps[i].pos.x = config.worldSize/2 + (xoffset - D_SA) * screwFactorCos;
 
 			strand.Ss[i].pos.y = yoffset + i*spacing;
 			strand.Bs[i].pos.y = yoffset + i*spacing;
 			strand.Ps[i].pos.y = yoffset + i*spacing + D_S5P;
+			
+			strand.Ss[i].pos.z = config.worldSize/2 + (zoffset - D_SA) * screwFactorSin;
+			strand.Bs[i].pos.z = config.worldSize/2 + (zoffset) * screwFactorSin;
+			strand.Ps[i].pos.z = config.worldSize/2 + (zoffset - D_SA) * screwFactorSin;
 
 			strand.Ss[i].pos.x += posStdev * randNorm();
 			strand.Ss[i].pos.y += posStdev * randNorm();
