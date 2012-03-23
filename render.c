@@ -12,8 +12,8 @@
 #define SCREEN_H 1000
 
 #define SPHERE_SLICES 10
-#define CILINDER_FACES 8
-#define CILINDER_RADIUS (config.radius / 4)
+#define CILINDER_FACES 6
+#define CILINDER_RADIUS (config.radius / 10)
 
 typedef struct {
 	GLfloat x, y, z;
