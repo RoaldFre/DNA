@@ -15,8 +15,8 @@ typedef struct config
 	double thermostatTau;   /* Thermostat relaxation time */
 	double langevinGamma;	/* Friction coefficient for Langevin dynamics */
 	int    verbose;         /* Iterations between dumping info, <0 to disable */
-	double worldSize;       /* The world is a cube with edges of this length 
-				   (Only used for rendering) */
+	double worldSize;       /* World = periodic cube with edges of this length */
+	double truncationLen;	/* Length at which potentials are truncated */
 	int    numBoxes;	/* Number of boxes in each dimension */
 	bool   render;          /* Whether or not to render the simulation */
 	double framerate;       /* The desired framerate when rendering */

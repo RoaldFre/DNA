@@ -43,10 +43,13 @@ static void printUsage(void)
 	printf("             default: %f)\n", DEF_RENDER_FRAMERATE);
 	printf(" -R <flt>  Radius (in Angstrom) of the particles when rendering\n");
 	printf("             default: %f\n", DEF_RENDER_RADIUS);
+	printf(" -l <flt>  truncation Length of potentials (in Angstrom).\n");
+	printf("             negative value: sets truncation to worldsize/2\n");
+	printf("             default: %f\n", DEF_TRUNCATION_LENGTH);
 	printf(" -S <flt>  Size of world (in Angstrom).\n");
 	printf("             default: (number of monomers) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
 	printf(" -b <num>  number of Boxes per dimension\n");
-	printf("             default: max so that boxsize >= largest potential truncation length\n");
+	printf("             default: max so that boxsize >= potential truncation length\n");
 	printf(" -v <int>  Verbose: dump statistics every <int> iterations\n");
 	printf(" -E <flt>  dump Energy statistics every <flt> femtoseconds.\n");
 	printf("           Don't forget to set the number of samples with '-s'!\n");
@@ -67,6 +70,7 @@ static void parseArguments(int argc, char **argv)
 	config.timeStep 	= DEF_TIMESTEP * TIME_FACTOR;
 	config.thermostatTemp	= DEF_TEMPERATURE;
 	config.radius		= DEF_RENDER_RADIUS * LENGTH_FACTOR;
+	config.truncationLen    = DEF_TRUNCATION_LENGTH;
 	config.framerate        = DEF_RENDER_FRAMERATE;
 	config.langevinGamma	= DEF_LANGEVIN_GAMMA;
 
@@ -76,7 +80,7 @@ static void parseArguments(int argc, char **argv)
 	config.measureInterval = -1;
 	config.numBoxes = -1;
 
-	while ((c = getopt(argc, argv, ":t:T:g:c:f:rR:S:b:v:E:s:w:h")) != -1)
+	while ((c = getopt(argc, argv, ":t:T:g:c:f:rR:l:S:b:v:E:s:w:h")) != -1)
 	{
 		switch (c)
 		{
@@ -113,6 +117,9 @@ static void parseArguments(int argc, char **argv)
 			config.radius = atof(optarg) * LENGTH_FACTOR;
 			if (config.radius <= 0)
 				die("Invalid radius %s\n", optarg);
+			break;
+		case 'l':
+			config.truncationLen = atof(optarg) * LENGTH_FACTOR;
 			break;
 		case 'S':
 			config.worldSize = atof(optarg) * 1e-10;
@@ -197,30 +204,28 @@ static void parseArguments(int argc, char **argv)
 				config.measureInterval / TIME_FACTOR,
 				config.timeStep / TIME_FACTOR);
 
-#if 0
-	if (config.truncateLJ < 0) {
+	if (config.truncationLen < 0) {
 		/* Disable truncation -> no space partitioning */
-		config.numBox = 1;
-		config.truncateLJ = worldSize / 2.0;
-		/* Worldsize/2 is necessary for correct pair correlations. 
-		 * Otherwise you get a 'tail' between ws/2 and ws/sqrt(2), 
-		 * which is an artefact from the periodic boundary 
-		 * conditions in a cubic box! */
-	} else if (config.truncateLJ > worldSize / 2.0)
-		config.truncateLJ = worldSize / 2.0; /* same reason */
-#endif
+		config.numBoxes = 1;
+		config.truncationLen = config.worldSize / 2.0;
+		/* Due to (cubic) periodicity, we still need to truncate at 
+		 * worldsize/2 to have correct energy conservation and to 
+		 * make sure every particle 'sees' the same (spherical) 
+		 * potential, no matter where it is within the cube. */
+	} else if (config.truncationLen > config.worldSize / 2.0)
+		config.truncationLen = config.worldSize / 2.0; /* same reason */
 
 	if (config.numBoxes == -1) {
-		config.numBoxes = config.worldSize / 20e-10; //TODO HARDCODED AT 20A FOR NOW
+		config.numBoxes = config.worldSize / config.truncationLen;
 		if (config.numBoxes  < 1)
-			config.numBoxes  = 1;
+			config.numBoxes = 1;
 	}
 
-#if 0
-	if (config.boxSize < config.truncateLJ && config.numBox > 1)
-		die("The boxsize (%f) is smaller than the L-J truncation "
-			"radius (%f)!\n", config.boxSize, config.truncateLJ);
-#endif
+	if (config.worldSize / config.numBoxes < config.truncationLen)
+		die("The boxsize (%f) is smaller than the potential "
+			"truncation radius (%f)!\n",
+			config.worldSize / config.numBoxes,
+			config.truncationLen);
 }
 
 void die(const char *fmt, ...)

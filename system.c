@@ -51,8 +51,8 @@
 #define DIHEDRAL_S3_P_5S_A	(  50.69 * TO_RADIANS)
 
 /* Base-Pair couplings */
-#define COUPLING_BP_AT 	19.28e-21 /* 2.77 kcal/mol == 19.28e-21 J (per particle) */
-#define COUPLING_BP_GC	28.96e-21 /* 4.16 kcal/mol == 28.96e-21 J (per particle) */
+#define COUPLING_BP_AT 	19.28e-11 /* 2.77 kcal/mol == 19.28e-21 J (per particle) */
+#define COUPLING_BP_GC	28.96e-11 /* 4.16 kcal/mol == 28.96e-21 J (per particle) */
 #define DISTANCE_r0_AT	2.9002e-10	/* Knotts et al 2007, table III, 2.9002 Angstrom */
 #define DISTANCE_r0_GC	2.8694e-10	/* Knotts et al 2007, table III, 2.8694 Angstrom */
 
@@ -474,22 +474,25 @@ static void basePairForce(Particle *p1, Particle *p2)
 {
 	double bpCoupling;
 	double bpForceDist;
-	double force;
-	double truncCorrection = 0;
+	double truncLen = config.truncationLen;
+	double truncCorrection;
 	Vec3 forceVec;
 	
 	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	if (rij > truncLen)
+		return; /* Too far away */
+
 	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
 	
 	/* Apply right force constant for AT-bonding and GC-bonding, 
 	 * if not AT or GC then zero */
 	
-	/* Lennard-Jones potential: potential = bpCoupling 
-	 *  * 5*(r^0 / r)^12 - 6*(r^0/r)^10 + 1 ].
+	/* Lennard-Jones potential:
+	 * potential = bpCoupling * 5*(r0 / r)^12 - 6*(r0/r)^10 + 1.
 	 * 
-	 * For the force we differentiate with respect to r,so we get
-	 * bpCoupling * 60*[ r^0^10 / r^11 - r^0^12/r^13 ] */	
-	
+	 * For the force we differentiate with respect to r, so we get
+	 * bpCoupling * 60*[ r0^10 / r^11 - r0^12/r^13 ] */
+
 	if ((p1->type==BASE_A && p2->type==BASE_T) 
 			|| (p1->type==BASE_T && p2->type==BASE_A)) {
 		bpCoupling = COUPLING_BP_AT;
@@ -542,6 +545,9 @@ static double calcLJPotential(double coupling, double rij0, double rijVar2)
 static double basePairPotential(Particle *p1, Particle *p2)
 {
 	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	if (rij > config.truncationLen)
+		return 0; /* Too far away */
+
 	double rij2 = rij*rij;
 	
 	double bpCoupling;
@@ -552,8 +558,8 @@ static double basePairPotential(Particle *p1, Particle *p2)
 	/* Apply right potential constant for AT-bonding and GC-bonding, 
 	 * if not AT or GC then zero */
 	
-	/* Lennard-Jones potential: potential = bpCoupling 
-	 *  * 5*(r^0 / r)^12 - 6*(r^0/r)^10 + 1 ]. */
+	/* Lennard-Jones potential:
+	 * potential = bpCoupling * 5*(r0 / r)^12 - 6*(r0/r)^10 + 1. */
 	
 	if ((p1->type==BASE_A && p2->type==BASE_T) 
 			|| (p1->type==BASE_T && p2->type==BASE_A)) {
@@ -569,8 +575,8 @@ static double basePairPotential(Particle *p1, Particle *p2)
 	}
 
 	/* calculate the correction by which the force should be lifted */
-	double boxSize2 = (config.worldSize / config.numBoxes) * (config.worldSize / config.numBoxes);
-	truncCorrection = calcLJPotential(bpCoupling, bpForceDist, boxSize2);	
+	double truncLen2 = config.truncationLen * config.truncationLen;
+	truncCorrection = calcLJPotential(bpCoupling, bpForceDist, truncLen2);
 		
 	bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
 	
