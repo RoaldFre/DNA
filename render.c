@@ -51,6 +51,7 @@ static void drawCilinder(Vec3 *p1, Vec3 *p2, int faces, double radius);
 static void renderParticles(int num, Particle *ps);
 static void renderBase(Particle *p);
 static void renderStrand(Strand *s);
+static void renderConnection(Particle *p1, Particle *p2);
 static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear, 
 		GLfloat zFar);
 static void calcFps(void);
@@ -233,18 +234,13 @@ static void renderStrand(Strand *s) {
 
 	/* Connections */
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, gray);
-	drawCilinder(&s->Ps[0].pos, &s->Ss[0].pos,
-			CILINDER_FACES, CILINDER_RADIUS);
-	drawCilinder(&s->Ss[0].pos, &s->Bs[0].pos,
-			CILINDER_FACES, CILINDER_RADIUS);
-		for(int i = 1; i < s->numMonomers; i++) {
-			drawCilinder(&s->Ps[i].pos, &s->Ss[i].pos,
-					CILINDER_FACES, CILINDER_RADIUS);
-			drawCilinder(&s->Ss[i].pos, &s->Bs[i].pos,
-					CILINDER_FACES, CILINDER_RADIUS);
-			drawCilinder(&s->Ss[i].pos, &s->Ps[i-1].pos,
-					CILINDER_FACES, CILINDER_RADIUS);
-		}
+	renderConnection(&s->Ps[0], &s->Ss[0]);
+	renderConnection(&s->Ss[0], &s->Bs[0]);
+	for(int i = 1; i < s->numMonomers; i++) {
+		renderConnection(&s->Ps[i], &s->Ss[i]);
+		renderConnection(&s->Ss[i], &s->Bs[i]);
+		renderConnection(&s->Ss[i], &s->Ps[i-1]);
+	}
 
 #if DRAWFORCES
 	/* Forces */
@@ -371,6 +367,12 @@ static void renderBase(Particle *p)
 	}
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, col);
 	renderParticle(p);
+}
+static void renderConnection(Particle *p1, Particle *p2)
+{
+	if (distance(&p1->pos, &p2->pos) > config.worldSize / 2)
+		return; /* To avoid periodic boundary clutter for now */
+	drawCilinder(&p1->pos, &p2->pos, CILINDER_FACES, CILINDER_RADIUS);
 }
 
 static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numInd,
