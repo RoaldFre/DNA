@@ -410,3 +410,8 @@ Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2)
 	return diff;
 }
 
+double nearestImageDist(Vec3 *v1, Vec3 *v2)
+{
+	Vec3 vec = nearestImageVector(v1, v2);
+	return length(&vec);
+}

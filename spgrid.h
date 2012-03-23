@@ -49,4 +49,7 @@ bool sanityCheck(void);
  * the grid is [0, L] in each dimension.)*/
 Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2);
 
+/*  Length of nearestImageVector */
+double nearestImageDist(Vec3 *v1, Vec3 *v2);
+
 #endif
