@@ -17,6 +17,7 @@
 /* Defaults */
 #define DEF_TIMESTEP 			1.0
 #define DEF_TEMPERATURE 		300.0
+#define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
 #define DEF_MONOMER_WORLDSIZE_FACTOR    5.5
 #define DEF_MONOMERS_PER_RENDER 	2000
@@ -32,6 +33,8 @@ static void printUsage(void)
 	printf("             default: %f\n", DEF_TIMESTEP);
 	printf(" -T <flt>  Temperature\n");
 	printf("             default: %f\n", DEF_TEMPERATURE);
+	printf(" -g <flt>  Gamma: friction coefficient for Langevin dynamics\n");
+	printf("             default: %e\n", DEF_LANGEVIN_GAMMA);
 	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
 	printf("             default: %d * timestep\n", DEF_COUPLING_TIMESTEP_FACTOR);
 	printf(" -r        Render\n");
@@ -64,6 +67,7 @@ static void parseArguments(int argc, char **argv)
 	config.thermostatTemp	= DEF_TEMPERATURE;
 	config.radius		= DEF_RENDER_RADIUS * LENGTH_FACTOR;
 	config.framerate        = DEF_RENDER_FRAMERATE;
+	config.langevinGamma	= DEF_LANGEVIN_GAMMA;
 
 	/* guards */
 	config.worldSize = -1;
@@ -71,7 +75,7 @@ static void parseArguments(int argc, char **argv)
 	config.measureInterval = -1;
 	config.numBoxes = -1;
 
-	while ((c = getopt(argc, argv, ":t:T:c:f:rR:S:b:v:E:s:w:h")) != -1)
+	while ((c = getopt(argc, argv, ":t:T:g:c:f:rR:S:b:v:E:s:w:h")) != -1)
 	{
 		switch (c)
 		{
@@ -84,6 +88,11 @@ static void parseArguments(int argc, char **argv)
 			config.thermostatTemp = atof(optarg);
 			if (config.thermostatTemp < 0)
 				die("Invalid temperature %s\n", optarg);
+			break;
+		case 'g':
+			config.langevinGamma = atof(optarg);
+			if (config.langevinGamma < 0)
+				die("Invalid friction coefficient %s\n", optarg);
 			break;
 		case 'c':
 			config.thermostatTau = atof(optarg) * TIME_FACTOR;
@@ -289,9 +298,9 @@ int main(int argc, char **argv)
 
 	parseArguments(argc, argv);
 
-	allocWorld(2, config.numBoxes, config.worldSize); // TODO
+	allocWorld(1, config.numBoxes, config.worldSize); // TODO
 	allocStrand(&world.strands[0], config.numMonomers);
-	allocStrand(&world.strands[1], config.numMonomers);
+	//allocStrand(&world.strands[1], config.numMonomers);
 	fillWorld();
 
 	Timer renderTimer = makeTimer(1.0 / config.framerate);

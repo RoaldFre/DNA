@@ -11,14 +11,15 @@ typedef struct config
 	long   measureSamples;  /* Number of samples to measure */
 	double measureWait;     /* Time to wait before starting measurement */
 	int    numMonomers;     /* Number of monomers in the DNA strand TODO */
-	double thermostatTemp;  /* Thermostat temperature. */
-	double thermostatTau;   /* Thermostat relaxation time. */
+	double thermostatTemp;  /* Thermostat temperature */
+	double thermostatTau;   /* Thermostat relaxation time */
+	double langevinGamma;	/* Friction coefficient for Langevin dynamics */
 	int    verbose;         /* Iterations between dumping info, <0 to disable */
 	double worldSize;       /* The world is a cube with edges of this length 
 				   (Only used for rendering) */
 	int    numBoxes;	/* Number of boxes in each dimension */
 	bool   render;          /* Whether or not to render the simulation */
-	double framerate;       /* The desired framerate when rendering. */
+	double framerate;       /* The desired framerate when rendering */
 	double radius;          /* The radius of the particles to render */
 } Config;
 

@@ -229,7 +229,7 @@ void fillWorld()
 }
 
 /* Returns a number sampled from a standard normal distribution. */
-static double randNorm()
+static double randNorm(void)
 {
 	/* Box-Muller transform */
 	double u1 = ((double) rand()) / RAND_MAX;
@@ -238,7 +238,18 @@ static double randNorm()
 	return sqrt(-2*log(u1)) * cos(2*M_PI*u2);
 }
 
-void freeWorld()
+/* Returns a vector with components sampled from a standard normal 
+ * distribution. */
+static Vec3 randNormVec(void)
+{
+	Vec3 res;
+	res.x = randNorm();
+	res.y = randNorm();
+	res.z = randNorm();
+	return res;
+}
+
+void freeWorld(void)
 {
 	assert(world.strands != NULL);
 	for (int s = 0; s < world.numStrands; s++)
@@ -301,7 +312,7 @@ static void verletHelper2(Particle *p)
 	scale(&p->F, dt / (2 * p->m), &tmp);
 	add(&p->vel, &tmp, &p->vel);
 }
-static void verlet()
+static void verlet(void)
 {
 	// The compiler better inlines all of this. TODO if not: force it.
 	forEveryParticle(&verletHelper1);
@@ -310,6 +321,58 @@ static void verlet()
 	reboxParticles(); //TODO only once every N iterations...
 }
 
+static void langevinBBKhelper1(Particle *p)
+{
+	double dt    = config.timeStep;
+	double gamma = config.langevinGamma;
+
+	Vec3 tmp1, tmp2;
+
+	/* from v(t) to v(t + dt/2) */
+	scale(&p->vel, 1 - gamma*dt/2, &tmp1);
+
+	/* p->F is regular force + random collision force */
+	scale(&p->F, dt / (2 * p->m), &tmp2);
+
+	add(&tmp1, &tmp2, &p->vel);
+
+	/* from r(t) to r(t + dt) */
+	scale(&p->vel, dt, &tmp1);
+	add(&p->pos, &tmp1, &p->pos);
+}
+static void langevinBBKhelper2(Particle *p)
+{
+	double dt    = config.timeStep;
+	double gamma = config.langevinGamma;
+	double T     = config.thermostatTemp;
+
+	/* Regular forces have been calculated. Add the random force due 
+	 * to collisions to the total force. The result is:
+	 * p->F = F(t + dt) + R(t + dt) */
+	/* TODO check that compiler inlines this and precalculates the 
+	 * prefactor before p->m when looping over all particles. */
+	double Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * gamma * p->m / dt);
+	Vec3 R = randNormVec();
+	scale(&R, Rstddev, &R);
+	add(&p->F, &R, &p->F);
+
+	/* from v(t + dt/2) to v(t + dt) */
+	Vec3 tmp;
+	scale(&p->F, dt / (2 * p->m), &tmp);
+	add(&p->vel, &tmp, &tmp);
+	scale(&tmp, 1 / (1 + gamma*dt/2), &p->vel);
+}
+
+/* BBK integrator for Langevin dynamics. Uses the one based on 
+ * velocity-verlet to include calculation of the velocities. 
+ * See http://localscf.com/LangevinDynamics.aspx */
+static void langevinBBK(void)
+{
+	forEveryParticle(&langevinBBKhelper1); /* updates positions */
+	reboxParticles(); //TODO only once every N iterations(?)
+	calculateForces();
+	forEveryParticle(&langevinBBKhelper2);
+}
 
 
 static double temperature(void)
@@ -689,10 +752,14 @@ static void Fstack(Particle *p1, Particle *p2)
 
 void stepWorld(void)
 {
+#if 0
 	verlet();
 	assert(physicsCheck());
 	thermostat();
 	assert(physicsCheck());
+#else
+	langevinBBK();
+#endif
 	sim_time += config.timeStep;
 }
 
