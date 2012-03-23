@@ -458,12 +458,14 @@ static double calcLJForce(double coupling, double rij0, double rijVar)
 
 static void basePairForce(Particle *p1, Particle *p2)
 {
-	double rij = distance(&p1->pos, &p2->pos);
 	double bpCoupling;
 	double bpForceDist;
 	double force;
 	double truncCorrection = 0;
 	Vec3 forceVec;
+	
+	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
 	
 	/* Apply right force constant for AT-bonding and GC-bonding, 
 	 * if not AT or GC then zero */
@@ -492,13 +494,6 @@ static void basePairForce(Particle *p1, Particle *p2)
 	truncCorrection = calcLJForce(bpCoupling, bpForceDist, boxSize);
 			
 	force = calcLJForce(bpCoupling, bpForceDist, rij) - truncCorrection;
-	
-	/* calculate the direction of the force between the basepairs */
-	Vec3 direction;
-	
-	/* subtract and normalize */
-	direction = nearestImageVector(&p1->pos, &p2->pos);
-	normalize(&direction, &direction);
 	
 	/* scale the direction with the calculated force */
 	scale(&direction, force, &forceVec);
@@ -536,7 +531,9 @@ static double calcLJPotential(double coupling, double rij0, double rijVar2)
 /* Lennard-Jones Potential */
 static double basePairPotential(Particle *p1, Particle *p2)
 {
-	double rij2 = distance2(&p1->pos, &p2->pos);
+	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	double rij2 = rij*rij;
+	
 	double bpCoupling;
 	double bpForceDist;
 	double bpPotential;
@@ -577,7 +574,7 @@ static double Vbond(Particle *p1, Particle *p2, double d0)
 {
 	double k1 = BOND_K1;
 	double k2 = BOND_K2;
-	double d = distance(&p1->pos, &p2->pos) - d0;
+	double d = nearestImageDistance(&p1->pos, &p2->pos) - d0;
 	double d2 = d * d;
 	double d4 = d2 * d2;
 	return k1 * d2  +  k2 * d4;
@@ -587,7 +584,7 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
 	double k1 = BOND_K1;
 	double k2 = BOND_K2;
 	Vec3 drVec, drVecNormalized, F;
-	sub(&p2->pos, &p1->pos, &drVec);
+	drVec = nearestImageVector(&p1->pos, &p2->pos);
 	double dr = length(&drVec);
 	double d  = dr - d0;
 	double d3 = d * d * d;
@@ -611,8 +608,10 @@ static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 {
 	Vec3 a, b;
 	double ktheta = BOND_Ktheta;
-	sub(&p1->pos, &p2->pos, &a);
-	sub(&p3->pos, &p2->pos, &b);
+	
+	a = nearestImageVector(&p2->pos, &p1->pos);
+	b = nearestImageVector(&p2->pos, &p3->pos);
+
 	double dtheta = angle(&a, &b) - theta0;
 	return ktheta/2 * dtheta*dtheta;
 }
@@ -620,8 +619,10 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 {
 	Vec3 a, b;
 	double ktheta = BOND_Ktheta;
-	sub(&p1->pos, &p2->pos, &a);
-	sub(&p3->pos, &p2->pos, &b);
+	
+	a = nearestImageVector(&p2->pos, &p1->pos);
+	b = nearestImageVector(&p2->pos, &p3->pos);
+	
 	double lal = length(&a);
 	double lbl = length(&b);
 	double adotb = dot(&a, &b);
