@@ -410,3 +410,24 @@ Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2)
 	return diff;
 }
 
+double nearestImageDistance(Vec3 *v1, Vec3 *v2)
+{
+	Vec3 rijVec = nearestImageVector(v1, v2);
+	double rijLength = length(&rijVec);
+	
+	return rijLength;
+}
+
+
+Vec3 nearestImageUnitVector(Vec3 *v1, Vec3 *v2)
+{
+	Vec3 rijUnit;
+	
+	Vec3 rijVec = nearestImageVector(v1, v2);
+	double rijLength = length(&rijVec);
+	
+	scale(&rijVec, rijLength, &rijUnit);
+	return rijUnit;
+}
+
+

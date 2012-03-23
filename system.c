@@ -395,12 +395,14 @@ static double calcLJForce(double coupling, double rij0, double rijVar)
 
 static void basePairForce(Particle *p1, Particle *p2)
 {
-	double rij = distance(&p1->pos, &p2->pos);
 	double bpCoupling;
 	double bpForceDist;
 	double force;
 	double truncCorrection = 0;
 	Vec3 forceVec;
+	
+	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
 	
 	/* Apply right force constant for AT-bonding and GC-bonding, 
 	 * if not AT or GC then zero */
@@ -429,13 +431,6 @@ static void basePairForce(Particle *p1, Particle *p2)
 	truncCorrection = calcLJForce(bpCoupling, bpForceDist, boxSize);
 			
 	force = calcLJForce(bpCoupling, bpForceDist, rij) - truncCorrection;
-	
-	/* calculate the direction of the force between the basepairs */
-	Vec3 direction;
-	
-	/* subtract and normalize */
-	direction = nearestImageVector(&p1->pos, &p2->pos);
-	normalize(&direction, &direction);
 	
 	/* scale the direction with the calculated force */
 	scale(&direction, force, &forceVec);
@@ -473,7 +468,9 @@ static double calcLJPotential(double coupling, double rij0, double rijVar2)
 /* Lennard-Jones Potential */
 static double basePairPotential(Particle *p1, Particle *p2)
 {
-	double rij2 = distance2(&p1->pos, &p2->pos);
+	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	double rij2 = rij*rij;
+	
 	double bpCoupling;
 	double bpForceDist;
 	double bpPotential;
