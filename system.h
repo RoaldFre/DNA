@@ -4,6 +4,12 @@
 #include <stdbool.h>
 #include "vmath.h"
 
+typedef enum integratorEnum
+{
+	LANGEVIN,
+	VERLET
+} Integrator;
+
 typedef struct config
 {
 	double timeStep;        /* The timestep (dt) in the simulation */
@@ -11,6 +17,7 @@ typedef struct config
 	long   measureSamples;  /* Number of samples to measure */
 	double measureWait;     /* Time to wait before starting measurement */
 	int    numMonomers;     /* Number of monomers in the DNA strand TODO */
+	Integrator integrator;	/* The integrator to use for the simulation */
 	double thermostatTemp;  /* Thermostat temperature */
 	double thermostatTau;   /* Thermostat relaxation time */
 	double langevinGamma;	/* Friction coefficient for Langevin dynamics */

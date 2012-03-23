@@ -19,25 +19,23 @@
 #define DEF_TEMPERATURE 		300.0
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
-#define DEF_TRUNCATION_LENGTH		20
+#define DEF_TRUNCATION_LENGTH		20.0
 #define DEF_MONOMER_WORLDSIZE_FACTOR    8.0
 #define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_RENDER_RADIUS 		1.5
 #define DEF_MEASUREMENT_WAIT 		4e4
 #define DEF_RENDER_FRAMERATE 		30.0
+#define DEF_INTEGRATOR			LANGEVIN
 
 static void printUsage(void)
 {
 	printf("Usage: main <number of monomers> [flags]\n");
+	printf("\n");
 	printf("Flags:\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
 	printf(" -T <flt>  Temperature\n");
 	printf("             default: %f\n", DEF_TEMPERATURE);
-	printf(" -g <flt>  Gamma: friction coefficient for Langevin dynamics\n");
-	printf("             default: %e\n", DEF_LANGEVIN_GAMMA);
-	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
-	printf("             default: %d * timestep\n", DEF_COUPLING_TIMESTEP_FACTOR);
 	printf(" -r        Render\n");
 	printf(" -f <flt>  desired Framerate when rendering.\n");
 	printf("             default: %f)\n", DEF_RENDER_FRAMERATE);
@@ -57,6 +55,17 @@ static void printUsage(void)
 	printf("             default: Don't sample, loop forever\n");
 	printf(" -w <flt>  Wait <flt> femtoseconds before starting the measurements\n");
 	printf("             default: %f\n", DEF_MEASUREMENT_WAIT);
+	printf(" -i <type> Integrator to use. Values for <type>:\n");
+	printf("             l: Langevin (velocity BBK) [default]\n");
+	printf("             v: velocity Verlet with Berendsen thermostat\n");
+	printf("\n");
+	printf("Parameters for velocity Verlet + Berendsen termostat:\n");
+	printf(" -g <flt>  Gamma: friction coefficient for Langevin dynamics\n");
+	printf("             default: %e\n", DEF_LANGEVIN_GAMMA);
+	printf("\n");
+	printf("Parameters for velocity Verlet + Berendsen termostat:\n");
+	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
+	printf("             default: %d * timestep\n", DEF_COUPLING_TIMESTEP_FACTOR);
 }
 
 static void parseArguments(int argc, char **argv)
@@ -73,6 +82,7 @@ static void parseArguments(int argc, char **argv)
 	config.truncationLen    = DEF_TRUNCATION_LENGTH;
 	config.framerate        = DEF_RENDER_FRAMERATE;
 	config.langevinGamma	= DEF_LANGEVIN_GAMMA;
+	config.integrator	= DEF_INTEGRATOR;
 
 	/* guards */
 	config.worldSize = -1;
@@ -80,7 +90,7 @@ static void parseArguments(int argc, char **argv)
 	config.measureInterval = -1;
 	config.numBoxes = -1;
 
-	while ((c = getopt(argc, argv, ":t:T:g:c:f:rR:l:S:b:v:E:s:w:h")) != -1)
+	while ((c = getopt(argc, argv, ":t:T:g:c:f:rR:l:S:b:v:E:s:w:i:h")) != -1)
 	{
 		switch (c)
 		{
@@ -155,6 +165,16 @@ static void parseArguments(int argc, char **argv)
 			if (config.measureWait < 0)
 				die("Invalid wait time %f\n", config.measureWait);
 			break;
+		case 'i':
+			if (optarg[0] == '\0' || optarg[1] != '\0')
+				die("Integrator: badly formatted integrator type\n");
+			switch(optarg[0]) {
+				case 'l': config.integrator = LANGEVIN; break;
+				case 'v': config.integrator = VERLET; break;
+				default: die("Unknown integrator type%s\n", optarg);
+					 break;
+			}
+			break;
 		case 'h':
 			printUsage();
 			exit(0);
@@ -168,7 +188,7 @@ static void parseArguments(int argc, char **argv)
 			die("Option -%c not recognized\n", optopt);
 			break;
 		default:
-			/* XXX */
+			die("Error parsing options!");
 			break;
 		}
 	}

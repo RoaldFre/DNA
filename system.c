@@ -769,14 +769,20 @@ static void Fstack(Particle *p1, Particle *p2)
 
 void stepWorld(void)
 {
-#if 0
-	verlet();
-	assert(physicsCheck());
-	thermostat();
-	assert(physicsCheck());
-#else
-	langevinBBK();
-#endif
+	switch(config.integrator) {
+	case VERLET:
+		verlet();
+		assert(physicsCheck());
+		thermostat();
+		assert(physicsCheck());
+		break;
+	case LANGEVIN:
+		langevinBBK();
+		break;
+	default:
+		assert(false);
+		break;
+	}
 	sim_time += config.timeStep;
 }
 
