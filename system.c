@@ -489,11 +489,7 @@ static void basePairForce(Particle *p1, Particle *p2)
 		return; /* no force */
 	}
 	
-	/* calculate the correction by which the force should be lifted */
-	double boxSize = (config.worldSize / config.numBoxes);
-	truncCorrection = calcLJForce(bpCoupling, bpForceDist, boxSize);
-			
-	force = calcLJForce(bpCoupling, bpForceDist, rij) - truncCorrection;
+	double force = calcLJForce(bpCoupling, bpForceDist, rij);
 	
 	/* scale the direction with the calculated force */
 	scale(&direction, force, &forceVec);
