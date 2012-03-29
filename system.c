@@ -56,6 +56,12 @@
 #define DISTANCE_r0_AT	2.9002e-10	/* Knotts et al 2007, table III, 2.9002 Angstrom */
 #define DISTANCE_r0_GC	2.8694e-10	/* Knotts et al 2007, table III, 2.8694 Angstrom */
 
+/* Coulomb interaction between phosphates */
+#define CHARGE_ELECTRON	1.602e-19	/* 1.602 Coulomb */
+#define VACUUM_PERMITTIVITY	8.8541e-12 	/* 8.854e-12 Farads/meter, epsilon_0 */
+#define COUPLING_EPS_H2O	(78*VACUUM_PERMITTIVITY) /* 78 epsilon_0 */
+#define DEBYE_LENGTH 	13.603e-10	/* 13.603 Angstrom for 50mM = [Na+]*/
+
 #define ENERGY_FACTOR	(1/1.602177e-19) /* Energy in electronvolt */
 #define BOLTZMANN_CONSTANT    1.38065e-23
 #define FROM_ANGSTROM_SQUARED 1e20 /* Bond constants are given for angstrom */
@@ -81,6 +87,9 @@ static double Vdihedral(Particle*, Particle*, Particle*, Particle*, double);
 static void   Fdihedral(Particle*, Particle*, Particle*, Particle*, double);
 static void   FdihedralParticle(Particle *target, Particle *p1, Particle *p2,
 			Particle *p3, Particle *p4, double Vorig, double phi0);
+static double	calcFqq(Particle *p1, Particle *p2);
+static double 	calcVqq(Particle *p1, Particle *p2);
+static double calcDebyeLength(void);
 static void   addBpPotential(Particle *p1, Particle *p2, void *data);
 
 /* GLOBALS */
@@ -198,6 +207,7 @@ void fillWorld()
 			strand.Ss[i].pos.y = yoffset + i*spacing;
 			strand.Bs[i].pos.y = yoffset + i*spacing;
 			strand.Ps[i].pos.y = yoffset + i*spacing + D_S5P;
+			
 			
 			strand.Ss[i].pos.z = config.worldSize/2 + (zoffset - D_SA) * screwFactorSin;
 			strand.Bs[i].pos.z = config.worldSize/2 + (zoffset) * screwFactorSin;
@@ -477,6 +487,7 @@ static void basePairForce(Particle *p1, Particle *p2)
 	double truncLen = config.truncationLen;
 	double truncCorrection;
 	Vec3 forceVec;
+	double force;
 	
 	double rij = nearestImageDistance(&p1->pos, &p2->pos);
 	if (rij > truncLen)
@@ -497,16 +508,21 @@ static void basePairForce(Particle *p1, Particle *p2)
 			|| (p1->type==BASE_T && p2->type==BASE_A)) {
 		bpCoupling = COUPLING_BP_AT;
 		bpForceDist = DISTANCE_r0_AT;
+		force = calcLJForce(bpCoupling, bpForceDist, rij);
 		
 	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
 			|| (p1->type==BASE_C && p2->type==BASE_G)) {
 		bpCoupling = COUPLING_BP_GC;
 		bpForceDist = DISTANCE_r0_GC;
+		force = calcLJForce(bpCoupling, bpForceDist, rij);
+		
+	} else if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
+		force = calcFqq(p1, p2);
+		
 	} else {
 		return; /* no force */
 	}
 	
-	double force = calcLJForce(bpCoupling, bpForceDist, rij);
 	
 	/* scale the direction with the calculated force */
 	scale(&direction, force, &forceVec);
@@ -514,6 +530,45 @@ static void basePairForce(Particle *p1, Particle *p2)
 	/* add force to particle objects */
 	add(&p1->F, &forceVec, &p1->F);
 	sub(&p2->F, &forceVec, &p2->F);
+}
+
+static double calcDebyeLength(void)
+{
+	return DEBYE_LENGTH;
+}
+
+
+static double calcFqq(Particle *p1, Particle *p2)
+{
+	double couplingConstant = CHARGE_ELECTRON*CHARGE_ELECTRON/
+											(4*M_PI*COUPLING_EPS_H2O);
+	double debyeLength = calcDebyeLength();
+	double distanceLength = nearestImageDistance(&p2->pos, &p1->pos);
+		
+	double expArgument = - distanceLength/debyeLength;
+	double exponentialPart = exp(expArgument);
+	
+	double forceQQ = couplingConstant* exponentialPart*
+					( 1/(distanceLength*distanceLength) 
+									+ 1/(debyeLength*distanceLength) );
+	
+	return forceQQ;
+	
+}
+
+static double calcVqq(Particle *p1, Particle *p2)
+{
+	double couplingConstant = CHARGE_ELECTRON*CHARGE_ELECTRON/
+											(4*M_PI*COUPLING_EPS_H2O);
+	double debyeLength = calcDebyeLength();
+	double distanceLength = nearestImageDistance(&p2->pos, &p1->pos);
+	
+	double expArgument = - distanceLength/debyeLength;
+	double exponentialPart = exp(expArgument);
+	
+	double potentialQQ = couplingConstant * exponentialPart / distanceLength;
+	
+	return potentialQQ*exponentialPart;	
 }
 
 
@@ -565,21 +620,28 @@ static double basePairPotential(Particle *p1, Particle *p2)
 			|| (p1->type==BASE_T && p2->type==BASE_A)) {
 		bpCoupling = COUPLING_BP_AT;
 		bpForceDist = DISTANCE_r0_AT;
+		/* calculate the correction by which the force should be lifted */
+		double truncLen2 = config.truncationLen * config.truncationLen;
+		truncCorrection = calcLJPotential(bpCoupling, bpForceDist, truncLen2);
+		bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
 		
 	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
 			|| (p1->type==BASE_C && p2->type==BASE_G)) {
 		bpCoupling = COUPLING_BP_GC;
 		bpForceDist = DISTANCE_r0_GC;
+		/* calculate the correction by which the force should be lifted */
+		double truncLen2 = config.truncationLen * config.truncationLen;
+		truncCorrection = calcLJPotential(bpCoupling, bpForceDist, truncLen2);
+		bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
+		
+	} else if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
+		bpPotential = calcVqq(p1, p2);
+		
 	} else {
 		return 0; /* return potential = 0 */
 	}
 
-	/* calculate the correction by which the force should be lifted */
-	double truncLen2 = config.truncationLen * config.truncationLen;
-	truncCorrection = calcLJPotential(bpCoupling, bpForceDist, truncLen2);
-		
-	bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
-	
+
 	return bpPotential;
 }
 
@@ -765,6 +827,8 @@ static void Fstack(Particle *p1, Particle *p2)
 	add(&p1->F, &Fi, &p1->F);
 	sub(&p2->F, &Fi, &p2->F);
 }
+
+
 
 
 void stepWorld(void)
