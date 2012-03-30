@@ -291,22 +291,28 @@ void freeStrand(Strand *strand)
 /* loop over every particle in the world */
 void forEveryParticle(void (*f)(Particle *p))
 {
-	for (int s = 0; s < world.numStrands; s++) {
-		Strand *strand = &world.strands[s];
-		for (int i = 0; i < 3*strand->numMonomers; i++)
-			f(&strand->all[i]);
-	}
+	for (int s = 0; s < world.numStrands; s++)
+		forEveryParticleOf(&world.strands[s], f);
 }
 /* loop over every particle in the world, pass [D]ata to the function */
 void forEveryParticleD(void (*f)(Particle *p, void *data), void *data)
 {
-	for (int s = 0; s < world.numStrands; s++) {
-		Strand *strand = &world.strands[s];
-		for (int i = 0; i < 3*strand->numMonomers; i++)
-			f(&strand->all[i], data);
-	}
+	for (int s = 0; s < world.numStrands; s++)
+		forEveryParticleOfD(&world.strands[s], f, data);
 }
-
+/* loop over every particle in the strand */
+void forEveryParticleOf(Strand *s, void (*f)(Particle *p))
+{
+	for (int i = 0; i < 3 * s->numMonomers; i++)
+		f(&s->all[i]);
+}
+/* loop over every particle in the strand, pass [D]ata to the function */
+void forEveryParticleOfD(Strand *s,
+			void (*f)(Particle *p, void *data), void *data)
+{
+	for (int i = 0; i < 3 * s->numMonomers; i++)
+		f(&s->all[i], data);
+}
 
 
 

@@ -227,7 +227,7 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 		for (int i = 0; i < n1; i++) { /* i'th particle in box */
 			Particle *p2 = p->next;
 			for (int j = i + 1; j < n1; j++) {
-				(*f)(p, p2, data);
+				f(p, p2, data);
 				p2 = p2->next;
 			}
 			/* Loop over particles in adjacent boxes to the box 
@@ -251,7 +251,7 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 				p2 = b->p;
 				n2 = b->n;
 				for (int j = 0; j < n2; j++) {
-					(*f)(p, p2, data);
+					f(p, p2, data);
 					p2 = p2->next;
 				}
 				assert(p2 == b->p);
@@ -278,7 +278,7 @@ static void pairWrapper(Particle *p1, Particle *p2, void *data)
 {
 	/* Black function pointer casting magic */
 	void (*f)(Particle *p1, Particle *p2) = (void (*)(Particle *p1, Particle *p2)) data;
-	(*f)(p1, p2);
+	f(p1, p2);
 }
 	
 
@@ -296,7 +296,7 @@ static void forEVERYpair(void (*f)(Particle *p1, Particle *p2, void *data),
 			for (int b2 = 0; b2 < nb*nb*nb; b2++) {
 				Particle *p2 = grid[b1].p;
 				for (int i2 = 0; i2 < grid[b1].n; i2++) {
-					(*f)(p1, p2, data);
+					f(p1, p2, data);
 					p2 = p2->next;
 				}
 			}

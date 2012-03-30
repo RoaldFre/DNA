@@ -101,6 +101,9 @@ void dumpEnergies(FILE *stream);
 bool physicsCheck(void);
 void forEveryParticle(void (*f)(Particle *p));
 void forEveryParticleD(void (*f)(Particle *p, void *data), void *data);
+void forEveryParticleOf(Strand *s, void (*f)(Particle *p));
+void forEveryParticleOfD(Strand *s,
+			void (*f)(Particle *p, void *data), void *data);
 
 extern World world;
 extern Config config;
