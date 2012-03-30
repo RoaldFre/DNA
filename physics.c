@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "system.h"
+#include "physics.h"
 #include "vmath.h"
 #include "spgrid.h"
 

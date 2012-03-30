@@ -9,7 +9,7 @@
 #include <sys/resource.h>
 #include "main.h"
 #include "vmath.h"
-#include "system.h"
+#include "physics.h"
 #include "render.h"
 
 #define DATA_FILE_NAME "/tmp/data.txt"
