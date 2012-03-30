@@ -516,18 +516,20 @@ static void basePairForce(Particle *p1, Particle *p2)
 		bpForceDist = DISTANCE_r0_GC;
 		force = calcLJForce(bpCoupling, bpForceDist, rij);
 		
+	/* If phosphates, apply Coulomb interaction between them */
+	
 	} else if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
 		force = calcFqq(p1, p2);
-		
+	
+	/* Else, no force and return without modifying particles */
 	} else {
-		return; /* no force */
+		return; 
 	}
 	
-	
-	/* scale the direction with the calculated force */
+	/* Scale the direction with the calculated force */
 	scale(&direction, force, &forceVec);
 
-	/* add force to particle objects */
+	/* Add force to particle objects */
 	add(&p1->F, &forceVec, &p1->F);
 	sub(&p2->F, &forceVec, &p2->F);
 }
@@ -633,12 +635,16 @@ static double basePairPotential(Particle *p1, Particle *p2)
 		double truncLen2 = config.truncationLen * config.truncationLen;
 		truncCorrection = calcLJPotential(bpCoupling, bpForceDist, truncLen2);
 		bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
-		
+	
+	/* If phosphates, apply Coulomb interaction between them */
+	
 	} else if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
 		bpPotential = calcVqq(p1, p2);
-		
+	
+	/* Else, no potential and return potential = 0 */
+	
 	} else {
-		return 0; /* return potential = 0 */
+		return 0; 
 	}
 
 
