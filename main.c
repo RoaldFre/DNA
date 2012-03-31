@@ -329,6 +329,22 @@ int main(int argc, char **argv)
 	//allocStrand(&world.strands[1], config.numMonomers);
 	fillWorld();
 
+
+	/* TODO this is just a quick and dirty test of the task framework 
+	 * for now! */
+	Task *tasks[2];
+	tasks[0] = &renderTask;
+	tasks[1] = &integratorTask;
+	Task task = sequence(tasks, 2);
+	run(&task);
+	return 0;
+
+
+
+
+
+#if 0
+
 	Timer renderTimer = makeTimer(1.0 / config.framerate);
 
 	if (config.render)
@@ -377,4 +393,5 @@ int main(int argc, char **argv)
 
 	freeWorld();
 	return 0;
+#endif
 }

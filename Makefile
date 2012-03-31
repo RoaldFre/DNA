@@ -1,4 +1,4 @@
-OBJECTS = physics.o spgrid.o main.o render.o
+OBJECTS = system.o task.o physics.o spgrid.o render.o main.o
 WARNINGS = -pedantic -Wextra -Wall -Wwrite-strings -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes
 PROFILE = 
 OPTIM = -O4 -flto -DNDEBUG -fexcess-precision=fast -ffast-math -finline-limit=2000 

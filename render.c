@@ -5,6 +5,7 @@
 #include "main.h"
 #include "render.h"
 #include "physics.h"
+#include "task.h"
 
 #define DRAWFORCES 0
 
@@ -56,6 +57,9 @@ static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear,
 		GLfloat zFar);
 static void calcFps(void);
 static void render(void);
+
+void *renderTaskStart(void *initialData);
+bool renderTaskTick(void *state);
 
 static void calcFps()
 {
@@ -475,3 +479,26 @@ static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numI
 
 	return;
 }
+
+
+/* TODO Still only quick tests -- need to rework this so I pass proper 
+ * config data */
+void *renderTaskStart(void *initialData)
+{
+	UNUSED(initialData);
+	initRender();
+	return NULL;
+}
+
+bool renderTaskTick(void *state)
+{
+	UNUSED(state);
+	return stepGraphics();
+}
+
+Task renderTask = {
+	NULL,
+	&renderTaskStart,
+	&renderTaskTick,
+	NULL
+};

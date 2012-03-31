@@ -276,8 +276,8 @@ void forEveryPair(void (*f)(Particle *p1, Particle *p2))
  * the non-data function poiner as the data argument. */
 static void pairWrapper(Particle *p1, Particle *p2, void *data)
 {
-	/* Black function pointer casting magic */
-	void (*f)(Particle *p1, Particle *p2) = (void (*)(Particle *p1, Particle *p2)) data;
+	void (*f)(Particle *p1, Particle *p2) = 
+			(void (*)(Particle *p1, Particle *p2)) data;
 	f(p1, p2);
 }
 	

@@ -92,12 +92,6 @@ static double 	calcVqq(Particle *p1, Particle *p2);
 static double calcDebyeLength(void);
 static void   addBpPotential(Particle *p1, Particle *p2, void *data);
 
-/* GLOBALS */
-
-World world;
-Config config;
-
-double sim_time = 0;
 
 
 
@@ -491,7 +485,6 @@ static void basePairForce(Particle *p1, Particle *p2)
 	double bpCoupling;
 	double bpForceDist;
 	double truncLen = config.truncationLen;
-	double truncCorrection;
 	Vec3 forceVec;
 	double force;
 	
@@ -841,8 +834,6 @@ static void Fstack(Particle *p1, Particle *p2)
 }
 
 
-
-
 void stepWorld(void)
 {
 	switch(config.integrator) {
@@ -859,7 +850,6 @@ void stepWorld(void)
 		assert(false);
 		break;
 	}
-	sim_time += config.timeStep;
 }
 
 static void kineticHelper(Particle *p, void *data)
@@ -990,10 +980,28 @@ void dumpEnergies(FILE *stream)
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack;
 	fprintf(stream, "%e %e %e %e %e %e %e\n",
-			sim_time, E, K, pe.bond, pe.angle, pe.dihedral, pe.stack);
+			getTime(), E, K, pe.bond, pe.angle, pe.dihedral, pe.stack);
 #else
 	/* DEBUG equipartition theorem */
 	dumpEquipartitionStats();
 #endif
 }
 
+
+
+/* TODO Still only quick tests -- need to rework this so I pass proper 
+ * config data */
+bool integratorTaskTick(void *state);
+bool integratorTaskTick(void *state)
+{
+	UNUSED(state);
+	stepWorld();
+	return true;
+}
+
+Task integratorTask = {
+	NULL,
+	NULL,
+	&integratorTaskTick,
+	NULL
+};
