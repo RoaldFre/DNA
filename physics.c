@@ -399,7 +399,7 @@ static void langevinBBK(void)
 }
 
 
-static double temperature(void)
+double temperature(void)
 {
 	return 2.0 / (3.0 * BOLTZMANN_CONSTANT)
 			* kineticEnergy() / (config.numMonomers * 3.0);

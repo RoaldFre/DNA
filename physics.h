@@ -21,6 +21,8 @@ void forEveryParticleOf(Strand *s, void (*f)(Particle *p));
 void forEveryParticleOfD(Strand *s,
 			void (*f)(Particle *p, void *data), void *data);
 
+double temperature(void);
+
 extern Task integratorTask;
 
 #endif

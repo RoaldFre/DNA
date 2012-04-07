@@ -106,7 +106,9 @@ typedef struct task
 
 	/* Called at every iteration step. Gets passed the data pointer 
 	 * that start() returned. Returns false if the simulation has to be 
-	 * stopped, true if everything can continue. */
+	 * stopped, true if everything can continue.
+	 * Time gets updated after the call to tick(), ie the simulation 
+	 * time when tick() gets called first is always 0. */
 	bool (*tick)(void *state);
 
 	/* Called at the end of the simulation run.  Gets passed the data 

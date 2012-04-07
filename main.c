@@ -11,6 +11,7 @@
 #include "vmath.h"
 #include "physics.h"
 #include "render.h"
+#include "samplers.h"
 
 #define DATA_FILE_NAME "/tmp/data.txt"
 
@@ -318,8 +319,6 @@ static bool stepSimulation(Timer *renderTimer) {
 
 int main(int argc, char **argv)
 {
-	bool keepGoing = true;
-
 	srand(time(NULL)); //seed random generator
 
 	parseArguments(argc, argv);
@@ -330,18 +329,26 @@ int main(int argc, char **argv)
 	fillWorld();
 
 
-	/* TODO this is just a quick and dirty test of the task framework 
-	 * for now! */
-	Task *tasks[2];
+	/* TODO this is just a quick and dirty test of the task and 
+	 * measurement framework for now! */
+	MeasurementConf measConf;
+	measConf.measureSamples = 10;
+	measConf.measureInterval = 10e-15;
+	measConf.measureWait = 200e-15;
+
+	Measurement meas;
+	meas.measConf = measConf;
+	meas.sampler = averageTemperatureSampler();
+
+	Task measTask = measurementTask(&meas);
+
+	Task *tasks[3];
 	tasks[0] = &renderTask;
 	tasks[1] = &integratorTask;
-	Task task = sequence(tasks, 2);
+	tasks[2] = &measTask;
+	Task task = sequence(tasks, 3);
 	run(&task);
 	return 0;
-
-
-
-
 
 #if 0
 
