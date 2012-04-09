@@ -35,3 +35,24 @@ void avgTempStop(long n, void *data)
 	free(accum);
 }
 
+
+
+bool dumpStatsSample(long i, void *data);
+
+Sampler dumpStatsSampler(void)
+{
+	Sampler sampler;
+	sampler.samplerConf = NULL;
+	sampler.start  = NULL;
+	sampler.sample = &dumpStatsSample;
+	sampler.stop   = NULL;
+	return sampler;
+}
+bool dumpStatsSample(long i, void *data)
+{
+	UNUSED(i);
+	UNUSED(data);
+	dumpStats();
+	return true;
+}
+
