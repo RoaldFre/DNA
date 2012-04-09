@@ -77,7 +77,6 @@ void addToGrid(Particle *p) {
 	Box *box = boxFromParticle(p);
 	addToBox(p, box);
 	numParticles++;
-	assert(sanityCheck());
 }
 
 void reboxParticles(void)
@@ -204,8 +203,6 @@ static void addToBox(Particle *p, Box *b)
 void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data)
 {
 	int n1, n2;
-
-	assert(sanityCheck());
 
 	if (nb < 3) {
 		/* Brute force. Reason: see comment below */
