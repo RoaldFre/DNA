@@ -7,9 +7,15 @@
 /* Configuration of a generic measurement */
 typedef struct measurementConf
 {
-	long   measureSamples;  /* Total number of samples to accumulate */
-	double measureInterval; /* Time between samples */
-	double measureWait;     /* Time to wait before starting measurement */
+	/* Total number of samples to accumulate. Negative to go on 
+	 * indefinitely. */
+	long   measureSamples;  
+
+	/* Time between samples. Negative to disable measurement. */
+	double measureInterval; 
+
+	/* Time to wait before starting measurement */
+	double measureWait;
 } MeasurementConf;
 
 /* A Sampler does the actual measurement by sampling the state of the 

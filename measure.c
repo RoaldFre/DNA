@@ -68,6 +68,9 @@ bool measTick(void *state)
 	double time = getTime();
 	bool ret = true;
 
+	if (measInterval < 0)
+		return ret;
+
 	switch (measState->measStatus) {
 	case RELAXING:
 		if (fmod(time, measWait / 100) < config.timeStep) {
@@ -92,6 +95,10 @@ bool measTick(void *state)
 		ret = samplerSample(sampler, measState->sample, 
 				measState->samplerState);
 		measState->sample++;
+		
+		if (measConf->measureSamples < 0)
+			break; /* Go on indefinitely, don't print anything */
+
 		printf("\rMeasured sample %ld/%ld", measState->sample,
 						    measConf->measureSamples);
 		fflush(stdout);
@@ -101,7 +108,7 @@ bool measTick(void *state)
 		}
 		break;
 	default:
-		fprintf(stderr, "measure.c: Unknown measurement status!\n");
+		fprintf(stderr, "Unknown measurement status!\n");
 		assert(false);
 	}
 	return ret;
