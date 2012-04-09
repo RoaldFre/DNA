@@ -14,7 +14,7 @@
 
 #define SPHERE_SLICES 10
 #define CILINDER_FACES 6
-#define CILINDER_RADIUS (config.radius / 10)
+#define CILINDER_RADIUS_DIVISOR 10
 
 typedef struct {
 	GLfloat x, y, z;
@@ -49,29 +49,33 @@ static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numI
 		GLushort **indices);
 static void drawLine(Vec3 *p1, Vec3 *p2);
 static void drawCilinder(Vec3 *p1, Vec3 *p2, int faces, double radius);
-static void renderParticles(int num, Particle *ps);
-static void renderBase(Particle *p);
-static void renderStrand(Strand *s);
-static void renderConnection(Particle *p1, Particle *p2);
+static void renderParticles(int num, Particle *ps, RenderConf *rc);
+static void renderBase(Particle *p, RenderConf *rc);
+static void renderStrand(Strand *s, RenderConf *rc);
+static void renderConnection(Particle *p1, Particle *p2, RenderConf *rc);
 static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear, 
 		GLfloat zFar);
+
+static void initRender(void);
 static void calcFps(void);
-static void render(void);
+void renderIfWeMust(RenderConf *rc);
+static void render(RenderConf *rc);
 
 void *renderTaskStart(void *initialData);
 bool renderTaskTick(void *state);
+void renderTaskStop(void *state);
 
 static void calcFps()
 {
-	static int tock = 0, frames;
-	int tick;
+	static long tock = 0;
+	static int frames = 0;
+	long tick;
 	char string[32];
 
 	frames++;
-	tick = SDL_GetTicks();
+	tick = SDL_GetTicks(); /* mili seconds */
 
-	if (tick - tock > 1000)
-	{
+	if (tick - tock > 1000) {
 		tock = tick;
 		sprintf(string, "%u FPS", frames);
 		SDL_WM_SetCaption(string, string);
@@ -80,21 +84,19 @@ static void calcFps()
 	return;
 }
 
-/* Update the rendered image and handle events
- * Return: true if everything went fine, false if user requested to quit. */
-bool stepGraphics()
+
+/* Handle events.
+ * Return true if everything went fine, false if user requested to quit. */
+static bool handleEvents(void)
 {
 	SDL_Event event;
-	while (SDL_PollEvent(&event))
-	{
+	while (SDL_PollEvent(&event)) {
 		if (event.type == SDL_QUIT) {
 			printf("\nRequested Quit.\n\n");
 			return false;
 		}
-		else if (event.type == SDL_KEYDOWN)
-		{
-			switch (event.key.keysym.sym)
-			{
+		else if (event.type == SDL_KEYDOWN) {
+			switch (event.key.keysym.sym) {
 			case SDLK_ESCAPE:
 				printf("\nRequested Quit.\n\n");
 				return false;
@@ -137,13 +139,28 @@ bool stepGraphics()
 			}
 		}
 	}
-
-	render();
-	calcFps();
-
 	return true;
 }
 
+
+/* Render the image if we must, based on the requested framerate and the 
+ * last invocation of this function. */
+void renderIfWeMust(RenderConf *rc)
+{
+	static long tock = -1000; /* always draw first frame immediately */
+
+	if (rc->framerate <= 0) {
+		render(rc);
+		return;
+	}
+
+	long tick = SDL_GetTicks(); /* mili seconds */
+
+	if (tick - tock > 1000 / rc->framerate) {
+		tock = tick;
+		render(rc);
+	}
+}
 
 static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear, 
 		GLfloat zFar)
@@ -159,7 +176,8 @@ static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear,
 	glFrustum(xMin, xMax, yMin, yMax, zNear, zFar);
 }
 
-int initRender(void)
+/* Returns false if we couldn't initialize, true otherwise */
+static void initRender(void)
 {
 	int flags = 0;
 	double ws = config.worldSize;
@@ -167,6 +185,7 @@ int initRender(void)
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		die(SDL_GetError());
+		//TODO cleaner way
 	
 	vidinfo = SDL_GetVideoInfo();
 	if (vidinfo == NULL)
@@ -191,7 +210,7 @@ int initRender(void)
 
 	/*SDL_WM_ToggleFullScreen(surface);	*/
 
-	atexit(SDL_Quit);
+	//atexit(SDL_Quit); //Do it when we stop our render task.
 
 	/* OpenGL Init */
 	glEnable(GL_DEPTH_TEST);
@@ -222,28 +241,26 @@ int initRender(void)
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-
-	return 0;
 }
 
-static void renderStrand(Strand *s) {
+static void renderStrand(Strand *s, RenderConf *rc) {
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, S_col);
-	renderParticles(s->numMonomers, s->Ss);
+	renderParticles(s->numMonomers, s->Ss, rc);
 
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, P_col);
-	renderParticles(s->numMonomers, s->Ps);
+	renderParticles(s->numMonomers, s->Ps, rc);
 
 	for (int i = 0; i < s->numMonomers; i++)
-		renderBase(&s->Bs[i]);
+		renderBase(&s->Bs[i], rc);
 
 	/* Connections */
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, gray);
-	renderConnection(&s->Ps[0], &s->Ss[0]);
-	renderConnection(&s->Ss[0], &s->Bs[0]);
+	renderConnection(&s->Ps[0], &s->Ss[0], rc);
+	renderConnection(&s->Ss[0], &s->Bs[0], rc);
 	for(int i = 1; i < s->numMonomers; i++) {
-		renderConnection(&s->Ps[i], &s->Ss[i]);
-		renderConnection(&s->Ss[i], &s->Bs[i]);
-		renderConnection(&s->Ss[i], &s->Ps[i-1]);
+		renderConnection(&s->Ps[i], &s->Ss[i],   rc);
+		renderConnection(&s->Ss[i], &s->Bs[i],   rc);
+		renderConnection(&s->Ss[i], &s->Ps[i-1], rc);
 	}
 
 #if DRAWFORCES
@@ -259,7 +276,8 @@ static void renderStrand(Strand *s) {
 #endif
 }
 
-static void render(void)
+/* Renders the frame and calls calcFps() */
+static void render(RenderConf *rc)
 {
 	double ws = config.worldSize;
 
@@ -291,9 +309,11 @@ static void render(void)
 	glTranslatef(-ws/2, -ws/2, -ws/2);
 
 	for (int s = 0; s < world.numStrands; s++)
-		renderStrand(&world.strands[s]);
+		renderStrand(&world.strands[s], rc);
 
 	SDL_GL_SwapBuffers();
+
+	calcFps();
 }
 
 static void drawPoint(Vec3 *p)
@@ -346,20 +366,20 @@ static void drawCilinder(Vec3 *p1, Vec3 *p2, int faces, double radius)
 	glEnd();
 }
 
-static void renderParticle(Particle *p)
+static void renderParticle(Particle *p, RenderConf *rc)
 {
 	glPushMatrix();
 		glTranslatef(p->pos.x, p->pos.y, p->pos.z);
-		glScalef(config.radius, config.radius, config.radius);
+		glScalef(rc->radius, rc->radius, rc->radius);
 		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, sphereIndex);
 	glPopMatrix();
 }
-static void renderParticles(int num, Particle *ps)
+static void renderParticles(int num, Particle *ps, RenderConf *rc)
 {
 	for (int i = 0; i < num; i++)
-		renderParticle(&ps[i]);
+		renderParticle(&ps[i], rc);
 }
-static void renderBase(Particle *p)
+static void renderBase(Particle *p, RenderConf *rc)
 {
 	const GLfloat *col;
 	switch(p->type) {
@@ -371,13 +391,14 @@ static void renderBase(Particle *p)
 		     assert(false);
 	}
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, col);
-	renderParticle(p);
+	renderParticle(p, rc);
 }
-static void renderConnection(Particle *p1, Particle *p2)
+static void renderConnection(Particle *p1, Particle *p2, RenderConf *rc)
 {
 	if (distance(&p1->pos, &p2->pos) > config.worldSize / 2)
-		return; /* To avoid periodic boundary clutter for now */
-	drawCilinder(&p1->pos, &p2->pos, CILINDER_FACES, CILINDER_RADIUS);
+		return; /* To avoid periodic boundary clutter */
+	drawCilinder(&p1->pos, &p2->pos, CILINDER_FACES,
+			rc->radius / CILINDER_RADIUS_DIVISOR);
 }
 
 static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numInd,
@@ -481,24 +502,38 @@ static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numI
 }
 
 
-/* TODO Still only quick tests -- need to rework this so I pass proper 
- * config data */
 void *renderTaskStart(void *initialData)
 {
-	UNUSED(initialData);
+	assert(initialData != NULL);
 	initRender();
-	return NULL;
+	return initialData;
 }
 
 bool renderTaskTick(void *state)
 {
-	UNUSED(state);
-	return stepGraphics();
+	RenderConf *rc = (RenderConf*) state;
+
+	bool ret = handleEvents();
+	renderIfWeMust(rc);
+	return ret;
 }
 
-Task renderTask = {
-	NULL,
-	&renderTaskStart,
-	&renderTaskTick,
-	NULL
-};
+void renderTaskStop(void *state)
+{
+	SDL_Quit();
+	free(state);
+}
+
+Task makeRenderTask(RenderConf *rc)
+{
+	RenderConf *rcCopy = malloc(sizeof(*rcCopy));
+	memcpy(rcCopy, rc, sizeof(*rcCopy));
+
+	Task ret = {
+		.initialData = rcCopy,
+		.start = &renderTaskStart,
+		.tick  = &renderTaskTick,
+		.stop  = &renderTaskStop,
+	};
+	return ret;
+}

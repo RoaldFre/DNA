@@ -25,8 +25,6 @@ typedef struct config
 	double truncationLen;	/* Length at which potentials are truncated */
 	int    numBoxes;	/* Number of boxes in each dimension */
 	bool   render;          /* Whether or not to render the simulation */
-	double framerate;       /* The desired framerate when rendering */
-	double radius;          /* The radius of the particles to render */
 } Config;
 
 typedef enum particleType

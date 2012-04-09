@@ -23,9 +23,9 @@
 #define DEF_TRUNCATION_LENGTH		20.0
 #define DEF_MONOMER_WORLDSIZE_FACTOR    8.0
 #define DEF_MONOMERS_PER_RENDER 	2000
-#define DEF_RENDER_RADIUS 		1.5
 #define DEF_MEASUREMENT_WAIT 		4e4
 #define DEF_RENDER_FRAMERATE 		30.0
+#define DEF_RENDER_RADIUS 		1.5
 #define DEF_INTEGRATOR			LANGEVIN
 
 
@@ -34,6 +34,11 @@ static MeasurementConf verboseConf =
 	.measureSamples = -1, /* loop forever */
 	.measureInterval = -1, /* default: disable */
 	.measureWait = 0,
+};
+static RenderConf renderConf =
+{
+	.framerate = DEF_RENDER_FRAMERATE,
+	.radius    = DEF_RENDER_RADIUS * LENGTH_FACTOR,
 };
 
 static void printUsage(void)
@@ -86,9 +91,7 @@ static void parseArguments(int argc, char **argv)
 	config.measureWait	= DEF_MEASUREMENT_WAIT * TIME_FACTOR;
 	config.timeStep 	= DEF_TIMESTEP * TIME_FACTOR;
 	config.thermostatTemp	= DEF_TEMPERATURE;
-	config.radius		= DEF_RENDER_RADIUS * LENGTH_FACTOR;
 	config.truncationLen    = DEF_TRUNCATION_LENGTH;
-	config.framerate        = DEF_RENDER_FRAMERATE;
 	config.langevinGamma	= DEF_LANGEVIN_GAMMA;
 	config.integrator	= DEF_INTEGRATOR;
 
@@ -124,16 +127,16 @@ static void parseArguments(int argc, char **argv)
 						optarg);
 			break;
 		case 'f':
-			config.framerate = atof(optarg);
-			if (config.framerate < 0)
+			renderConf.framerate = atof(optarg);
+			if (renderConf.framerate < 0)
 				die("Invalid framerate %s\n", optarg);
 			break;
 		case 'r':
 			config.render = true;
 			break;
 		case 'R':
-			config.radius = atof(optarg) * LENGTH_FACTOR;
-			if (config.radius <= 0)
+			renderConf.radius = atof(optarg) * LENGTH_FACTOR;
+			if (renderConf.radius <= 0)
 				die("Invalid radius %s\n", optarg);
 			break;
 		case 'l':
@@ -283,6 +286,9 @@ int main(int argc, char **argv)
 	verbose.measConf = verboseConf;
 	verbose.sampler = dumpStatsSampler();
 	Task verboseTask = measurementTask(&verbose);
+
+	Task renderTask = makeRenderTask(&renderConf);
+
 
 	Task *tasks[3];
 	tasks[0] = (config.render ? &renderTask : NULL);

@@ -3,9 +3,12 @@
 
 #include "task.h"
 
-int initRender(void);
-bool stepGraphics(void);
+typedef struct
+{
+	int framerate; /* The desired framerate */
+	double radius; /* The radius of the particles to render */
+} RenderConf;
 
-extern Task renderTask;
+Task makeRenderTask(RenderConf *rc);
 
 #endif
