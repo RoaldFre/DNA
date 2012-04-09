@@ -6,9 +6,9 @@ void *measStart(void *initialData);
 bool measTick(void *state);
 void measStop(void *state);
 
-void *samplerStart(Sampler *sampler);
-bool samplerSample(Sampler *sampler, long i, void *state);
-void samplerStop(Sampler *sampler, long n, void *state);
+static void *samplerStart(Sampler *sampler);
+static bool samplerSample(Sampler *sampler, long i, void *state);
+static void samplerStop(Sampler *sampler, long n, void *state);
 
 Task measurementTask(Measurement *measurement)
 {
@@ -119,7 +119,7 @@ void measStop(void *state)
 	MeasTaskState *measState = (MeasTaskState*) state;
 	Sampler *sampler = &measState->sampler;
 
-	sampler->stop(measState->sample, measState->samplerState);
+	samplerStop(sampler, measState->sample, measState->samplerState);
 
 	free(measState);
 }
@@ -131,7 +131,7 @@ void measStop(void *state)
 
 /* Returns the state pointer that gets returned from sampler.start(), or 
  * NULL if sampler.start == NULL */
-void *samplerStart(Sampler *sampler)
+static void *samplerStart(Sampler *sampler)
 {
 	if (sampler->start == NULL)
 		return NULL;
@@ -141,7 +141,7 @@ void *samplerStart(Sampler *sampler)
 /* Sample and return sampler.sample(), or do nothing if sampler.sample == 
  * NULL and return true. Note that this would be a pretty useless sampler 
  * in the latter case... */
-bool samplerSample(Sampler *sampler, long i, void *state)
+static bool samplerSample(Sampler *sampler, long i, void *state)
 {
 	if (sampler->sample == NULL)
 		return true;
@@ -149,7 +149,7 @@ bool samplerSample(Sampler *sampler, long i, void *state)
 }
 
 /* Stop the sampler, or do nothing if sampler.stop == NULL */
-void samplerStop(Sampler *sampler, long n, void *state)
+static void samplerStop(Sampler *sampler, long n, void *state)
 {
 	if (sampler->stop == NULL)
 		return;
