@@ -150,7 +150,7 @@ static void parseArguments(int argc, char **argv)
 						optarg);
 			break;
 		case 'E':
-			config.measureInterval = atoi(optarg) * TIME_FACTOR;
+			config.measureInterval = atof(optarg) * TIME_FACTOR;
 			if (config.measureInterval <= 0)
 				die("Verbose: invalid measurement interval %s\n",
 						optarg);
