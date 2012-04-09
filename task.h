@@ -11,7 +11,7 @@
  * of tasks will be copied to an internal structure, so it is safe to free 
  * the data after calling this function.
  *
- * args: sequence: a list to task pointers, all of which should be valid! */
+ * args: sequence: a list to task pointers. Null pointerns will be ignored. */
 Task sequence(Task **tasks, int num);
 
 

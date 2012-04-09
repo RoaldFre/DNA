@@ -50,14 +50,23 @@ Task sequence(Task **tasks, int num)
 	 * resident. Free it in seqStart. */
 	SeqData *seqData = malloc(sizeof(*seqData));
 
+	int trueNum = 0;
+	/* Find out how many 'actual' (non-NULL) tasks there are */
+	for (int i = 0; i < num; i++)
+		if(tasks[i] != NULL)
+			trueNum++;
+
 	/* We must copy, because the list of pointers we received may point 
 	 * to the stack of the caller, and may become invalid by the time 
 	 * we actually run the simulation. */
-	seqData->num = num;
-	seqData->tasks = calloc(num, sizeof(*seqData->tasks));
+	seqData->num = trueNum;
+	seqData->tasks = calloc(trueNum, sizeof(*seqData->tasks));
+	int j = 0;
 	for (int i = 0; i < num; i++) {
-		assert(tasks[i] != NULL);
-		memcpy(&seqData->tasks[i], tasks[i], sizeof(*seqData->tasks));
+		if(tasks[i] == NULL)
+			continue;
+		memcpy(&seqData->tasks[j], tasks[i], sizeof(*seqData->tasks));
+		j++;
 	}
 	
 	Task seq;
