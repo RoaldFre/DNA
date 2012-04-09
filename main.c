@@ -28,6 +28,14 @@
 #define DEF_RENDER_FRAMERATE 		30.0
 #define DEF_INTEGRATOR			LANGEVIN
 
+
+static MeasurementConf verboseConf =
+{
+	.measureSamples = -1, /* loop forever */
+	.measureInterval = -1, /* default: disable */
+	.measureWait = 0,
+};
+
 static void printUsage(void)
 {
 	printf("Usage: main <number of monomers> [flags]\n");
@@ -49,7 +57,7 @@ static void printUsage(void)
 	printf("             default: (number of monomers) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
 	printf(" -b <num>  number of Boxes per dimension\n");
 	printf("             default: max so that boxsize >= potential truncation length\n");
-	printf(" -v <int>  Verbose: dump statistics every <int> iterations\n");
+	printf(" -v <int>  Verbose: dump statistics every <flt> femtoseconds\n");
 	printf(" -E <flt>  dump Energy statistics every <flt> femtoseconds.\n");
 	printf("           Don't forget to set the number of samples with '-s'!\n");
 	printf(" -s <int>  accumulate <int> measurement Samples\n");
@@ -74,7 +82,6 @@ static void parseArguments(int argc, char **argv)
 	int c;
 
 	/* defaults */
-	config.verbose          = 0;
 	config.measureSamples   = -1; /* loop indefinitely */
 	config.measureWait	= DEF_MEASUREMENT_WAIT * TIME_FACTOR;
 	config.timeStep 	= DEF_TIMESTEP * TIME_FACTOR;
@@ -144,9 +151,9 @@ static void parseArguments(int argc, char **argv)
 						optarg);
 			break;
 		case 'v':
-			config.verbose = atoi(optarg);
-			if (config.verbose <= 0)
-				die("Verbose: invalid number of iterations %s\n",
+			verboseConf.measureInterval = atof(optarg) * TIME_FACTOR;
+			if (verboseConf.measureInterval <= 0)
+				die("Verbose: invalid verbose interval %s\n",
 						optarg);
 			break;
 		case 'E':
@@ -260,145 +267,28 @@ void die(const char *fmt, ...)
 	exit(1);
 }
 
-
-
-typedef struct timer {
-	struct timeval prev; /* time at last invocation of tickTimer */
-	double interval;
-	double accum; /* accumulated time since last tick */
-} Timer;
-
-static Timer makeTimer(double interval)
-{
-	Timer timer;
-	gettimeofday(&timer.prev, NULL);
-	timer.interval = interval;
-	timer.accum = 0;
-	return timer;
-}
-
-static bool tickTimer(Timer *timer)
-{
-	time_t prev_sec       = timer->prev.tv_sec;
-	suseconds_t prev_usec = timer->prev.tv_usec;
-	gettimeofday(&timer->prev, NULL);
-	time_t sec       = timer->prev.tv_sec;
-	suseconds_t usec = timer->prev.tv_usec;
-
-	timer->accum += sec - prev_sec + ((double) (usec - prev_usec)) / 1e6;
-	if (timer->accum < timer->interval)
-		return false;
-
-	timer->accum = 0;
-	//timer->accum -= timer->interval;
-	//timer->accum = fmod(timer->accum, timer->interval);
-	return true;
-}
-
-
-/* Advance the simulation by one time step. Render and/or dump statistics 
- * if neccesary. Return false if the user wants to quit. */
-static bool stepSimulation(Timer *renderTimer) {
-	static int  stepsSinceVerbose = 0;
-
-	stepWorld();
-
-	if (config.verbose > 0) {
-		stepsSinceVerbose++;
-		if (stepsSinceVerbose > config.verbose) {
-			stepsSinceVerbose = 0;
-			dumpStats();
-		}
-	}
-
-	if (config.render && tickTimer(renderTimer))
-			return stepGraphics();
-
-	return true;
-}
-
 int main(int argc, char **argv)
 {
 	srand(time(NULL)); //seed random generator
 
 	parseArguments(argc, argv);
 
-	allocWorld(1, config.numBoxes, config.worldSize); // TODO
+	//TODO
+	allocWorld(1, config.numBoxes, config.worldSize);
 	allocStrand(&world.strands[0], config.numMonomers);
 	//allocStrand(&world.strands[1], config.numMonomers);
 	fillWorld();
 
-
-	/* TODO this is just a quick and dirty test of the task and 
-	 * measurement framework for now! */
-	MeasurementConf measConf;
-	measConf.measureSamples = 10;
-	measConf.measureInterval = 10e-15;
-	measConf.measureWait = 200e-15;
-
-	Measurement meas;
-	meas.measConf = measConf;
-	meas.sampler = averageTemperatureSampler();
-
-	Task measTask = measurementTask(&meas);
+	Measurement verbose;
+	verbose.measConf = verboseConf;
+	verbose.sampler = dumpStatsSampler();
+	Task verboseTask = measurementTask(&verbose);
 
 	Task *tasks[3];
-	tasks[0] = &renderTask;
+	tasks[0] = (config.render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
-	tasks[2] = &measTask;
+	tasks[2] = &verboseTask;
 	Task task = sequence(tasks, 3);
 	run(&task);
 	return 0;
-
-#if 0
-
-	Timer renderTimer = makeTimer(1.0 / config.framerate);
-
-	if (config.render)
-		initRender();
-
-	if (config.measureSamples < 0) {
-		/* Loop forever, or until the user quits the renderer */
-		while (stepSimulation(&renderTimer));
-	} else {
-		printf("Waiting for system to relax.\n");
-		for (double t = 0; keepGoing && t < config.measureWait; t += config.timeStep) {
-			keepGoing = stepSimulation(&renderTimer);
-			if (fmod(t, config.measureWait / 100) < config.timeStep) {
-				printf("\rRelax time %13f of %f",
-						(t + config.measureWait/100) / TIME_FACTOR, 
-						config.measureWait / TIME_FACTOR);
-				fflush(stdout);
-			}
-		}
-
-		/* Perform the measurements */
-		printf("\nStarting measurement.\n");
-		FILE *outstream = fopen(DATA_FILE_NAME, "w");
-		double intervalTime = 0;
-		for (long sample = 0; keepGoing && sample < config.measureSamples; sample++) {
-			while (keepGoing && intervalTime <= config.measureInterval) {
-				keepGoing = stepSimulation(&renderTimer);
-				intervalTime += config.timeStep;
-			}
-			if (!keepGoing)
-				break;
-
-			/* Check for numerical drift (or bugs) before 
-			 * commiting measurement. */
-			if (!physicsCheck())
-				die("You broke physics!\n");
-
-			dumpEnergies(outstream);
-			printf("\rMeasured sample %ld/%ld", sample + 1, config.measureSamples);
-			fflush(stdout);
-			intervalTime -= config.measureInterval;
-		}
-		printf("\n");
-		fclose(outstream);
-	}
-
-	freeWorld();
-	return 0;
-#endif
 }

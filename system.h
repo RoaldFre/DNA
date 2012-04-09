@@ -21,7 +21,6 @@ typedef struct config
 	double thermostatTemp;  /* Thermostat temperature */
 	double thermostatTau;   /* Thermostat relaxation time */
 	double langevinGamma;	/* Friction coefficient for Langevin dynamics */
-	int    verbose;         /* Iterations between dumping info, <0 to disable */
 	double worldSize;       /* World = periodic cube with edges of this length */
 	double truncationLen;	/* Length at which potentials are truncated */
 	int    numBoxes;	/* Number of boxes in each dimension */

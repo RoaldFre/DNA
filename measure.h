@@ -9,7 +9,7 @@ typedef struct measurementConf
 {
 	/* Total number of samples to accumulate. Negative to go on 
 	 * indefinitely. */
-	long   measureSamples;  
+	long measureSamples;
 
 	/* Time between samples. Negative to disable measurement. */
 	double measureInterval; 
