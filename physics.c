@@ -97,9 +97,9 @@ static void   FdihedralParticle(Particle *target, Particle *p1, Particle *p2,
 static double calcCoulombForce(double distanceLength);
 static double calcCoulombPotential(double distanceLength);
 static double calcDebyeLength(void);
-static void   addBpPotential(Particle *p1, Particle *p2, void *data);
-static void   addPhosphatePotential(Particle *p1, Particle *p2, void *data);
-static void   pairPotentials(Particle *p1, Particle *p2, void *data);
+static double   addBpPotential(Particle *p1, Particle *p2);
+static double   addPhosphatePotential(Particle *p1, Particle *p2);
+//static void   pairPotentials(Particle *p1, Particle *p2, PotentialEnergies *data);
 
 
 
@@ -884,8 +884,8 @@ bool physicsCheck(void)
 	return true;
 }
 
-typedef struct potentialEnergies {
-	double bond, angle, dihedral, stack, pairing;
+typedef struct PotentialEnergies {
+	double bond, angle, dihedral, stack, basepairing, phosphatepairing;
 } PotentialEnergies;
 
 /* Add energy stats of given strand, in electronvolts. */
@@ -1011,40 +1011,41 @@ static double calcCoulombPotential(double distanceLength)
 }
 
 
-static void addBpPotential(Particle *p1, Particle *p2, void *data)
+static double addBpPotential(Particle *p1, Particle *p2)
 {
-	double *Vbp = (double*) data;
-	*Vbp += basePairPotential(p1, p2);
+	return basePairPotential(p1, p2);
 	
 }
 
-static void addPhosphatePotential(Particle *p1, Particle *p2, void *data)
+static double addPhosphatePotential(Particle *p1, Particle *p2)
 {
-	double *Vphosphate = (double*) data;
-	*Vphosphate += phosphatePairPotential(p1, p2);
+	return phosphatePairPotential(p1, p2);
 }
 
-static void pairPotentials(Particle *p1, Particle *p2, void *data)
+static void pairPotentials(Particle *p1, Particle *p2, PotentialEnergies *data)
 {
-	addBpPotential(p1, p2, data);
-	addPhosphatePotential(p1, p2, data);
+	PotentialEnergies *pe = (PotentialEnergies*) data;
+	
+	pe->basepairing += addBpPotential(p1, p2);
+	pe->phosphatepairing += addPhosphatePotential(p1, p2);
 }
 
 /* Return energy stats of world, in electronvolts. */
 static PotentialEnergies calcPotentialEnergies(void) {
 	
-	PotentialEnergies pe = {0, 0, 0, 0, 0};
+	PotentialEnergies pe = {0, 0, 0, 0, 0,0};
 	for (int s = 0; s < world.numStrands; s++)
 		addPotentialEnergies(&world.strands[s], &pe);
 	
-	forEveryPairD(&pairPotentials, &pe.pairing);
+	forEveryPairD(&pairPotentials, &pe);
 	
 	/* Convert to eV */
 	pe.bond     *= ENERGY_FACTOR;
 	pe.angle    *= ENERGY_FACTOR;
 	pe.dihedral *= ENERGY_FACTOR;
 	pe.stack    *= ENERGY_FACTOR;
-	pe.pairing  *= ENERGY_FACTOR;
+	pe.basepairing  *= ENERGY_FACTOR;
+	pe.phosphatepairing  *= ENERGY_FACTOR;
 	
 	return pe;
 }
@@ -1054,10 +1055,10 @@ void dumpStats()
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double T = temperature();
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.pairing;
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basepairing + pe.phosphatepairing;
 
-	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vp = %e, T = %f\n",
-			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.pairing, T);
+	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, T = %f\n",
+			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basepairing, pe.phosphatepairing, T);
 }
 
 void dumpEnergies(FILE *stream)
@@ -1066,9 +1067,9 @@ void dumpEnergies(FILE *stream)
 	assert(stream != NULL);
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.pairing;
-	fprintf(stream, "%e %e %e %e %e %e %e %e \n",
-			getTime(), E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.pairing);
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basepairing + pe.phosphatepairing;
+	fprintf(stream, "%e %e %e %e %e %e %e %e %e \n",
+			getTime(), E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basepairing, pe.phosphatepairing);
 #else
 	/* DEBUG equipartition theorem */
 	dumpEquipartitionStats();
