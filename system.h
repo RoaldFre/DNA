@@ -25,6 +25,7 @@ typedef struct config
 	double truncationLen;	/* Length at which potentials are truncated */
 	int    numBoxes;	/* Number of boxes in each dimension */
 	bool   render;          /* Whether or not to render the simulation */
+	double saltConcentration; /* Na+ concentration in the environment */
 } Config;
 
 typedef enum particleType
