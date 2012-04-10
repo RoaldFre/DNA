@@ -15,6 +15,9 @@ static void freeState(long n, void *state)
 	free(state);
 }
 
+
+/* TEMPERATURE */
+
 void *avgTempStart(void *conf);
 bool avgTempSample(long i, void *data);
 void avgTempStop(long n, void *data);
@@ -51,6 +54,8 @@ void avgTempStop(long n, void *data)
 
 
 
+/* STATS / VERBOSE */
+
 bool dumpStatsSample(long i, void *data);
 
 Sampler dumpStatsSampler(void)
@@ -72,6 +77,8 @@ bool dumpStatsSample(long i, void *data)
 
 
 
+/* POSITION / CENTER OF MASS */
+
 static Sampler particlesCOMSampler(Particle *ps, int num);
 static bool particlesCOMSample(long i, void *data);
 
@@ -81,10 +88,10 @@ Sampler particlePositionSampler(Particle *p)
 }
 Sampler strandCOMSampler(Strand *s)
 {
-	return particlesCOMSampler(s->all, 3*s->numMonomers);
+	return particlesCOMSampler(s->all, 3 * s->numMonomers);
 }
 
-typedef struct particlesCOMSamplerConf
+typedef struct
 {
 	Particle *ps;
 	int num;
@@ -112,6 +119,64 @@ static bool particlesCOMSample(long i, void *data)
 	scale(&COM, 1 / LENGTH_FACTOR, &COM);
 	printVector(&COM);
 	printf("\n");
+	return true;
+}
+
+
+
+/* SQUARED DISPLACEMENT */
+
+static Sampler particlesSquaredDisplacementSampler(Particle *ps, int num);
+static void *particlesSquaredDisplacementStart(void *conf);
+static bool particlesSquaredDisplacementSample(long i, void *state);
+
+Sampler particleSquaredDisplacementSampler(Particle *p)
+{
+	return particlesSquaredDisplacementSampler(p, 1);
+}
+Sampler strandCOMSquaredDisplacementSampler(Strand *s)
+{
+	return particlesSquaredDisplacementSampler(s->all, 3 * s->numMonomers);
+}
+
+typedef struct
+{
+	Particle *ps;
+	int num;
+	Vec3 initial;
+} SquaredDisplacementConf;
+
+static Sampler particlesSquaredDisplacementSampler(Particle *ps, int num)
+{
+	SquaredDisplacementConf *sdc = malloc(sizeof(*sdc));
+	sdc->ps = ps;
+	sdc->num = num;
+	/* Fill sdc->initial in start() */
+
+	Sampler sampler;
+	sampler.samplerConf = sdc;
+	sampler.start  = &particlesSquaredDisplacementStart;
+	sampler.sample = &particlesSquaredDisplacementSample;
+	sampler.stop   = &freeState;
+	return sampler;
+}
+static void *particlesSquaredDisplacementStart(void *conf)
+{
+	SquaredDisplacementConf *sdc = (SquaredDisplacementConf*) conf;
+	sdc->initial = getCOM(sdc->ps, sdc->num);
+	return sdc;
+}
+static bool particlesSquaredDisplacementSample(long i, void *state)
+{
+	UNUSED(i);
+	SquaredDisplacementConf *sdc = (SquaredDisplacementConf*) state;
+
+	Vec3 COM = getCOM(sdc->ps, sdc->num);
+	Vec3 displacement;
+	sub(&COM, &sdc->initial, &displacement);
+	double squaredDisplacement = length2(&displacement)
+					/ (LENGTH_FACTOR * LENGTH_FACTOR);
+	printf("%f\n", squaredDisplacement);
 	return true;
 }
 
