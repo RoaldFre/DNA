@@ -80,10 +80,10 @@ static double kineticEnergy(void);
 static double calcLJForce(double coupling, double rij0, double rijVar);
 static double calcLJPotential(double coupling, double rij0, double rijVar2);
 static void   pairForces(Particle *p1, Particle *p2);
-static void   phosphatePairForce(Particle *p1, Particle *p2);
-static void   basePairForce(Particle *p1, Particle *p2);
-static double phosphatePairPotential(Particle *p1, Particle *p2);
-static double basePairPotential(Particle *p1, Particle *p2);
+static void   FCoulomb(Particle *p1, Particle *p2);
+static void   FbasePair(Particle *p1, Particle *p2);
+static double VbasePair(Particle *p1, Particle *p2);
+static double VCoulomb(Particle *p1, Particle *p2);
 static double Vbond(Particle *p1, Particle *p2, double d0);
 static void   Fbond(Particle *p1, Particle *p2, double d0);
 static double Vstack(Particle *p1, Particle *p2);
@@ -97,8 +97,6 @@ static void   FdihedralParticle(Particle *target, Particle *p1, Particle *p2,
 static double calcCoulombForce(double distanceLength);
 static double calcCoulombPotential(double distanceLength);
 static double calcDebyeLength(void);
-static double addBpPotential(Particle *p1, Particle *p2);
-static double addPhosphatePotential(Particle *p1, Particle *p2);
 
 
 
@@ -503,11 +501,11 @@ static double calcLJForce(double coupling, double rij0, double rijVar)
 
 static void pairForces(Particle *p1, Particle *p2)
 {
-	basePairForce(p1, p2);	
-	phosphatePairForce(p1, p2);
+	FbasePair(p1, p2);
+	FCoulomb(p1, p2);
 }
 
-static void phosphatePairForce(Particle *p1, Particle *p2)
+static void FCoulomb(Particle *p1, Particle *p2)
 {	
 	double truncLen = config.truncationLen;
 	double rij = nearestImageDistance(&p2->pos, &p1->pos);
@@ -535,7 +533,7 @@ static void phosphatePairForce(Particle *p1, Particle *p2)
 	sub(&p2->F, &forceVec, &p2->F);
 }
 
-static void basePairForce(Particle *p1, Particle *p2)
+static void FbasePair(Particle *p1, Particle *p2)
 {
 	double bpCoupling;
 	double bpForceDist;
@@ -884,7 +882,7 @@ bool physicsCheck(void)
 }
 
 typedef struct PotentialEnergies {
-	double bond, angle, dihedral, stack, basepairing, phosphatepairing;
+	double bond, angle, dihedral, stack, basePair, Coulomb;
 } PotentialEnergies;
 
 /* Add energy stats of given strand, in electronvolts. */
@@ -927,7 +925,7 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 	pe->stack    = Vs;
 }
 
-static double basePairPotential(Particle *p1, Particle *p2)
+static double VbasePair(Particle *p1, Particle *p2)
 {
 	double rij = nearestImageDistance(&p1->pos, &p2->pos);
 	if (rij > config.truncationLen)
@@ -972,7 +970,7 @@ static double basePairPotential(Particle *p1, Particle *p2)
 	return bpPotential;
 }
 
-static double phosphatePairPotential(Particle *p1, Particle *p2)
+static double VCoulomb(Particle *p1, Particle *p2)
 {
 	double rij = nearestImageDistance(&p1->pos, &p2->pos);
 	if (rij > config.truncationLen)
@@ -1009,30 +1007,18 @@ static double calcCoulombPotential(double distanceLength)
 	return potentialQQ*exponentialPart;	
 }
 
-
-static double addBpPotential(Particle *p1, Particle *p2)
-{
-	return basePairPotential(p1, p2);
-	
-}
-
-static double addPhosphatePotential(Particle *p1, Particle *p2)
-{
-	return phosphatePairPotential(p1, p2);
-}
-
 static void pairPotentials(Particle *p1, Particle *p2, void *data)
 {
 	PotentialEnergies *pe = (PotentialEnergies*) data;
 	
-	pe->basepairing += addBpPotential(p1, p2);
-	pe->phosphatepairing += addPhosphatePotential(p1, p2);
+	pe->basePair += VbasePair(p1, p2);
+	pe->Coulomb  += VCoulomb(p1, p2);
 }
 
 /* Return energy stats of world, in electronvolts. */
 static PotentialEnergies calcPotentialEnergies(void) {
 	
-	PotentialEnergies pe = {0, 0, 0, 0, 0,0};
+	PotentialEnergies pe = {0, 0, 0, 0, 0, 0};
 	for (int s = 0; s < world.numStrands; s++)
 		addPotentialEnergies(&world.strands[s], &pe);
 	
@@ -1043,8 +1029,8 @@ static PotentialEnergies calcPotentialEnergies(void) {
 	pe.angle    *= ENERGY_FACTOR;
 	pe.dihedral *= ENERGY_FACTOR;
 	pe.stack    *= ENERGY_FACTOR;
-	pe.basepairing  *= ENERGY_FACTOR;
-	pe.phosphatepairing  *= ENERGY_FACTOR;
+	pe.basePair *= ENERGY_FACTOR;
+	pe.Coulomb  *= ENERGY_FACTOR;
 	
 	return pe;
 }
@@ -1054,10 +1040,10 @@ void dumpStats()
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double T = temperature();
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basepairing + pe.phosphatepairing;
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb;
 
 	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, T = %f\n",
-			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basepairing, pe.phosphatepairing, T);
+			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, T);
 }
 
 void dumpEnergies(FILE *stream)
@@ -1066,9 +1052,9 @@ void dumpEnergies(FILE *stream)
 	assert(stream != NULL);
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basepairing + pe.phosphatepairing;
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb;
 	fprintf(stream, "%e %e %e %e %e %e %e %e %e \n",
-			getTime(), E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basepairing, pe.phosphatepairing);
+			getTime(), E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb);
 #else
 	/* DEBUG equipartition theorem */
 	dumpEquipartitionStats();
