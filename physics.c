@@ -51,52 +51,26 @@
 #define DIHEDRAL_S3_P_5S_A	(  50.69 * TO_RADIANS)
 
 /* Base-Pair couplings */
-#define COUPLING_BP_AT 	19.28e-11 /* 2.77 kcal/mol == 19.28e-21 J (per particle) */
-#define COUPLING_BP_GC	28.96e-11 /* 4.16 kcal/mol == 28.96e-21 J (per particle) */
-#define DISTANCE_r0_AT	2.9002e-10	/* Knotts et al 2007, table III, 2.9002 Angstrom */
-#define DISTANCE_r0_GC	2.8694e-10	/* Knotts et al 2007, table III, 2.8694 Angstrom */
+#define COUPLING_BP_AT 	19.28e-11  /* 2.77 kcal/mol (per particle) */
+#define COUPLING_BP_GC	28.96e-11  /* 4.16 kcal/mol (per particle) */
+#define DISTANCE_r0_AT	2.9002e-10 /* Knotts et al 2007, table III, 2.9002 A */
+#define DISTANCE_r0_GC	2.8694e-10 /* Knotts et al 2007, table III, 2.8694 A */
 
 /* Coulomb interaction between phosphates */
-#define CHARGE_ELECTRON	1.602e-19	/* 1.602 Coulomb */
-#define VACUUM_PERMITTIVITY	8.8541e-12 	/* 8.854e-12 Farads/meter, epsilon_0 */
+#define CHARGE_ELECTRON		1.602e-19  /* 1.602 Coulomb */
+#define VACUUM_PERMITTIVITY	8.8541e-12 /* 8.854e-12 Farads/m */
 #define COUPLING_EPS_H2O	(78*VACUUM_PERMITTIVITY) /* 78 epsilon_0 */
-#define DEBYE_LENGTH 	13.603e-10	/* 13.603 Angstrom for 50mM = [Na+]*/
+#define DEBYE_LENGTH 		13.603e-10 /* 13.603 Angstrom for 50mM = [Na+]*/
 
 /* Thermodynamics */
 #define ENERGY_FACTOR	(1/1.602177e-19) /* Energy in electronvolt */
 #define BOLTZMANN_CONSTANT    1.38065e-23
-#define FROM_ANGSTROM_SQUARED 1e20 /* Bond constants are given for angstrom */
+#define FROM_ANGSTROM_SQUARED 1e20 /* Bond constants are given for Angstrom */
 #define TO_RADIANS	      (M_PI / 180)
 
 #define DIELECTRIC_CST_H20	80
-#define AVOGADRO		6.023e23	/* particles per mol */
+#define AVOGADRO		6.023e23 /* particles per mol */
 
-static void verlet(void);
-static void calculateForces(void);
-
-static double randNorm(void);
-
-static double kineticEnergy(void);
-static double calcLJForce(double coupling, double rij0, double rijVar);
-static double calcLJPotential(double coupling, double rij0, double rijVar2);
-static void   pairForces(Particle *p1, Particle *p2);
-static void   FCoulomb(Particle *p1, Particle *p2);
-static void   FbasePair(Particle *p1, Particle *p2);
-static double VbasePair(Particle *p1, Particle *p2);
-static double VCoulomb(Particle *p1, Particle *p2);
-static double Vbond(Particle *p1, Particle *p2, double d0);
-static void   Fbond(Particle *p1, Particle *p2, double d0);
-static double Vstack(Particle *p1, Particle *p2);
-static void   Fstack(Particle *p1, Particle *p2);
-static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0);
-static void   Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0);
-static double Vdihedral(Particle*, Particle*, Particle*, Particle*, double);
-static void   Fdihedral(Particle*, Particle*, Particle*, Particle*, double);
-static void   FdihedralParticle(Particle *target, Particle *p1, Particle *p2,
-			Particle *p3, Particle *p4, double Vorig, double phi0);
-static double calcCoulombForce(double distanceLength);
-static double calcCoulombPotential(double distanceLength);
-static double calcDebyeLength(void);
 
 
 
@@ -138,6 +112,27 @@ bool allocStrand(Strand *s, int numMonomers) {
 	return true;
 }
 
+
+/* Returns a number sampled from a standard normal distribution. */
+static double randNorm(void)
+{
+	/* Box-Muller transform */
+	double u1 = ((double) rand()) / RAND_MAX;
+	double u2 = ((double) rand()) / RAND_MAX;
+
+	return sqrt(-2*log(u1)) * cos(2*M_PI*u2);
+}
+
+/* Returns a vector with components sampled from a standard normal 
+ * distribution. */
+static Vec3 randNormVec(void)
+{
+	Vec3 res;
+	res.x = randNorm();
+	res.y = randNorm();
+	res.z = randNorm();
+	return res;
+}
 
 /* Place monomers in a screwed column (in the x-y-z plane) in the center
  * of the world. Distances between sugar, base and phospate are the 
@@ -265,27 +260,6 @@ void fillWorld()
 	forEveryParticle(&addToGrid);
 }
 
-/* Returns a number sampled from a standard normal distribution. */
-static double randNorm(void)
-{
-	/* Box-Muller transform */
-	double u1 = ((double) rand()) / RAND_MAX;
-	double u2 = ((double) rand()) / RAND_MAX;
-
-	return sqrt(-2*log(u1)) * cos(2*M_PI*u2);
-}
-
-/* Returns a vector with components sampled from a standard normal 
- * distribution. */
-static Vec3 randNormVec(void)
-{
-	Vec3 res;
-	res.x = randNorm();
-	res.y = randNorm();
-	res.z = randNorm();
-	return res;
-}
-
 void freeWorld(void)
 {
 	assert(world.strands != NULL);
@@ -300,6 +274,10 @@ void freeStrand(Strand *strand)
 	free(strand->all);
 	strand->numMonomers = 0;
 }
+
+
+
+/* ===== ITERATION FUNCTIONS ===== */
 
 /* loop over every particle in the world */
 void forEveryParticle(void (*f)(Particle *p))
@@ -329,318 +307,7 @@ void forEveryParticleOfD(Strand *s,
 
 
 
-/* PHYSICS */
-
-static void verletHelper1(Particle *p)
-{
-	double dt = config.timeStep;
-	Vec3 tmp;
-
-	/* vel(t + dt/2) = vel(t) + acc(t)*dt/2 */
-	scale(&p->F, dt / (2 * p->m), &tmp);
-	add(&p->vel, &tmp, &p->vel);
-
-	assert(!isnan(p->vel.x) && !isnan(p->vel.y) && !isnan(p->vel.z));
-
-	/* pos(t + dt) = pos(t) + vel(t + dt/2)*dt */
-	scale(&p->vel, dt, &tmp);
-	add(&p->pos, &tmp, &p->pos);
-}
-static void verletHelper2(Particle *p)
-{
-	double dt = config.timeStep;
-	Vec3 tmp;
-
-	/* vel(t + dt) = vel(t + dt/2) + acc(t + dt)*dt/2 */
-	scale(&p->F, dt / (2 * p->m), &tmp);
-	add(&p->vel, &tmp, &p->vel);
-}
-static void verlet(void)
-{
-	// The compiler better inlines all of this. TODO if not: force it.
-	forEveryParticle(&verletHelper1);
-	calculateForces(); /* acc(t + dt) */
-	forEveryParticle(&verletHelper2);
-	reboxParticles(); //TODO only once every N iterations...
-}
-
-static void langevinBBKhelper1(Particle *p)
-{
-	double dt    = config.timeStep;
-	double gamma = config.langevinGamma;
-
-	Vec3 tmp1, tmp2;
-
-	/* from v(t) to v(t + dt/2) */
-	scale(&p->vel, 1 - gamma*dt/2, &tmp1);
-
-	/* p->F is regular force + random collision force */
-	scale(&p->F, dt / (2 * p->m), &tmp2);
-
-	add(&tmp1, &tmp2, &p->vel);
-
-	/* from r(t) to r(t + dt) */
-	scale(&p->vel, dt, &tmp1);
-	add(&p->pos, &tmp1, &p->pos);
-}
-static void langevinBBKhelper2(Particle *p)
-{
-	double dt    = config.timeStep;
-	double gamma = config.langevinGamma;
-	double T     = config.thermostatTemp;
-
-	/* Regular forces have been calculated. Add the random force due 
-	 * to collisions to the total force. The result is:
-	 * p->F = F(t + dt) + R(t + dt) */
-	/* TODO check that compiler inlines this and precalculates the 
-	 * prefactor before p->m when looping over all particles. */
-	double Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * gamma * p->m / dt);
-	Vec3 R = randNormVec();
-	scale(&R, Rstddev, &R);
-	add(&p->F, &R, &p->F);
-
-	/* from v(t + dt/2) to v(t + dt) */
-	Vec3 tmp;
-	scale(&p->F, dt / (2 * p->m), &tmp);
-	add(&p->vel, &tmp, &tmp);
-	scale(&tmp, 1 / (1 + gamma*dt/2), &p->vel);
-}
-
-/* BBK integrator for Langevin dynamics. Uses the one based on 
- * velocity-verlet to include calculation of the velocities. 
- * See http://localscf.com/LangevinDynamics.aspx */
-static void langevinBBK(void)
-{
-	forEveryParticle(&langevinBBKhelper1); /* updates positions */
-	reboxParticles(); //TODO only once every N iterations(?)
-	calculateForces();
-	forEveryParticle(&langevinBBKhelper2);
-}
-
-
-double temperature(void)
-{
-	return 2.0 / (3.0 * BOLTZMANN_CONSTANT)
-			* kineticEnergy() / (config.numMonomers * 3.0);
-}
-
-static void thermostatHelper(Particle *p, void *data)
-{
-	double lambda = *(double*) data;
-	scale(&p->vel, lambda, &p->vel);
-}
-static void thermostat(void)
-{
-	if (config.thermostatTau <= 0)
-		return;
-
-	/* Mass and Boltzmann constant are 1 */ 
-	double Tk  = temperature();
-	double T0  = config.thermostatTemp;
-	double dt  = config.timeStep;
-	double tau = config.thermostatTau;
-	double lambda = sqrt(1 + dt/tau * (T0/Tk - 1));
-
-	forEveryParticleD(&thermostatHelper, (void*) &lambda);
-}
-
-
-static void resetForce(Particle *p)
-{
-	p->F.x = p->F.y = p->F.z = 0;
-}
-
-/* Calculate the forces on the particles of the strand that are attributed 
- * to the structure of the strand itself. These are:
- * Fbond, Fangle, Fdihedral, Fstack. */
-static void strandForces(Strand *s) {
-	if (s->numMonomers < 0)
-		return;
-	assert(s->Ss != NULL && s->Ps != NULL && s->Bs != NULL);
-
-	/* Bottom monomer */
-	Fbond(&s->Ss[0], &s->Bs[0], D_SA);
-	Fbond(&s->Ss[0], &s->Ps[0], D_S5P);
-	Fangle(&s->Ps[0], &s->Ss[0], &s->Bs[0], ANGLE_P_5S_A);
-	/* Rest of the monomers */
-	for (int i = 1; i < s->numMonomers; i++) {
-		Fbond(&s->Ss[i], &s->Bs[i],   D_SA);
-		Fbond(&s->Ss[i], &s->Ps[i],   D_S5P);
-		Fbond(&s->Ss[i], &s->Ps[i-1], D_S3P);
-
-		Fstack(&s->Bs[i], &s->Bs[i-1]);
-
-		Fangle(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_5S_A);
-		Fangle(&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
-		Fangle(&s->Ps[i-1], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_3S_A);
-		Fangle(&s->Ss[i-1], &s->Ps[i-1], &s->Ss[ i ], ANGLE_S5_P_3S);
-
-		Fdihedral(&s->Ps[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
-							DIHEDRAL_P_5S3_P_5S);
-		Fdihedral(&s->Bs[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
-							DIHEDRAL_A_S3_P_5S);
-		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1],
-							DIHEDRAL_S3_P_5S_A);
-		if (i >= 2)
-		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
-							DIHEDRAL_S3_P_5S3_P);
-	}
-}
-
-static double calcLJForce(double coupling, double rij0, double rijVar)
-{
-	double rfrac = rij0 / rijVar;
-	double rfrac2 = rfrac * rfrac;
-	double rfrac4 = rfrac2 * rfrac2;
-	double rfrac8 = rfrac4 * rfrac4;
-	double rfrac10 = rfrac8 * rfrac2;
-	double rfrac12 = rfrac10 * rfrac2;
-				
-	return coupling*60*( rfrac12 / rijVar - rfrac10 / rijVar );
-}
-
-static void pairForces(Particle *p1, Particle *p2)
-{
-	FbasePair(p1, p2);
-	FCoulomb(p1, p2);
-}
-
-static void FCoulomb(Particle *p1, Particle *p2)
-{	
-	double truncLen = config.truncationLen;
-	double rij = nearestImageDistance(&p2->pos, &p1->pos);
-	if (rij > truncLen)
-		return; /* Too far away */
-	
-	/* If phosphates, apply Coulomb interaction between them */
-
-	double force;
-
-	if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
-		force = calcCoulombForce(rij);
-	} else {
-		return;
-	}
-	
-	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
-	Vec3 forceVec;
-	
-	/* Scale the direction with the calculated force */
-	scale(&direction, force, &forceVec);
-
-	/* Add force to particle objects */
-	add(&p1->F, &forceVec, &p1->F);
-	sub(&p2->F, &forceVec, &p2->F);
-}
-
-static void FbasePair(Particle *p1, Particle *p2)
-{
-	double bpCoupling;
-	double bpForceDist;
-	double truncLen = config.truncationLen;
-	Vec3 forceVec;
-	double force;
-	
-	double rij = nearestImageDistance(&p1->pos, &p2->pos);
-	if (rij > truncLen)
-		return; /* Too far away */
-
-	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
-	
-	/* Apply right force constant for AT-bonding and GC-bonding, 
-	 * if not AT or GC then zero */
-	
-	/* Lennard-Jones potential:
-	 * potential = bpCoupling * 5*(r0 / r)^12 - 6*(r0/r)^10 + 1.
-	 * 
-	 * For the force we differentiate with respect to r, so we get
-	 * bpCoupling * 60*[ r0^10 / r^11 - r0^12/r^13 ] */
-
-	if ((p1->type==BASE_A && p2->type==BASE_T) 
-			|| (p1->type==BASE_T && p2->type==BASE_A)) {
-		bpCoupling = COUPLING_BP_AT;
-		bpForceDist = DISTANCE_r0_AT;
-		force = calcLJForce(bpCoupling, bpForceDist, rij);
-		
-	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
-			|| (p1->type==BASE_C && p2->type==BASE_G)) {
-		bpCoupling = COUPLING_BP_GC;
-		bpForceDist = DISTANCE_r0_GC;
-		force = calcLJForce(bpCoupling, bpForceDist, rij);
-	
-	/* Else, no force and return without modifying particles */
-	} else {
-		return; 
-	}
-	/* Scale the direction with the calculated force */
-	scale(&direction, force, &forceVec);
-
-	/* Add force to particle objects */
-	add(&p1->F, &forceVec, &p1->F);
-	sub(&p2->F, &forceVec, &p2->F);
-}
-
-static double calcDebyeLength(void)
-{
-	double T = config.thermostatTemp;
-	double saltCon = (double)(config.saltConcentration);
-	double elCharge = CHARGE_ELECTRON;
-	double lambdaBDenom, lambdaB, kInvSq, kInv, kDebye;
-	
-	lambdaBDenom = 4 * M_PI * VACUUM_PERMITTIVITY * DIELECTRIC_CST_H20 *
-			BOLTZMANN_CONSTANT * T;
-	lambdaB = elCharge*elCharge / lambdaBDenom;
-	kInvSq = 8*M_PI*lambdaB*AVOGADRO*saltCon;
-	kInv = sqrt(kInvSq);
-	kDebye = 1/kInv;
-	
-	return kDebye;
-}
-
-
-static double calcCoulombForce(double distanceLength)
-{
-	double couplingConstant = CHARGE_ELECTRON*CHARGE_ELECTRON/
-					(4*M_PI*COUPLING_EPS_H2O);
-	double debyeLength = calcDebyeLength();
-		
-	double expArgument = - distanceLength/debyeLength;
-	double exponentialPart = exp(expArgument);
-	
-	double forceQQ = couplingConstant* exponentialPart*
-				( 1/(distanceLength*distanceLength) 
-				+ 1/(debyeLength*distanceLength) );
-	
-	return forceQQ;
-	
-}
-
-static void calculateForces()
-{
-	/* Reset forces */
-	forEveryParticle(&resetForce);
-
-	/* Strand-based forces */
-	for (int s = 0; s < world.numStrands; s++)
-		strandForces(&world.strands[s]);
-
-	/* Particle-based forces */
-	forEveryPair(&pairForces);
-}
-
-static double calcLJPotential(double coupling, double rij0, double rijVar2)
-{
-	double rfrac2 = rij0 * rij0 / rijVar2;
-	double rfrac4 = rfrac2 * rfrac2;
-	double rfrac8 = rfrac4 * rfrac4;
-	double rfrac10 = rfrac8 * rfrac2;
-	double rfrac12 = rfrac8 * rfrac4;
-	
-	return coupling*(5*rfrac12 - 6*rfrac10 + 1);
-}
-
-
-
+/* ===== FORCES AND POTENTIALS ===== */
 
 /* V = k1 * (dr - d0)^2  +  k2 * (d - d0)^4
  * where dr is the distance between the particles */
@@ -746,17 +413,6 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	//printf("phi = %f\n",phi / TO_RADIANS);
 	return kphi * (1 - cos(phi - phi0));
 }
-static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
-								double phi0)
-{
-	/* This is a *mess* to do analytically, so we do a numerical 
-	 * differentiation instead. */
-	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
-	FdihedralParticle(p1, p1, p2, p3, p4, Vorig, phi0);
-	FdihedralParticle(p2, p1, p2, p3, p4, Vorig, phi0);
-	FdihedralParticle(p3, p1, p2, p3, p4, Vorig, phi0);
-	FdihedralParticle(p4, p1, p2, p3, p4, Vorig, phi0);
-}
 static void FdihedralParticle(Particle *target, 
 		Particle *p1, Particle *p2, Particle *p3, Particle *p4, 
 		double Vorig, double phi0)
@@ -781,6 +437,17 @@ static void FdihedralParticle(Particle *target,
 	target->pos.z -= h;
 
 	add(&target->F, &F, &target->F);
+}
+static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
+								double phi0)
+{
+	/* This is a *mess* to do analytically, so we do a numerical 
+	 * differentiation instead. */
+	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
+	FdihedralParticle(p1, p1, p2, p3, p4, Vorig, phi0);
+	FdihedralParticle(p2, p1, p2, p3, p4, Vorig, phi0);
+	FdihedralParticle(p3, p1, p2, p3, p4, Vorig, phi0);
+	FdihedralParticle(p4, p1, p2, p3, p4, Vorig, phi0);
 }
 
 static double Vstack(Particle *p1, Particle *p2)
@@ -825,23 +492,287 @@ static void Fstack(Particle *p1, Particle *p2)
 }
 
 
-void stepWorld(void)
+static double calcVBasePai(double coupling, double rij0, double rijVar2)
 {
-	switch(config.integrator) {
-	case VERLET:
-		verlet();
-		assert(physicsCheck());
-		thermostat();
-		assert(physicsCheck());
-		break;
-	case LANGEVIN:
-		langevinBBK();
-		break;
-	default:
-		assert(false);
-		break;
+	double rfrac2 = rij0 * rij0 / rijVar2;
+	double rfrac4 = rfrac2 * rfrac2;
+	double rfrac8 = rfrac4 * rfrac4;
+	double rfrac10 = rfrac8 * rfrac2;
+	double rfrac12 = rfrac8 * rfrac4;
+	
+	return coupling*(5*rfrac12 - 6*rfrac10 + 1);
+}
+static double VbasePair(Particle *p1, Particle *p2)
+{
+	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	if (rij > config.truncationLen)
+		return 0; /* Too far away */
+
+	double rij2 = rij*rij;
+	
+	double bpCoupling;
+	double bpForceDist;
+	double bpPotential;
+	double truncCorrection = 0;
+	
+	/* Apply right potential constant for AT-bonding and GC-bonding, 
+	 * if not AT or GC then zero */
+	
+	/* Lennard-Jones potential:
+	 * potential = bpCoupling * 5*(r0 / r)^12 - 6*(r0/r)^10 + 1. */
+	
+	if ((p1->type==BASE_A && p2->type==BASE_T) 
+			|| (p1->type==BASE_T && p2->type==BASE_A)) {
+		bpCoupling = COUPLING_BP_AT;
+		bpForceDist = DISTANCE_r0_AT;
+		/* calculate the correction by which the force should be lifted */
+		double truncLen2 = config.truncationLen * config.truncationLen;
+		truncCorrection = calcVBasePai(bpCoupling, bpForceDist, truncLen2);
+		bpPotential = calcVBasePai(bpCoupling, bpForceDist, rij2) - truncCorrection;
+		
+	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
+			|| (p1->type==BASE_C && p2->type==BASE_G)) {
+		bpCoupling = COUPLING_BP_GC;
+		bpForceDist = DISTANCE_r0_GC;
+		/* calculate the correction by which the force should be lifted */
+		double truncLen2 = config.truncationLen * config.truncationLen;
+		truncCorrection = calcVBasePai(bpCoupling, bpForceDist, truncLen2);
+		bpPotential = calcVBasePai(bpCoupling, bpForceDist, rij2) - truncCorrection;
+		
+	/* Else, no L-J potential and return potential = 0 */
+	} else {
+		return 0; 
+	}
+
+	return bpPotential;
+}
+
+static double calcFbasePair(double coupling, double rij0, double rijVar)
+{
+	double rfrac = rij0 / rijVar;
+	double rfrac2 = rfrac * rfrac;
+	double rfrac4 = rfrac2 * rfrac2;
+	double rfrac8 = rfrac4 * rfrac4;
+	double rfrac10 = rfrac8 * rfrac2;
+	double rfrac12 = rfrac10 * rfrac2;
+				
+	return coupling*60*( rfrac12 / rijVar - rfrac10 / rijVar );
+}
+static void FbasePair(Particle *p1, Particle *p2)
+{
+	double bpCoupling;
+	double bpForceDist;
+	double truncLen = config.truncationLen;
+	Vec3 forceVec;
+	double force;
+	
+	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	if (rij > truncLen)
+		return; /* Too far away */
+
+	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
+	
+	/* Apply right force constant for AT-bonding and GC-bonding, 
+	 * if not AT or GC then zero */
+	
+	/* Lennard-Jones potential:
+	 * potential = bpCoupling * 5*(r0 / r)^12 - 6*(r0/r)^10 + 1.
+	 * 
+	 * For the force we differentiate with respect to r, so we get
+	 * bpCoupling * 60*[ r0^10 / r^11 - r0^12/r^13 ] */
+
+	if ((p1->type==BASE_A && p2->type==BASE_T) 
+			|| (p1->type==BASE_T && p2->type==BASE_A)) {
+		bpCoupling = COUPLING_BP_AT;
+		bpForceDist = DISTANCE_r0_AT;
+		force = calcFbasePair(bpCoupling, bpForceDist, rij);
+		
+	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
+			|| (p1->type==BASE_C && p2->type==BASE_G)) {
+		bpCoupling = COUPLING_BP_GC;
+		bpForceDist = DISTANCE_r0_GC;
+		force = calcFbasePair(bpCoupling, bpForceDist, rij);
+	
+	/* Else, no force and return without modifying particles */
+	} else {
+		return; 
+	}
+	/* Scale the direction with the calculated force */
+	scale(&direction, force, &forceVec);
+
+	/* Add force to particle objects */
+	add(&p1->F, &forceVec, &p1->F);
+	sub(&p2->F, &forceVec, &p2->F);
+}
+
+
+static double calcDebyeLength(void)
+{
+	double T = config.thermostatTemp;
+	double saltCon = (double)(config.saltConcentration);
+	double elCharge = CHARGE_ELECTRON;
+	double lambdaBDenom, lambdaB, kInvSq, kInv, kDebye;
+	
+	lambdaBDenom = 4 * M_PI * VACUUM_PERMITTIVITY * DIELECTRIC_CST_H20 *
+			BOLTZMANN_CONSTANT * T;
+	lambdaB = elCharge*elCharge / lambdaBDenom;
+	kInvSq = 8*M_PI*lambdaB*AVOGADRO*saltCon;
+	kInv = sqrt(kInvSq);
+	kDebye = 1/kInv;
+	
+	return kDebye;
+}
+static double calcVCoulomb(double distanceLength)
+{
+	double couplingConstant = CHARGE_ELECTRON*CHARGE_ELECTRON/
+				(4*M_PI*COUPLING_EPS_H2O);
+	double debyeLength = calcDebyeLength();
+	
+	double expArgument = - distanceLength/debyeLength;
+	double exponentialPart = exp(expArgument);
+	
+	double potentialQQ = couplingConstant * exponentialPart / distanceLength;
+	
+	return potentialQQ*exponentialPart;	
+}
+static double VCoulomb(Particle *p1, Particle *p2)
+{
+	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	if (rij > config.truncationLen)
+		return 0; /* Too far away */
+	
+	double truncLength = config.truncationLen;	
+	double phPotential;
+	double truncCorrection = 0;
+	
+	if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
+		/* calculate the correction by which the force should be lifted */
+		truncCorrection = calcVCoulomb(truncLength);
+		phPotential = calcVCoulomb(rij) - truncCorrection;
+	
+	/* Else, no Coulomb potential and return potential = 0 */
+	} else {
+		return 0; 
+	}
+	
+	return phPotential;
+}
+
+
+static double calcFCoulomb(double distanceLength)
+{
+	double couplingConstant = CHARGE_ELECTRON*CHARGE_ELECTRON/
+					(4*M_PI*COUPLING_EPS_H2O);
+	double debyeLength = calcDebyeLength();
+		
+	double expArgument = - distanceLength/debyeLength;
+	double exponentialPart = exp(expArgument);
+	
+	double forceQQ = couplingConstant* exponentialPart*
+				( 1/(distanceLength*distanceLength) 
+				+ 1/(debyeLength*distanceLength) );
+	
+	return forceQQ;
+	
+}
+static void FCoulomb(Particle *p1, Particle *p2)
+{	
+	double truncLen = config.truncationLen;
+	double rij = nearestImageDistance(&p2->pos, &p1->pos);
+	if (rij > truncLen)
+		return; /* Too far away */
+	
+	/* If phosphates, apply Coulomb interaction between them */
+
+	double force;
+
+	if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
+		force = calcFCoulomb(rij);
+	} else {
+		return;
+	}
+	
+	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
+	Vec3 forceVec;
+	
+	/* Scale the direction with the calculated force */
+	scale(&direction, force, &forceVec);
+
+	/* Add force to particle objects */
+	add(&p1->F, &forceVec, &p1->F);
+	sub(&p2->F, &forceVec, &p2->F);
+}
+
+
+
+
+
+/* ===== FORCE FUNCTIONS ===== */
+
+static void resetForce(Particle *p)
+{
+	p->F.x = p->F.y = p->F.z = 0;
+}
+
+/* Calculate the forces on the particles of the strand that are attributed 
+ * to the structure of the strand itself. These are:
+ * Fbond, Fangle, Fdihedral, Fstack. */
+static void strandForces(Strand *s) {
+	if (s->numMonomers < 0)
+		return;
+	assert(s->Ss != NULL && s->Ps != NULL && s->Bs != NULL);
+
+	/* Bottom monomer */
+	Fbond(&s->Ss[0], &s->Bs[0], D_SA);
+	Fbond(&s->Ss[0], &s->Ps[0], D_S5P);
+	Fangle(&s->Ps[0], &s->Ss[0], &s->Bs[0], ANGLE_P_5S_A);
+	/* Rest of the monomers */
+	for (int i = 1; i < s->numMonomers; i++) {
+		Fbond(&s->Ss[i], &s->Bs[i],   D_SA);
+		Fbond(&s->Ss[i], &s->Ps[i],   D_S5P);
+		Fbond(&s->Ss[i], &s->Ps[i-1], D_S3P);
+
+		Fstack(&s->Bs[i], &s->Bs[i-1]);
+
+		Fangle(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_5S_A);
+		Fangle(&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
+		Fangle(&s->Ps[i-1], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_3S_A);
+		Fangle(&s->Ss[i-1], &s->Ps[i-1], &s->Ss[ i ], ANGLE_S5_P_3S);
+
+		Fdihedral(&s->Ps[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
+							DIHEDRAL_P_5S3_P_5S);
+		Fdihedral(&s->Bs[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
+							DIHEDRAL_A_S3_P_5S);
+		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1],
+							DIHEDRAL_S3_P_5S_A);
+		if (i >= 2)
+		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
+							DIHEDRAL_S3_P_5S3_P);
 	}
 }
+
+static void pairForces(Particle *p1, Particle *p2)
+{
+	FbasePair(p1, p2);
+	FCoulomb(p1, p2);
+}
+
+static void calculateForces()
+{
+	/* Reset forces */
+	forEveryParticle(&resetForce);
+
+	/* Strand-based forces */
+	for (int s = 0; s < world.numStrands; s++)
+		strandForces(&world.strands[s]);
+
+	/* Particle-based forces */
+	forEveryPair(&pairForces);
+}
+
+
+
+/* ===== ENERGY FUNCTIONS ===== */
 
 static void kineticHelper(Particle *p, void *data)
 {
@@ -854,36 +785,23 @@ static double kineticEnergy(void)
 	forEveryParticleD(&kineticHelper, (void*) &twiceK);
 	return twiceK/2;
 }
-
-static void momentumHelper(Particle *p, void *data)
+double temperature(void)
 {
-	Vec3 *Ptot = (Vec3*) data;
-	Vec3 P;
-	scale(&p->vel, p->m, &P);
-	add(&P, Ptot, Ptot);
-}
-static Vec3 momentum(void)
-{
-	Vec3 Ptot = {0, 0, 0};
-	forEveryParticleD(&momentumHelper, (void*) &Ptot);
-	return Ptot;
+	return 2.0 / (3.0 * BOLTZMANN_CONSTANT)
+			* kineticEnergy() / (config.numMonomers * 3.0);
 }
 
-bool physicsCheck(void)
-{
-	Vec3 P = momentum();
-	double PPM = length(&P) / config.numMonomers;
-	if (PPM > 1e-20) {
-		fprintf(stderr, "\nMOMENTUM CONSERVATION VIOLATED! "
-				"Momentum per monomer: |P| = %e\n", PPM);
-		return false;
-	}
-	return true;
-}
 
 typedef struct PotentialEnergies {
 	double bond, angle, dihedral, stack, basePair, Coulomb;
 } PotentialEnergies;
+static void pairPotentials(Particle *p1, Particle *p2, void *data)
+{
+	PotentialEnergies *pe = (PotentialEnergies*) data;
+	
+	pe->basePair += VbasePair(p1, p2);
+	pe->Coulomb  += VCoulomb(p1, p2);
+}
 
 /* Add energy stats of given strand, in electronvolts. */
 static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
@@ -925,96 +843,6 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 	pe->stack    = Vs;
 }
 
-static double VbasePair(Particle *p1, Particle *p2)
-{
-	double rij = nearestImageDistance(&p1->pos, &p2->pos);
-	if (rij > config.truncationLen)
-		return 0; /* Too far away */
-
-	double rij2 = rij*rij;
-	
-	double bpCoupling;
-	double bpForceDist;
-	double bpPotential;
-	double truncCorrection = 0;
-	
-	/* Apply right potential constant for AT-bonding and GC-bonding, 
-	 * if not AT or GC then zero */
-	
-	/* Lennard-Jones potential:
-	 * potential = bpCoupling * 5*(r0 / r)^12 - 6*(r0/r)^10 + 1. */
-	
-	if ((p1->type==BASE_A && p2->type==BASE_T) 
-			|| (p1->type==BASE_T && p2->type==BASE_A)) {
-		bpCoupling = COUPLING_BP_AT;
-		bpForceDist = DISTANCE_r0_AT;
-		/* calculate the correction by which the force should be lifted */
-		double truncLen2 = config.truncationLen * config.truncationLen;
-		truncCorrection = calcLJPotential(bpCoupling, bpForceDist, truncLen2);
-		bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
-		
-	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
-			|| (p1->type==BASE_C && p2->type==BASE_G)) {
-		bpCoupling = COUPLING_BP_GC;
-		bpForceDist = DISTANCE_r0_GC;
-		/* calculate the correction by which the force should be lifted */
-		double truncLen2 = config.truncationLen * config.truncationLen;
-		truncCorrection = calcLJPotential(bpCoupling, bpForceDist, truncLen2);
-		bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
-		
-	/* Else, no L-J potential and return potential = 0 */
-	} else {
-		return 0; 
-	}
-
-	return bpPotential;
-}
-
-static double VCoulomb(Particle *p1, Particle *p2)
-{
-	double rij = nearestImageDistance(&p1->pos, &p2->pos);
-	if (rij > config.truncationLen)
-		return 0; /* Too far away */
-	
-	double truncLength = config.truncationLen;	
-	double phPotential;
-	double truncCorrection = 0;
-	
-	if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
-		/* calculate the correction by which the force should be lifted */
-		truncCorrection = calcCoulombPotential(truncLength);
-		phPotential = calcCoulombPotential(rij) - truncCorrection;
-	
-	/* Else, no Coulomb potential and return potential = 0 */
-	} else {
-		return 0; 
-	}
-	
-	return phPotential;
-}
-
-static double calcCoulombPotential(double distanceLength)
-{
-	double couplingConstant = CHARGE_ELECTRON*CHARGE_ELECTRON/
-				(4*M_PI*COUPLING_EPS_H2O);
-	double debyeLength = calcDebyeLength();
-	
-	double expArgument = - distanceLength/debyeLength;
-	double exponentialPart = exp(expArgument);
-	
-	double potentialQQ = couplingConstant * exponentialPart / distanceLength;
-	
-	return potentialQQ*exponentialPart;	
-}
-
-static void pairPotentials(Particle *p1, Particle *p2, void *data)
-{
-	PotentialEnergies *pe = (PotentialEnergies*) data;
-	
-	pe->basePair += VbasePair(p1, p2);
-	pe->Coulomb  += VCoulomb(p1, p2);
-}
-
 /* Return energy stats of world, in electronvolts. */
 static PotentialEnergies calcPotentialEnergies(void) {
 	
@@ -1034,6 +862,189 @@ static PotentialEnergies calcPotentialEnergies(void) {
 	
 	return pe;
 }
+
+
+
+
+/* ===== MOMENTUM FUNCTIONS ===== */
+
+static void momentumHelper(Particle *p, void *data)
+{
+	Vec3 *Ptot = (Vec3*) data;
+	Vec3 P;
+	scale(&p->vel, p->m, &P);
+	add(&P, Ptot, Ptot);
+}
+static Vec3 momentum(void)
+{
+	Vec3 Ptot = {0, 0, 0};
+	forEveryParticleD(&momentumHelper, (void*) &Ptot);
+	return Ptot;
+}
+
+bool physicsCheck(void)
+{
+	Vec3 P = momentum();
+	double PPM = length(&P) / config.numMonomers;
+	if (PPM > 1e-20) {
+		fprintf(stderr, "\nMOMENTUM CONSERVATION VIOLATED! "
+				"Momentum per monomer: |P| = %e\n", PPM);
+		return false;
+	}
+	return true;
+}
+
+
+
+
+/* ===== INTEGRATOR ===== */
+
+static void thermostatHelper(Particle *p, void *data)
+{
+	double lambda = *(double*) data;
+	scale(&p->vel, lambda, &p->vel);
+}
+static void thermostat(void)
+{
+	if (config.thermostatTau <= 0)
+		return;
+
+	/* Mass and Boltzmann constant are 1 */ 
+	double Tk  = temperature();
+	double T0  = config.thermostatTemp;
+	double dt  = config.timeStep;
+	double tau = config.thermostatTau;
+	double lambda = sqrt(1 + dt/tau * (T0/Tk - 1));
+
+	forEveryParticleD(&thermostatHelper, (void*) &lambda);
+}
+
+static void verletHelper1(Particle *p)
+{
+	double dt = config.timeStep;
+	Vec3 tmp;
+
+	/* vel(t + dt/2) = vel(t) + acc(t)*dt/2 */
+	scale(&p->F, dt / (2 * p->m), &tmp);
+	add(&p->vel, &tmp, &p->vel);
+
+	assert(!isnan(p->vel.x) && !isnan(p->vel.y) && !isnan(p->vel.z));
+
+	/* pos(t + dt) = pos(t) + vel(t + dt/2)*dt */
+	scale(&p->vel, dt, &tmp);
+	add(&p->pos, &tmp, &p->pos);
+}
+static void verletHelper2(Particle *p)
+{
+	double dt = config.timeStep;
+	Vec3 tmp;
+
+	/* vel(t + dt) = vel(t + dt/2) + acc(t + dt)*dt/2 */
+	scale(&p->F, dt / (2 * p->m), &tmp);
+	add(&p->vel, &tmp, &p->vel);
+}
+static void verlet(void)
+{
+	// The compiler better inlines all of this. TODO if not: force it.
+	forEveryParticle(&verletHelper1);
+	calculateForces(); /* acc(t + dt) */
+	forEveryParticle(&verletHelper2);
+	reboxParticles(); //TODO only once every N iterations...
+}
+
+static void langevinBBKhelper1(Particle *p)
+{
+	double dt    = config.timeStep;
+	double gamma = config.langevinGamma;
+
+	Vec3 tmp1, tmp2;
+
+	/* from v(t) to v(t + dt/2) */
+	scale(&p->vel, 1 - gamma*dt/2, &tmp1);
+
+	/* p->F is regular force + random collision force */
+	scale(&p->F, dt / (2 * p->m), &tmp2);
+
+	add(&tmp1, &tmp2, &p->vel);
+
+	/* from r(t) to r(t + dt) */
+	scale(&p->vel, dt, &tmp1);
+	add(&p->pos, &tmp1, &p->pos);
+}
+static void langevinBBKhelper2(Particle *p)
+{
+	double dt    = config.timeStep;
+	double gamma = config.langevinGamma;
+	double T     = config.thermostatTemp;
+
+	/* Regular forces have been calculated. Add the random force due 
+	 * to collisions to the total force. The result is:
+	 * p->F = F(t + dt) + R(t + dt) */
+	/* TODO check that compiler inlines this and precalculates the 
+	 * prefactor before p->m when looping over all particles. */
+	double Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * gamma * p->m / dt);
+	Vec3 R = randNormVec();
+	scale(&R, Rstddev, &R);
+	add(&p->F, &R, &p->F);
+
+	/* from v(t + dt/2) to v(t + dt) */
+	Vec3 tmp;
+	scale(&p->F, dt / (2 * p->m), &tmp);
+	add(&p->vel, &tmp, &tmp);
+	scale(&tmp, 1 / (1 + gamma*dt/2), &p->vel);
+}
+
+/* BBK integrator for Langevin dynamics. Uses the one based on 
+ * velocity-verlet to include calculation of the velocities. 
+ * See http://localscf.com/LangevinDynamics.aspx */
+static void langevinBBK(void)
+{
+	forEveryParticle(&langevinBBKhelper1); /* updates positions */
+	reboxParticles(); //TODO only once every N iterations(?)
+	calculateForces();
+	forEveryParticle(&langevinBBKhelper2);
+}
+
+
+
+void stepWorld(void)
+{
+	switch(config.integrator) {
+	case VERLET:
+		verlet();
+		assert(physicsCheck());
+		thermostat();
+		assert(physicsCheck());
+		break;
+	case LANGEVIN:
+		langevinBBK();
+		break;
+	default:
+		assert(false);
+		break;
+	}
+}
+
+/* TODO Still only quick tests -- need to rework this so I pass proper 
+ * config data */
+bool integratorTaskTick(void *state);
+bool integratorTaskTick(void *state)
+{
+	UNUSED(state);
+	stepWorld();
+	return true;
+}
+
+Task integratorTask = {
+	NULL,
+	NULL,
+	&integratorTaskTick,
+	NULL
+};
+
+
+
+/* ===== INFORMATION FUNCTIONS ===== */
 
 void dumpStats()
 {
@@ -1061,6 +1072,9 @@ void dumpEnergies(FILE *stream)
 #endif
 }
 
+
+/* ===== MISC FUNCTIONS ===== */
+
 Vec3 getCOM(Particle *ps, int num)
 {
 	Vec3 COM = {0, 0, 0};
@@ -1076,20 +1090,3 @@ Vec3 getCOM(Particle *ps, int num)
 }
 
 
-
-/* TODO Still only quick tests -- need to rework this so I pass proper 
- * config data */
-bool integratorTaskTick(void *state);
-bool integratorTaskTick(void *state)
-{
-	UNUSED(state);
-	stepWorld();
-	return true;
-}
-
-Task integratorTask = {
-	NULL,
-	NULL,
-	&integratorTaskTick,
-	NULL
-};
