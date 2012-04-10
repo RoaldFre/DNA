@@ -62,10 +62,14 @@
 #define COUPLING_EPS_H2O	(78*VACUUM_PERMITTIVITY) /* 78 epsilon_0 */
 #define DEBYE_LENGTH 	13.603e-10	/* 13.603 Angstrom for 50mM = [Na+]*/
 
+/* Thermodynamics */
 #define ENERGY_FACTOR	(1/1.602177e-19) /* Energy in electronvolt */
 #define BOLTZMANN_CONSTANT    1.38065e-23
 #define FROM_ANGSTROM_SQUARED 1e20 /* Bond constants are given for angstrom */
 #define TO_RADIANS	      (M_PI / 180)
+
+#define DIELECTRIC_CST_H20	80
+#define AVOGADRO		6.023e23	/* particles per mol */
 
 static void verlet(void);
 static void calculateForces(void);
@@ -75,7 +79,10 @@ static double randNorm(void);
 static double kineticEnergy(void);
 static double calcLJForce(double coupling, double rij0, double rijVar);
 static double calcLJPotential(double coupling, double rij0, double rijVar2);
+static void   pairForces(Particle *p1, Particle *p2);
+static void   phosphatePairForce(Particle *p1, Particle *p2);
 static void   basePairForce(Particle *p1, Particle *p2);
+static double phosphatePairPotential(Particle *p1, Particle *p2);
 static double basePairPotential(Particle *p1, Particle *p2);
 static double Vbond(Particle *p1, Particle *p2, double d0);
 static void   Fbond(Particle *p1, Particle *p2, double d0);
@@ -87,11 +94,12 @@ static double Vdihedral(Particle*, Particle*, Particle*, Particle*, double);
 static void   Fdihedral(Particle*, Particle*, Particle*, Particle*, double);
 static void   FdihedralParticle(Particle *target, Particle *p1, Particle *p2,
 			Particle *p3, Particle *p4, double Vorig, double phi0);
-static double	calcFqq(Particle *p1, Particle *p2);
-static double 	calcVqq(Particle *p1, Particle *p2);
+static double calcCoulombForce(double distanceLength);
+static double calcCoulombPotential(double distanceLength);
 static double calcDebyeLength(void);
 static void   addBpPotential(Particle *p1, Particle *p2, void *data);
-
+static void   addPhosphatePotential(Particle *p1, Particle *p2, void *data);
+static void   pairPotentials(Particle *p1, Particle *p2, void *data);
 
 
 
@@ -134,8 +142,8 @@ bool allocStrand(Strand *s, int numMonomers) {
 }
 
 
-/* Place monomers in a vertical column (in the x-y plane) in the center of 
- * the world. Distances between sugar, base and phospate are the 
+/* Place monomers in a screwed column (in the x-y-z plane) in the center
+ * of the world. Distances between sugar, base and phospate are the 
  * equilibrium lenghts with some small gaussian jitter added.
  *
  * Indices work like this:
@@ -173,20 +181,25 @@ bool allocStrand(Strand *s, int numMonomers) {
  */
 void fillWorld()
 {
+	//char * basePairContent = "ATCGATTGAGCTCTAGCG​CAGTAAGTC";
+	//int n = strlen(basePairContent);
 	int n = config.numMonomers;
-
+	
 	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
 	double xoffset = -D_SA / 2;
 	double zoffset = -D_SA / 2;
 	double yoffset = -n * spacing / 2 + config.worldSize/2;
 	
 	double posStdev = spacing / 100;
+	
+
 
 	for (int s = 0; s < world.numStrands; s++) {
 		Strand strand = world.strands[s];
 		for (int i = 0; i < n; i++) {
 			
-			//strand.Ss[i].pos.z = strand.Bs[i].pos.z = strand.Ps[i].pos.z = config.worldSize/2;
+			/*strand.Ss[i].pos.z = strand.Bs[i].pos.z 
+			 * = strand.Ps[i].pos.z = config.worldSize/2; */
 			
 			/* screw factor */
 			double screwFactorCos = cos( i*SCREW_SYM_PHI );
@@ -194,18 +207,24 @@ void fillWorld()
 			
 			/* Positions */
 
-			strand.Ss[i].pos.x = config.worldSize/2 + (xoffset - D_SA) * screwFactorCos;
-			strand.Bs[i].pos.x = config.worldSize/2 + (xoffset)* screwFactorCos;
-			strand.Ps[i].pos.x = config.worldSize/2 + (xoffset - D_SA) * screwFactorCos;
+			strand.Ss[i].pos.x = config.worldSize/2 
+					+ (xoffset - D_SA) * screwFactorCos;
+			strand.Bs[i].pos.x = config.worldSize/2 
+					+ (xoffset)* screwFactorCos;
+			strand.Ps[i].pos.x = config.worldSize/2 
+					+ (xoffset - D_SA) * screwFactorCos;
 
 			strand.Ss[i].pos.y = yoffset + i*spacing;
 			strand.Bs[i].pos.y = yoffset + i*spacing;
 			strand.Ps[i].pos.y = yoffset + i*spacing + D_S5P;
 			
 			
-			strand.Ss[i].pos.z = config.worldSize/2 + (zoffset - D_SA) * screwFactorSin;
-			strand.Bs[i].pos.z = config.worldSize/2 + (zoffset) * screwFactorSin;
-			strand.Ps[i].pos.z = config.worldSize/2 + (zoffset - D_SA) * screwFactorSin;
+			strand.Ss[i].pos.z = config.worldSize/2 
+					+ (zoffset - D_SA) * screwFactorSin;
+			strand.Bs[i].pos.z = config.worldSize/2 
+					+ (zoffset) * screwFactorSin;
+			strand.Ps[i].pos.z = config.worldSize/2 
+					+ (zoffset - D_SA) * screwFactorSin;
 
 			strand.Ss[i].pos.x += posStdev * randNorm();
 			strand.Ss[i].pos.y += posStdev * randNorm();
@@ -218,9 +237,12 @@ void fillWorld()
 			strand.Ps[i].pos.z += posStdev * randNorm();
 
 			/* Velocity */
-			strand.Ss[i].vel.x = strand.Ss[i].vel.y = strand.Ss[i].vel.z = 0;
-			strand.Bs[i].vel.x = strand.Bs[i].vel.y = strand.Bs[i].vel.z = 0;
-			strand.Ps[i].vel.x = strand.Ps[i].vel.y = strand.Ps[i].vel.z = 0;
+			strand.Ss[i].vel.x = strand.Ss[i].vel.y 
+						= strand.Ss[i].vel.z = 0;
+			strand.Bs[i].vel.x = strand.Bs[i].vel.y 
+						= strand.Bs[i].vel.z = 0;
+			strand.Ps[i].vel.x = strand.Ps[i].vel.y 
+						= strand.Ps[i].vel.z = 0;
 
 			/* Mass */
 			strand.Ss[i].m = MASS_S;
@@ -480,6 +502,40 @@ static double calcLJForce(double coupling, double rij0, double rijVar)
 	return coupling*60*( rfrac12 / rijVar - rfrac10 / rijVar );
 }
 
+static void pairForces(Particle *p1, Particle *p2)
+{
+	basePairForce(p1, p2);	
+	phosphatePairForce(p1, p2);
+}
+
+static void phosphatePairForce(Particle *p1, Particle *p2)
+{	
+	double truncLen = config.truncationLen;
+	double rij = nearestImageDistance(&p2->pos, &p1->pos);
+	if (rij > truncLen)
+		return; /* Too far away */
+	
+	/* If phosphates, apply Coulomb interaction between them */
+
+	double force;
+
+	if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
+		force = calcCoulombForce(rij);
+	} else {
+		return;
+	}
+	
+	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
+	Vec3 forceVec;
+	
+	/* Scale the direction with the calculated force */
+	scale(&direction, force, &forceVec);
+
+	/* Add force to particle objects */
+	add(&p1->F, &forceVec, &p1->F);
+	sub(&p2->F, &forceVec, &p2->F);
+}
+
 static void basePairForce(Particle *p1, Particle *p2)
 {
 	double bpCoupling;
@@ -514,17 +570,11 @@ static void basePairForce(Particle *p1, Particle *p2)
 		bpCoupling = COUPLING_BP_GC;
 		bpForceDist = DISTANCE_r0_GC;
 		force = calcLJForce(bpCoupling, bpForceDist, rij);
-		
-	/* If phosphates, apply Coulomb interaction between them */
-	
-	} else if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
-		force = calcFqq(p1, p2);
 	
 	/* Else, no force and return without modifying particles */
 	} else {
 		return; 
 	}
-	
 	/* Scale the direction with the calculated force */
 	scale(&direction, force, &forceVec);
 
@@ -535,43 +585,38 @@ static void basePairForce(Particle *p1, Particle *p2)
 
 static double calcDebyeLength(void)
 {
-	return DEBYE_LENGTH;
+	double temperature = config.thermostatTemp;
+	double saltCon = (double)(config.saltConcentration);
+	double elCharge = CHARGE_ELECTRON;
+	double lambdaBDenom, lambdaB, kInvSq, kInv, kDebye;
+	
+	lambdaBDenom = 4 * M_PI * VACUUM_PERMITTIVITY * DIELECTRIC_CST_H20 *
+			BOLTZMANN_CONSTANT * temperature;
+	lambdaB = elCharge*elCharge / lambdaBDenom;
+	kInvSq = 8*M_PI*lambdaB*AVOGADRO*saltCon;
+	kInv = sqrt(kInvSq);
+	kDebye = 1/kInv;
+	
+	return kDebye;
 }
 
 
-static double calcFqq(Particle *p1, Particle *p2)
+static double calcCoulombForce(double distanceLength)
 {
 	double couplingConstant = CHARGE_ELECTRON*CHARGE_ELECTRON/
-											(4*M_PI*COUPLING_EPS_H2O);
+					(4*M_PI*COUPLING_EPS_H2O);
 	double debyeLength = calcDebyeLength();
-	double distanceLength = nearestImageDistance(&p2->pos, &p1->pos);
 		
 	double expArgument = - distanceLength/debyeLength;
 	double exponentialPart = exp(expArgument);
 	
 	double forceQQ = couplingConstant* exponentialPart*
-					( 1/(distanceLength*distanceLength) 
-									+ 1/(debyeLength*distanceLength) );
+				( 1/(distanceLength*distanceLength) 
+				+ 1/(debyeLength*distanceLength) );
 	
 	return forceQQ;
 	
 }
-
-static double calcVqq(Particle *p1, Particle *p2)
-{
-	double couplingConstant = CHARGE_ELECTRON*CHARGE_ELECTRON/
-											(4*M_PI*COUPLING_EPS_H2O);
-	double debyeLength = calcDebyeLength();
-	double distanceLength = nearestImageDistance(&p2->pos, &p1->pos);
-	
-	double expArgument = - distanceLength/debyeLength;
-	double exponentialPart = exp(expArgument);
-	
-	double potentialQQ = couplingConstant * exponentialPart / distanceLength;
-	
-	return potentialQQ*exponentialPart;	
-}
-
 
 static void calculateForces()
 {
@@ -583,7 +628,7 @@ static void calculateForces()
 		strandForces(&world.strands[s]);
 
 	/* Particle-based forces */
-	forEveryPair(&basePairForce);
+	forEveryPair(&pairForces);
 }
 
 static double calcLJPotential(double coupling, double rij0, double rijVar2)
@@ -597,58 +642,7 @@ static double calcLJPotential(double coupling, double rij0, double rijVar2)
 	return coupling*(5*rfrac12 - 6*rfrac10 + 1);
 }
 
-/* Lennard-Jones Potential */
-static double basePairPotential(Particle *p1, Particle *p2)
-{
-	double rij = nearestImageDistance(&p1->pos, &p2->pos);
-	if (rij > config.truncationLen)
-		return 0; /* Too far away */
 
-	double rij2 = rij*rij;
-	
-	double bpCoupling;
-	double bpForceDist;
-	double bpPotential;
-	double truncCorrection = 0;
-	
-	/* Apply right potential constant for AT-bonding and GC-bonding, 
-	 * if not AT or GC then zero */
-	
-	/* Lennard-Jones potential:
-	 * potential = bpCoupling * 5*(r0 / r)^12 - 6*(r0/r)^10 + 1. */
-	
-	if ((p1->type==BASE_A && p2->type==BASE_T) 
-			|| (p1->type==BASE_T && p2->type==BASE_A)) {
-		bpCoupling = COUPLING_BP_AT;
-		bpForceDist = DISTANCE_r0_AT;
-		/* calculate the correction by which the force should be lifted */
-		double truncLen2 = config.truncationLen * config.truncationLen;
-		truncCorrection = calcLJPotential(bpCoupling, bpForceDist, truncLen2);
-		bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
-		
-	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
-			|| (p1->type==BASE_C && p2->type==BASE_G)) {
-		bpCoupling = COUPLING_BP_GC;
-		bpForceDist = DISTANCE_r0_GC;
-		/* calculate the correction by which the force should be lifted */
-		double truncLen2 = config.truncationLen * config.truncationLen;
-		truncCorrection = calcLJPotential(bpCoupling, bpForceDist, truncLen2);
-		bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
-	
-	/* If phosphates, apply Coulomb interaction between them */
-	
-	} else if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
-		bpPotential = calcVqq(p1, p2);
-	
-	/* Else, no potential and return potential = 0 */
-	
-	} else {
-		return 0; 
-	}
-
-
-	return bpPotential;
-}
 
 
 /* V = k1 * (dr - d0)^2  +  k2 * (d - d0)^4
@@ -891,7 +885,7 @@ bool physicsCheck(void)
 }
 
 typedef struct potentialEnergies {
-	double bond, angle, dihedral, stack, basepairing;
+	double bond, angle, dihedral, stack, pairing;
 } PotentialEnergies;
 
 /* Add energy stats of given strand, in electronvolts. */
@@ -934,6 +928,89 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 	pe->stack    = Vs;
 }
 
+static double basePairPotential(Particle *p1, Particle *p2)
+{
+	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	if (rij > config.truncationLen)
+		return 0; /* Too far away */
+
+	double rij2 = rij*rij;
+	
+	double bpCoupling;
+	double bpForceDist;
+	double bpPotential;
+	double truncCorrection = 0;
+	
+	/* Apply right potential constant for AT-bonding and GC-bonding, 
+	 * if not AT or GC then zero */
+	
+	/* Lennard-Jones potential:
+	 * potential = bpCoupling * 5*(r0 / r)^12 - 6*(r0/r)^10 + 1. */
+	
+	if ((p1->type==BASE_A && p2->type==BASE_T) 
+			|| (p1->type==BASE_T && p2->type==BASE_A)) {
+		bpCoupling = COUPLING_BP_AT;
+		bpForceDist = DISTANCE_r0_AT;
+		/* calculate the correction by which the force should be lifted */
+		double truncLen2 = config.truncationLen * config.truncationLen;
+		truncCorrection = calcLJPotential(bpCoupling, bpForceDist, truncLen2);
+		bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
+		
+	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
+			|| (p1->type==BASE_C && p2->type==BASE_G)) {
+		bpCoupling = COUPLING_BP_GC;
+		bpForceDist = DISTANCE_r0_GC;
+		/* calculate the correction by which the force should be lifted */
+		double truncLen2 = config.truncationLen * config.truncationLen;
+		truncCorrection = calcLJPotential(bpCoupling, bpForceDist, truncLen2);
+		bpPotential = calcLJPotential(bpCoupling, bpForceDist, rij2) - truncCorrection;
+		
+	/* Else, no L-J potential and return potential = 0 */
+	} else {
+		return 0; 
+	}
+
+	return bpPotential;
+}
+
+static double phosphatePairPotential(Particle *p1, Particle *p2)
+{
+	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	if (rij > config.truncationLen)
+		return 0; /* Too far away */
+	
+	double truncLength = config.truncationLen;	
+	double phPotential;
+	double truncCorrection = 0;
+	
+	if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
+		/* calculate the correction by which the force should be lifted */
+		truncCorrection = calcCoulombPotential(truncLength);
+		phPotential = calcCoulombPotential(rij) - truncCorrection;
+	
+	/* Else, no Coulomb potential and return potential = 0 */
+	} else {
+		return 0; 
+	}
+	
+	return phPotential;
+}
+
+static double calcCoulombPotential(double distanceLength)
+{
+	double couplingConstant = CHARGE_ELECTRON*CHARGE_ELECTRON/
+				(4*M_PI*COUPLING_EPS_H2O);
+	double debyeLength = calcDebyeLength();
+	
+	double expArgument = - distanceLength/debyeLength;
+	double exponentialPart = exp(expArgument);
+	
+	double potentialQQ = couplingConstant * exponentialPart / distanceLength;
+	
+	return potentialQQ*exponentialPart;	
+}
+
+
 static void addBpPotential(Particle *p1, Particle *p2, void *data)
 {
 	double *Vbp = (double*) data;
@@ -941,22 +1018,33 @@ static void addBpPotential(Particle *p1, Particle *p2, void *data)
 	
 }
 
+static void addPhosphatePotential(Particle *p1, Particle *p2, void *data)
+{
+	double *Vphosphate = (double*) data;
+	*Vphosphate += phosphatePairPotential(p1, p2);
+}
+
+static void pairPotentials(Particle *p1, Particle *p2, void *data)
+{
+	addBpPotential(p1, p2, data);
+	addPhosphatePotential(p1, p2, data);
+}
 
 /* Return energy stats of world, in electronvolts. */
 static PotentialEnergies calcPotentialEnergies(void) {
+	
 	PotentialEnergies pe = {0, 0, 0, 0, 0};
 	for (int s = 0; s < world.numStrands; s++)
 		addPotentialEnergies(&world.strands[s], &pe);
-		
-		
-	forEveryPairD(&addBpPotential, &pe.basepairing);
+	
+	forEveryPairD(&pairPotentials, &pe.pairing);
 	
 	/* Convert to eV */
 	pe.bond     *= ENERGY_FACTOR;
 	pe.angle    *= ENERGY_FACTOR;
 	pe.dihedral *= ENERGY_FACTOR;
 	pe.stack    *= ENERGY_FACTOR;
-	pe.basepairing *= ENERGY_FACTOR;
+	pe.pairing  *= ENERGY_FACTOR;
 	
 	return pe;
 }
@@ -966,10 +1054,10 @@ void dumpStats()
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double T = temperature();
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basepairing;
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.pairing;
 
-	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, T = %f\n",
-			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basepairing, T);
+	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vp = %e, T = %f\n",
+			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.pairing, T);
 }
 
 void dumpEnergies(FILE *stream)
@@ -978,9 +1066,9 @@ void dumpEnergies(FILE *stream)
 	assert(stream != NULL);
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack;
-	fprintf(stream, "%e %e %e %e %e %e %e\n",
-			getTime(), E, K, pe.bond, pe.angle, pe.dihedral, pe.stack);
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.pairing;
+	fprintf(stream, "%e %e %e %e %e %e %e %e \n",
+			getTime(), E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.pairing);
 #else
 	/* DEBUG equipartition theorem */
 	dumpEquipartitionStats();
