@@ -3,11 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <string.h>
 #include "physics.h"
 #include "vmath.h"
 #include "spgrid.h"
-
 
 /* Masses (in kg) */
 #define AU      1.660539e-27
@@ -78,8 +76,6 @@ static void calculateForces(void);
 
 static double randNorm(void);
 
-static void buildStrand(Strand strand);
-
 static double kineticEnergy(void);
 static double calcLJForce(double coupling, double rij0, double rijVar);
 static double calcLJPotential(double coupling, double rij0, double rijVar2);
@@ -103,7 +99,7 @@ static double calcCoulombPotential(double distanceLength);
 static double calcDebyeLength(void);
 static double   addBpPotential(Particle *p1, Particle *p2);
 static double   addPhosphatePotential(Particle *p1, Particle *p2);
-
+//static void   pairPotentials(Particle *p1, Particle *p2, PotentialEnergies *data);
 
 
 
@@ -185,110 +181,91 @@ bool allocStrand(Strand *s, int numMonomers) {
  */
 void fillWorld()
 {
+	//char * basePairContent = "ATCGATTGAGCTCTAGCG​CAGTAAGTC";
+	//int n = strlen(basePairContent);
+	int n = config.numMonomers;
+	
+	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
+	double xoffset = -D_SA / 2;
+	double zoffset = -D_SA / 2;
+	double yoffset = -n * spacing / 2 + config.worldSize/2;
+	
+	double posStdev = spacing / 100;
+	
+
+
 	for (int s = 0; s < world.numStrands; s++) {
 		Strand strand = world.strands[s];
-		
-		buildStrand(strand);
+		for (int i = 0; i < n; i++) {
+			
+			/*strand.Ss[i].pos.z = strand.Bs[i].pos.z 
+			 * = strand.Ps[i].pos.z = config.worldSize/2; */
+			
+			/* screw factor */
+			double screwFactorCos = cos( i*SCREW_SYM_PHI );
+			double screwFactorSin = sin( i*SCREW_SYM_PHI );
+			
+			/* Positions */
+
+			strand.Ss[i].pos.x = config.worldSize/2 
+					+ (xoffset - D_SA) * screwFactorCos;
+			strand.Bs[i].pos.x = config.worldSize/2 
+					+ (xoffset)* screwFactorCos;
+			strand.Ps[i].pos.x = config.worldSize/2 
+					+ (xoffset - D_SA) * screwFactorCos;
+
+			strand.Ss[i].pos.y = yoffset + i*spacing;
+			strand.Bs[i].pos.y = yoffset + i*spacing;
+			strand.Ps[i].pos.y = yoffset + i*spacing + D_S5P;
+			
+			
+			strand.Ss[i].pos.z = config.worldSize/2 
+					+ (zoffset - D_SA) * screwFactorSin;
+			strand.Bs[i].pos.z = config.worldSize/2 
+					+ (zoffset) * screwFactorSin;
+			strand.Ps[i].pos.z = config.worldSize/2 
+					+ (zoffset - D_SA) * screwFactorSin;
+
+			strand.Ss[i].pos.x += posStdev * randNorm();
+			strand.Ss[i].pos.y += posStdev * randNorm();
+			strand.Ss[i].pos.z += posStdev * randNorm();
+			strand.Bs[i].pos.x += posStdev * randNorm();
+			strand.Bs[i].pos.y += posStdev * randNorm();
+			strand.Bs[i].pos.z += posStdev * randNorm();
+			strand.Ps[i].pos.x += posStdev * randNorm();
+			strand.Ps[i].pos.y += posStdev * randNorm();
+			strand.Ps[i].pos.z += posStdev * randNorm();
+
+			/* Velocity */
+			strand.Ss[i].vel.x = strand.Ss[i].vel.y 
+						= strand.Ss[i].vel.z = 0;
+			strand.Bs[i].vel.x = strand.Bs[i].vel.y 
+						= strand.Bs[i].vel.z = 0;
+			strand.Ps[i].vel.x = strand.Ps[i].vel.y 
+						= strand.Ps[i].vel.z = 0;
+
+			/* Mass */
+			strand.Ss[i].m = MASS_S;
+			strand.Bs[i].m = MASS_A;
+			strand.Ps[i].m = MASS_P;
+
+			/* Type */
+			strand.Ss[i].type = SUGAR;
+			strand.Ps[i].type = PHOSPHATE;
+			
+			int basetype_number = rand() % 4;
+			
+			switch (basetype_number) {
+				case 0: strand.Bs[i].type = BASE_A; break;
+				case 1: strand.Bs[i].type = BASE_T; break;
+				case 2: strand.Bs[i].type = BASE_C; break;
+				case 3: strand.Bs[i].type = BASE_G; break;
+			}
+		}
 	}
 
 	/* Add everything to the space partition grid */
 	forEveryParticle(&addToGrid);
-}
-
-static void buildStrand(Strand strand)
-{	
-	char strandContent[] = "ATCGATTGAGAACTCAACATCGATTATCGT"; // 30
-	// AGACAGACAGACACCCCTGTCTGTCTGTCT
-	// ATCGATTGAGAACTCAACATCGATTATCGT
-	// AAAAAAAAAAAAAAATTTTTTTTTTTTTTT
-	int strandLength = strlen(strandContent);
-	config.numMonomers = strandLength;
-		
-	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
-	double xoffset = -D_SA / 2;
-	double zoffset = -D_SA / 2;
-	double yoffset = -strandLength * spacing / 2 + config.worldSize/2;
-	
-	double posStdev = spacing / 100;
-	
-	for (int i = 0; i < strandLength; i++) {
-		
-		/*strand.Ss[i].pos.z = strand.Bs[i].pos.z 
-		 * = strand.Ps[i].pos.z = config.worldSize/2; */
-		
-		/* screw factor */
-		double screwFactorCos = cos( i*SCREW_SYM_PHI );
-		double screwFactorSin = sin( i*SCREW_SYM_PHI );
-		
-		/* Positions */
-		strand.Ss[i].pos.x = config.worldSize/2 
-				+ (xoffset - D_SA) * screwFactorCos;
-		strand.Bs[i].pos.x = config.worldSize/2 
-				+ (xoffset)* screwFactorCos;
-		strand.Ps[i].pos.x = config.worldSize/2 
-				+ (xoffset - D_SA) * screwFactorCos;
-		strand.Ss[i].pos.y = yoffset + i*spacing;
-		strand.Bs[i].pos.y = yoffset + i*spacing;
-		strand.Ps[i].pos.y = yoffset + i*spacing + D_S5P;
-		
-		
-		strand.Ss[i].pos.z = config.worldSize/2 
-				+ (zoffset - D_SA) * screwFactorSin;
-		strand.Bs[i].pos.z = config.worldSize/2 
-				+ (zoffset) * screwFactorSin;
-		strand.Ps[i].pos.z = config.worldSize/2 
-				+ (zoffset - D_SA) * screwFactorSin;
-
-		strand.Ss[i].pos.x += posStdev * randNorm();
-		strand.Ss[i].pos.y += posStdev * randNorm();
-		strand.Ss[i].pos.z += posStdev * randNorm();
-		strand.Bs[i].pos.x += posStdev * randNorm();
-		strand.Bs[i].pos.y += posStdev * randNorm();
-		strand.Bs[i].pos.z += posStdev * randNorm();
-		strand.Ps[i].pos.x += posStdev * randNorm();
-		strand.Ps[i].pos.y += posStdev * randNorm();
-		strand.Ps[i].pos.z += posStdev * randNorm();
-
-		/* Velocity */
-		strand.Ss[i].vel.x = strand.Ss[i].vel.y 
-					= strand.Ss[i].vel.z = 0;
-		strand.Bs[i].vel.x = strand.Bs[i].vel.y 
-					= strand.Bs[i].vel.z = 0;
-		strand.Ps[i].vel.x = strand.Ps[i].vel.y 
-					= strand.Ps[i].vel.z = 0;
-
-		/* Mass */
-		strand.Ss[i].m = MASS_S;
-		strand.Bs[i].m = MASS_A;
-		strand.Ps[i].m = MASS_P;
-
-		/* Type */
-		strand.Ss[i].type = SUGAR;
-		strand.Ps[i].type = PHOSPHATE;
-		
-		char characterContent = strandContent[i];
-		printf("%c", characterContent);
-		
-		/* default fallback */
-		strand.Bs[i].type = BASE_A;
-		
-		switch (characterContent) {
-			case 'A': strand.Bs[i].type = BASE_A; break;
-			case 'T': strand.Bs[i].type = BASE_T; break;
-			case 'C': strand.Bs[i].type = BASE_C; break;
-			case 'G': strand.Bs[i].type = BASE_G; break;
-		}
-		
-		
-		/* int basetype_number = rand() % 4;
-		switch (basetype_number) {
-			case 0: strand.Bs[i].type = BASE_A; break;
-			case 1: strand.Bs[i].type = BASE_T; break;
-			case 2: strand.Bs[i].type = BASE_C; break;
-			case 3: strand.Bs[i].type = BASE_G; break;
-		}*/
-	}
-	
 }
 
 /* Returns a number sampled from a standard normal distribution. */
