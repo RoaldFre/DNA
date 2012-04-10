@@ -97,9 +97,8 @@ static void   FdihedralParticle(Particle *target, Particle *p1, Particle *p2,
 static double calcCoulombForce(double distanceLength);
 static double calcCoulombPotential(double distanceLength);
 static double calcDebyeLength(void);
-static double   addBpPotential(Particle *p1, Particle *p2);
-static double   addPhosphatePotential(Particle *p1, Particle *p2);
-//static void   pairPotentials(Particle *p1, Particle *p2, PotentialEnergies *data);
+static double addBpPotential(Particle *p1, Particle *p2);
+static double addPhosphatePotential(Particle *p1, Particle *p2);
 
 
 
@@ -585,13 +584,13 @@ static void basePairForce(Particle *p1, Particle *p2)
 
 static double calcDebyeLength(void)
 {
-	double temperature = config.thermostatTemp;
+	double T = config.thermostatTemp;
 	double saltCon = (double)(config.saltConcentration);
 	double elCharge = CHARGE_ELECTRON;
 	double lambdaBDenom, lambdaB, kInvSq, kInv, kDebye;
 	
 	lambdaBDenom = 4 * M_PI * VACUUM_PERMITTIVITY * DIELECTRIC_CST_H20 *
-			BOLTZMANN_CONSTANT * temperature;
+			BOLTZMANN_CONSTANT * T;
 	lambdaB = elCharge*elCharge / lambdaBDenom;
 	kInvSq = 8*M_PI*lambdaB*AVOGADRO*saltCon;
 	kInv = sqrt(kInvSq);
@@ -1022,7 +1021,7 @@ static double addPhosphatePotential(Particle *p1, Particle *p2)
 	return phosphatePairPotential(p1, p2);
 }
 
-static void pairPotentials(Particle *p1, Particle *p2, PotentialEnergies *data)
+static void pairPotentials(Particle *p1, Particle *p2, void *data)
 {
 	PotentialEnergies *pe = (PotentialEnergies*) data;
 	
