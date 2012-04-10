@@ -987,6 +987,20 @@ void dumpEnergies(FILE *stream)
 #endif
 }
 
+Vec3 getCOM(Particle *ps, int num)
+{
+	Vec3 COM = {0, 0, 0};
+	double M = 0; /* total mass */
+	for (int i = 0; i < num; i++) {
+		Vec3 tmp;
+		scale(&ps[i].pos, ps[i].m, &tmp);
+		add(&tmp, &COM, &COM);
+		M += ps[i].m;
+	}
+	scale(&COM, 1/M, &COM);
+	return COM;
+}
+
 
 
 /* TODO Still only quick tests -- need to rework this so I pass proper 

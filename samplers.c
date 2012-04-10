@@ -1,5 +1,19 @@
+#include "main.h" //TODO for LENGTH_FACTOR
 #include "samplers.h"
 #include "physics.h"
+
+/* Simple sampler start that just passes the configuration data as the 
+ * state pointer. */
+static void *passConf(void *conf)
+{
+	return conf;
+}
+/* Simple sampler stop that just frees the state. */
+static void freeState(long n, void *state)
+{
+	UNUSED(n);
+	free(state);
+}
 
 void *avgTempStart(void *conf);
 bool avgTempSample(long i, void *data);
@@ -53,6 +67,51 @@ bool dumpStatsSample(long i, void *data)
 	UNUSED(i);
 	UNUSED(data);
 	dumpStats();
+	return true;
+}
+
+
+
+static Sampler particlesCOMSampler(Particle *ps, int num);
+static bool particlesCOMSample(long i, void *data);
+
+Sampler particlePositionSampler(Particle *p)
+{
+	return particlesCOMSampler(p, 1);
+}
+Sampler strandCOMSampler(Strand *s)
+{
+	return particlesCOMSampler(s->all, 3*s->numMonomers);
+}
+
+typedef struct particlesCOMSamplerConf
+{
+	Particle *ps;
+	int num;
+} ParticlesCOMSamplerConf;
+
+static Sampler particlesCOMSampler(Particle *ps, int num)
+{
+	ParticlesCOMSamplerConf *pcsc = malloc(sizeof(*pcsc));
+	pcsc->ps = ps;
+	pcsc->num = num;
+
+	Sampler sampler;
+	sampler.samplerConf = pcsc;
+	sampler.start  = &passConf;
+	sampler.sample = &particlesCOMSample;
+	sampler.stop   = &freeState;
+	return sampler;
+}
+
+static bool particlesCOMSample(long i, void *data)
+{
+	UNUSED(i);
+	ParticlesCOMSamplerConf *pcsc = (ParticlesCOMSamplerConf*) data;
+	Vec3 COM = getCOM(pcsc->ps, pcsc->num);
+	scale(&COM, 1 / LENGTH_FACTOR, &COM);
+	printVector(&COM);
+	printf("\n");
 	return true;
 }
 

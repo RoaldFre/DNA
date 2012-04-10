@@ -22,6 +22,8 @@ void forEveryParticleOfD(Strand *s,
 			void (*f)(Particle *p, void *data), void *data);
 
 double temperature(void);
+/* Returns the position vector of the Center Of Mass. */
+Vec3 getCOM(Particle *ps, int num);
 
 extern Task integratorTask;
 

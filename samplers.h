@@ -11,4 +11,10 @@ Sampler averageTemperatureSampler(void);
 /* Sampler that dumps physics stats. */
 Sampler dumpStatsSampler(void);
 
+/* Sampler that dumps the position of the particle. */
+Sampler particlePositionSampler(Particle *p);
+
+/* Sampler that dumps the Center Of Mass position of the strand. */
+Sampler strandCOMSampler(Strand *s);
+
 #endif
