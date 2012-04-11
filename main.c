@@ -7,6 +7,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <string.h>
 #include "main.h"
 #include "vmath.h"
 #include "physics.h"
@@ -16,12 +17,13 @@
 #define DATA_FILE_NAME "/tmp/data.txt"
 
 /* Defaults */
+#define DEF_BASE_SEQUENCE		"TCGATTGAGAACTCAACATCGATTATCGT"
 #define DEF_TIMESTEP 			1.0
 #define DEF_TEMPERATURE 		300.0
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
 #define DEF_TRUNCATION_LENGTH		20.0
-#define DEF_MONOMER_WORLDSIZE_FACTOR    8.0
+#define DEF_MONOMER_WORLDSIZE_FACTOR    9.0
 #define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_MEASUREMENT_WAIT 		4e4
 #define DEF_RENDER_FRAMERATE 		30.0
@@ -42,12 +44,21 @@ static RenderConf renderConf =
 	.radius    = DEF_RENDER_RADIUS * LENGTH_FACTOR,
 };
 static bool render;
+static IntegratorConf integratorConf =
+{
+	.integrator = DEF_INTEGRATOR,
+	.numBoxes   = -1, /* guard */
+};
+static const char* baseSequence = DEF_BASE_SEQUENCE;
+
 
 static void printUsage(void)
 {
-	printf("Usage: main <number of monomers> [flags]\n");
+	printf("Usage: main [flags]\n");
 	printf("\n");
 	printf("Flags:\n");
+	printf(" -s <str>  base Sequence of the DNA strand to simulate\n");
+	printf("             default: %s\n", DEF_BASE_SEQUENCE);
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
 	printf(" -T <flt>  Temperature\n");
@@ -87,17 +98,18 @@ static void parseArguments(int argc, char **argv)
 	config.thermostatTemp	= DEF_TEMPERATURE;
 	config.truncationLen    = DEF_TRUNCATION_LENGTH;
 	config.langevinGamma	= DEF_LANGEVIN_GAMMA;
-	config.integrator	= DEF_INTEGRATOR;
 
 	/* guards */
 	config.worldSize = -1;
 	config.thermostatTau = -1;
-	config.numBoxes = -1;
 
-	while ((c = getopt(argc, argv, ":t:T:g:c:f:rR:l:S:b:v:i:h")) != -1)
+	while ((c = getopt(argc, argv, ":s:t:T:g:c:f:rR:l:S:b:v:i:h")) != -1)
 	{
 		switch (c)
 		{
+		case 's':
+			baseSequence = optarg;
+			break;
 		case 't':
 			config.timeStep = atof(optarg) * TIME_FACTOR;
 			if (config.timeStep <= 0)
@@ -141,8 +153,8 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid world size %s\n", optarg);
 			break;
 		case 'b':
-			config.numBoxes = atoi(optarg);
-			if (config.numBoxes <= 0)
+			integratorConf.numBoxes = atoi(optarg);
+			if (integratorConf.numBoxes <= 0)
 				die("Invalid number of boxes %s\n",
 						optarg);
 			break;
@@ -156,10 +168,10 @@ static void parseArguments(int argc, char **argv)
 			if (optarg[0] == '\0' || optarg[1] != '\0')
 				die("Integrator: badly formatted integrator type\n");
 			switch(optarg[0]) {
-				case 'l': config.integrator = LANGEVIN; break;
-				case 'v': config.integrator = VERLET; break;
-				default: die("Unknown integrator type%s\n", optarg);
-					 break;
+			case 'l': integratorConf.integrator = LANGEVIN; break;
+			case 'v': integratorConf.integrator = VERLET; break;
+			default: die("Unknown integrator type '%s'\n", optarg);
+				 break;
 			}
 			break;
 		case 'h':
@@ -183,17 +195,13 @@ static void parseArguments(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-	if (argc < 1) {
+	if (argc > 0) {
 		printUsage();
-		die("\nNot enough required arguments!\n");
+		die("\nFound unrecognised option(s) at the command line!\n");
 	}
 
-	config.numMonomers = atoi(argv[0]);
-	if (config.numMonomers <= 0)
-		die("Invalid number of monomers!\n");
-
 	if (config.worldSize < 0)
-		config.worldSize = 1e-10 * config.numMonomers 
+		config.worldSize = LENGTH_FACTOR * strlen(baseSequence)
 					* DEF_MONOMER_WORLDSIZE_FACTOR;
 	if (config.thermostatTau < 0)
 		config.thermostatTau = DEF_COUPLING_TIMESTEP_FACTOR
@@ -201,7 +209,7 @@ static void parseArguments(int argc, char **argv)
 
 	if (config.truncationLen < 0) {
 		/* Disable truncation -> no space partitioning */
-		config.numBoxes = 1;
+		integratorConf.numBoxes = 1;
 		config.truncationLen = config.worldSize / 2.0;
 		/* Due to (cubic) periodicity, we still need to truncate at 
 		 * worldsize/2 to have correct energy conservation and to 
@@ -210,16 +218,16 @@ static void parseArguments(int argc, char **argv)
 	} else if (config.truncationLen > config.worldSize / 2.0)
 		config.truncationLen = config.worldSize / 2.0; /* same reason */
 
-	if (config.numBoxes == -1) {
-		config.numBoxes = config.worldSize / config.truncationLen;
-		if (config.numBoxes  < 1)
-			config.numBoxes = 1;
+	if (integratorConf.numBoxes == -1) {
+		integratorConf.numBoxes = config.worldSize / config.truncationLen;
+		if (integratorConf.numBoxes  < 1)
+			integratorConf.numBoxes = 1;
 	}
 
-	if (config.worldSize / config.numBoxes < config.truncationLen)
+	if (config.worldSize / integratorConf.numBoxes < config.truncationLen)
 		die("The boxsize (%f) is smaller than the potential "
 			"truncation radius (%f)!\n",
-			config.worldSize / config.numBoxes,
+			config.worldSize / integratorConf.numBoxes,
 			config.truncationLen);
 }
 
@@ -240,25 +248,35 @@ int main(int argc, char **argv)
 
 	parseArguments(argc, argv);
 
-	//TODO
-	allocWorld(1, config.numBoxes, config.worldSize);
-	allocStrand(&world.strands[0], config.numMonomers);
-	//allocStrand(&world.strands[1], config.numMonomers);
-	fillWorld();
+	allocWorld(1, config.worldSize);
+	fillStrand(&world.strands[0], baseSequence);
 
 	Measurement verbose;
 	verbose.measConf = verboseConf;
 	verbose.sampler = dumpStatsSampler();
 	Task verboseTask = measurementTask(&verbose);
 
+#if 0
+	Measurement COM;
+	COM.sampler = strandCOMSquaredDisplacementSampler(&world.strands[0]);
+	COM.measConf.measureSamples = -1; /* loop forever */
+	COM.measConf.measureInterval = 100 * TIME_FACTOR;
+	COM.measConf.measureWait = 0;
+	Task COMTask = measurementTask(&COM);
+#endif
+
+
 	Task renderTask = makeRenderTask(&renderConf);
 
+	Task integratorTask = makeIntegratorTask(&integratorConf);
 
-	Task *tasks[3];
+	Task *tasks[4];
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
-	Task task = sequence(tasks, 3);
+	//tasks[3] = &COMTask;
+	tasks[3] = NULL;
+	Task task = sequence(tasks, 4);
 	run(&task);
 	return 0;
 }

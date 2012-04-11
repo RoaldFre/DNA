@@ -4,23 +4,14 @@
 #include <stdbool.h>
 #include "vmath.h"
 
-typedef enum integratorEnum
-{
-	LANGEVIN,
-	VERLET
-} Integrator;
-
 typedef struct config
 {
 	double timeStep;        /* The timestep (dt) in the simulation */
-	int    numMonomers;     /* Number of monomers in the DNA strand TODO */
-	Integrator integrator;	/* The integrator to use for the simulation */
 	double thermostatTemp;  /* Thermostat temperature */
 	double thermostatTau;   /* Thermostat relaxation time */
 	double langevinGamma;	/* Friction coefficient for Langevin dynamics */
 	double worldSize;       /* World = periodic cube with edges of this length */
 	double truncationLen;	/* Length at which potentials are truncated */
-	int    numBoxes;	/* Number of boxes in each dimension */
 	double saltConcentration; /* Na+ concentration in the environment */
 } Config;
 

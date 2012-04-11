@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include "physics.h"
 #include "vmath.h"
 #include "spgrid.h"
@@ -63,13 +64,13 @@
 #define DEBYE_LENGTH 		13.603e-10 /* 13.603 Angstrom for 50mM = [Na+]*/
 
 /* Thermodynamics */
-#define ENERGY_FACTOR	(1/1.602177e-19) /* Energy in electronvolt */
+#define ENERGY_FACTOR	      (1/1.602177e-19) /* Energy in electronvolt */
 #define BOLTZMANN_CONSTANT    1.38065e-23
 #define FROM_ANGSTROM_SQUARED 1e20 /* Bond constants are given for Angstrom */
 #define TO_RADIANS	      (M_PI / 180)
 
-#define DIELECTRIC_CST_H20	80
-#define AVOGADRO		6.023e23 /* particles per mol */
+#define DIELECTRIC_CST_H20    80
+#define AVOGADRO              6.023e23 /* particles per mol */
 
 
 
@@ -78,20 +79,14 @@
  * value in world.
  * Precondition: allocWorld must not already have been called (unless 
  * followed by a freeWorld). */
-bool allocWorld(int numStrands, int numBoxes, double worldSize)
+bool allocWorld(int numStrands, double worldSize)
 {
 	assert(world.strands == NULL);
 	world.strands = calloc(numStrands, sizeof(*world.strands));
 	if (world.strands == NULL)
 		return false;
 	world.numStrands = numStrands;
-
-
-	if(!allocGrid(numBoxes, worldSize)) {
-		freeWorld();
-		return false;
-	}
-
+	config.worldSize = worldSize; //TODO better place for this?
 	return true;
 }
 
@@ -105,8 +100,8 @@ bool allocStrand(Strand *s, int numMonomers) {
 	
 	/* Split the list in three sublists */
 	s->Ss = &s->all[0];
-	s->Bs = &s->all[1 * config.numMonomers];
-	s->Ps = &s->all[2 * config.numMonomers];
+	s->Bs = &s->all[1 * numMonomers];
+	s->Ps = &s->all[2 * numMonomers];
 
 	s->numMonomers = numMonomers;
 	return true;
@@ -134,9 +129,15 @@ static Vec3 randNormVec(void)
 	return res;
 }
 
-/* Place monomers in a screwed column (in the x-y-z plane) in the center
+/* 
+ * Builds a single DNA strand with the given base sequence.
+ * The strand is a single helix (in the y direction) in the center
  * of the world. Distances between sugar, base and phospate are the 
  * equilibrium lenghts with some small gaussian jitter added.
+ *
+ * The given strand may not have been allocated before. It is also your 
+ * responsibility to free the strand afterwards (either via freeStrand() or 
+ * freeWorld()).
  *
  * Indices work like this:
  *
@@ -171,93 +172,80 @@ static Vec3 randNormVec(void)
  *  ''' 
  * 
  */
-void fillWorld()
+void fillStrand(Strand *s, const char *baseSequence)
 {
-	//char * basePairContent = "ATCGATTGAGCTCTAGCG​CAGTAAGTC";
-	//int n = strlen(basePairContent);
-	int n = config.numMonomers;
-	
+	int n = strlen(baseSequence);
+	allocStrand(s, n);
+
+	double ws = config.worldSize;
 	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
 	double xoffset = -D_SA / 2;
 	double zoffset = -D_SA / 2;
-	double yoffset = -n * spacing / 2 + config.worldSize/2;
-	
+	double yoffset = (ws - n * spacing) / 2;
 	double posStdev = spacing / 100;
-	
 
+	for (int i = 0; i < n; i++) {
+		/* screw factor */
+		double screwFactorCos = cos(i * SCREW_SYM_PHI);
+		double screwFactorSin = sin(i * SCREW_SYM_PHI);
+		
+		/* Positions */
+		s->Ss[i].pos.x = ws/2 + (xoffset - D_SA) * screwFactorCos;
+		s->Bs[i].pos.x = ws/2 + (xoffset       ) * screwFactorCos;
+		s->Ps[i].pos.x = ws/2 + (xoffset - D_SA) * screwFactorCos;
 
-	for (int s = 0; s < world.numStrands; s++) {
-		Strand strand = world.strands[s];
-		for (int i = 0; i < n; i++) {
-			
-			/*strand.Ss[i].pos.z = strand.Bs[i].pos.z 
-			 * = strand.Ps[i].pos.z = config.worldSize/2; */
-			
-			/* screw factor */
-			double screwFactorCos = cos( i*SCREW_SYM_PHI );
-			double screwFactorSin = sin( i*SCREW_SYM_PHI );
-			
-			/* Positions */
+		s->Ss[i].pos.y = yoffset + i*spacing;
+		s->Bs[i].pos.y = yoffset + i*spacing;
+		s->Ps[i].pos.y = yoffset + i*spacing + D_S5P;
+		
+		
+		s->Ss[i].pos.z = ws/2 + (zoffset - D_SA) * screwFactorSin;
+		s->Bs[i].pos.z = ws/2 + (zoffset       ) * screwFactorSin;
+		s->Ps[i].pos.z = ws/2 + (zoffset - D_SA) * screwFactorSin;
 
-			strand.Ss[i].pos.x = config.worldSize/2 
-					+ (xoffset - D_SA) * screwFactorCos;
-			strand.Bs[i].pos.x = config.worldSize/2 
-					+ (xoffset)* screwFactorCos;
-			strand.Ps[i].pos.x = config.worldSize/2 
-					+ (xoffset - D_SA) * screwFactorCos;
+		s->Ss[i].pos.x += posStdev * randNorm();
+		s->Ss[i].pos.y += posStdev * randNorm();
+		s->Ss[i].pos.z += posStdev * randNorm();
+		s->Bs[i].pos.x += posStdev * randNorm();
+		s->Bs[i].pos.y += posStdev * randNorm();
+		s->Bs[i].pos.z += posStdev * randNorm();
+		s->Ps[i].pos.x += posStdev * randNorm();
+		s->Ps[i].pos.y += posStdev * randNorm();
+		s->Ps[i].pos.z += posStdev * randNorm();
 
-			strand.Ss[i].pos.y = yoffset + i*spacing;
-			strand.Bs[i].pos.y = yoffset + i*spacing;
-			strand.Ps[i].pos.y = yoffset + i*spacing + D_S5P;
-			
-			
-			strand.Ss[i].pos.z = config.worldSize/2 
-					+ (zoffset - D_SA) * screwFactorSin;
-			strand.Bs[i].pos.z = config.worldSize/2 
-					+ (zoffset) * screwFactorSin;
-			strand.Ps[i].pos.z = config.worldSize/2 
-					+ (zoffset - D_SA) * screwFactorSin;
+		/* Velocity */
+		s->Ss[i].vel = (Vec3) {0, 0, 0};
+		s->Bs[i].vel = (Vec3) {0, 0, 0};
+		s->Ps[i].vel = (Vec3) {0, 0, 0};
 
-			strand.Ss[i].pos.x += posStdev * randNorm();
-			strand.Ss[i].pos.y += posStdev * randNorm();
-			strand.Ss[i].pos.z += posStdev * randNorm();
-			strand.Bs[i].pos.x += posStdev * randNorm();
-			strand.Bs[i].pos.y += posStdev * randNorm();
-			strand.Bs[i].pos.z += posStdev * randNorm();
-			strand.Ps[i].pos.x += posStdev * randNorm();
-			strand.Ps[i].pos.y += posStdev * randNorm();
-			strand.Ps[i].pos.z += posStdev * randNorm();
+		/* Mass */
+		s->Ss[i].m = MASS_S;
+		s->Bs[i].m = MASS_A;
+		s->Ps[i].m = MASS_P;
 
-			/* Velocity */
-			strand.Ss[i].vel.x = strand.Ss[i].vel.y 
-						= strand.Ss[i].vel.z = 0;
-			strand.Bs[i].vel.x = strand.Bs[i].vel.y 
-						= strand.Bs[i].vel.z = 0;
-			strand.Ps[i].vel.x = strand.Ps[i].vel.y 
-						= strand.Ps[i].vel.z = 0;
-
-			/* Mass */
-			strand.Ss[i].m = MASS_S;
-			strand.Bs[i].m = MASS_A;
-			strand.Ps[i].m = MASS_P;
-
-			/* Type */
-			strand.Ss[i].type = SUGAR;
-			strand.Ps[i].type = PHOSPHATE;
-			
-			int basetype_number = rand() % 4;
-			
-			switch (basetype_number) {
-				case 0: strand.Bs[i].type = BASE_A; break;
-				case 1: strand.Bs[i].type = BASE_T; break;
-				case 2: strand.Bs[i].type = BASE_C; break;
-				case 3: strand.Bs[i].type = BASE_G; break;
-			}
+		/* Type */
+		s->Ss[i].type = SUGAR;
+		s->Ps[i].type = PHOSPHATE;
+		
+		switch (baseSequence[i]) {
+		case 'A': s->Bs[i].type = BASE_A; break;
+		case 'T': s->Bs[i].type = BASE_T; break;
+		case 'C': s->Bs[i].type = BASE_C; break;
+		case 'G': s->Bs[i].type = BASE_G; break;
+		default: 
+			fprintf(stderr, "Unknown base type '%c' at "
+				"position %d in base sequence %s. "
+				"Defaulting to Adenine!\n",
+				baseSequence[i], i, baseSequence);
+			s->Bs[i].type = BASE_A;
 		}
 	}
+}
 
-	/* Add everything to the space partition grid */
-	forEveryParticle(&addToGrid);
+void freeStrand(Strand *strand)
+{
+	free(strand->all);
+	strand->numMonomers = 0;
 }
 
 void freeWorld(void)
@@ -269,11 +257,15 @@ void freeWorld(void)
 	freeGrid();
 	return;
 }
-void freeStrand(Strand *strand)
+
+static int numParticles(void)
 {
-	free(strand->all);
-	strand->numMonomers = 0;
+	int num = 0;
+	for (int s = 0; s < world.numStrands; s++)
+		num += world.strands[s].numMonomers;
+	return 3*num; /* three particles per monomer. */
 }
+
 
 
 
@@ -757,7 +749,7 @@ static void pairForces(Particle *p1, Particle *p2)
 	FCoulomb(p1, p2);
 }
 
-static void calculateForces()
+static void calculateForces(void)
 {
 	/* Reset forces */
 	forEveryParticle(&resetForce);
@@ -788,7 +780,7 @@ static double kineticEnergy(void)
 double temperature(void)
 {
 	return 2.0 / (3.0 * BOLTZMANN_CONSTANT)
-			* kineticEnergy() / (config.numMonomers * 3.0);
+			* kineticEnergy() / numParticles();
 }
 
 
@@ -814,7 +806,7 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 	Vb += Vbond(&s->Ss[0], &s->Ps[0],   D_S5P);
 
 	Va += Vangle(&s->Bs[0], &s->Ss[0], &s->Ps[0], ANGLE_P_5S_A);
-	for (int i = 1; i < config.numMonomers; i++) {
+	for (int i = 1; i < s->numMonomers; i++) {
 		Vb += Vbond(&s->Ss[i], &s->Bs[i],   D_SA);
 		Vb += Vbond(&s->Ss[i], &s->Ps[i],   D_S5P);
 		Vb += Vbond(&s->Ss[i], &s->Ps[i-1], D_S3P);
@@ -885,7 +877,7 @@ static Vec3 momentum(void)
 bool physicsCheck(void)
 {
 	Vec3 P = momentum();
-	double PPM = length(&P) / config.numMonomers;
+	double PPM = length(&P) / numParticles();
 	if (PPM > 1e-20) {
 		fprintf(stderr, "\nMOMENTUM CONSERVATION VIOLATED! "
 				"Momentum per monomer: |P| = %e\n", PPM);
@@ -1007,9 +999,9 @@ static void langevinBBK(void)
 
 
 
-void stepWorld(void)
+static void stepWorld(Integrator integrator)
 {
-	switch(config.integrator) {
+	switch(integrator) {
 	case VERLET:
 		verlet();
 		assert(physicsCheck());
@@ -1020,27 +1012,56 @@ void stepWorld(void)
 		langevinBBK();
 		break;
 	default:
+		fprintf(stderr, "ERROR: Unknown integrator!\n");
 		assert(false);
 		break;
 	}
 }
 
-/* TODO Still only quick tests -- need to rework this so I pass proper 
- * config data */
-bool integratorTaskTick(void *state);
-bool integratorTaskTick(void *state)
+typedef struct
 {
-	UNUSED(state);
-	stepWorld();
+	Integrator integrator;
+} IntegratorState;
+/* The integrator task is responsible for handeling the space partition 
+ * grid */
+static void *integratorTaskStart(void *initialData)
+{
+	IntegratorConf *ic = (IntegratorConf*) initialData;
+
+	if(!allocGrid(ic->numBoxes, config.worldSize))
+		return NULL;
+
+	forEveryParticle(&addToGrid);
+
+	IntegratorState *state = malloc(sizeof(*state));
+	state->integrator = ic->integrator;
+	free(initialData);
+	return state;
+}
+static bool integratorTaskTick(void *state)
+{
+	IntegratorState *is = (IntegratorState*) state;
+	stepWorld(is->integrator);
 	return true;
 }
+static void integratorTaskStop(void *state)
+{
+	UNUSED(state);
+	freeGrid();
+}
 
-Task integratorTask = {
-	NULL,
-	NULL,
-	&integratorTaskTick,
-	NULL
-};
+Task makeIntegratorTask(IntegratorConf *conf)
+{
+	Task task;
+	IntegratorConf *confCpy = malloc(sizeof(*confCpy));
+	memcpy(confCpy, conf, sizeof(*confCpy));
+
+	task.initialData = confCpy;
+	task.start = &integratorTaskStart;
+	task.tick  = &integratorTaskTick;
+	task.stop  = &integratorTaskStop;
+	return task;
+}
 
 
 
