@@ -38,8 +38,9 @@ void reboxParticles(void);
 void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data);
 void forEveryPair(void (*f)(Particle *p1, Particle *p2));
 
-/* Check whether internal structure is still consistent. */
-bool sanityCheck(void);
+/* Check whether internal structure is still consistent. If checkCorrectBox 
+ * is true, then also check if all particles are in their correct boxes. */
+bool sanityCheck(bool checkCorrectBox);
 
 /* Returns the shortest vector that points from v1 to v2, taking into 
  * account the periodic boundary conditions. The particle MUST be within 

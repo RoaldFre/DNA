@@ -37,7 +37,7 @@ bool allocGrid(int numBoxes, double size)
 		return false;
 	nb = numBoxes;
 	boxSize = size / numBoxes;
-	assert(sanityCheck());
+	assert(sanityCheck(true));
 	return true;
 }
 
@@ -65,7 +65,7 @@ void freeGrid()
 		}
 		assert(box->n == 0  &&  box->p == NULL);
 	}
-	assert(sanityCheck());
+	assert(sanityCheck(true));
 	assert(numParticles == 0);
 
 	nb = 0;
@@ -77,11 +77,15 @@ void addToGrid(Particle *p) {
 	Box *box = boxFromParticle(p);
 	addToBox(p, box);
 	numParticles++;
+
+	assert(sanityCheck(false));
 }
 
 void reboxParticles(void)
 {
 	double gridSize = nb * boxSize;
+
+	assert(sanityCheck(false));
 
 	for (int i = 0; i < nb*nb*nb; i++) {
 		Box *currentBox = &grid[i];
@@ -110,7 +114,7 @@ void reboxParticles(void)
 			p = next;
 		}
 	}
-	assert(sanityCheck());
+	assert(sanityCheck(true));
 }
 
 /* Precondition: particle must be within the grid. */
@@ -302,7 +306,7 @@ static void forEVERYpair(void (*f)(Particle *p1, Particle *p2, void *data),
 	}
 }
 
-bool sanityCheck(void)
+bool sanityCheck(bool checkCorrectBox)
 {
 	int nParts1 = 0;
 	int nParts2 = 0;
@@ -350,7 +354,7 @@ bool sanityCheck(void)
 		int j = 0;
 		do {
 			Box *correctBox = boxFromParticle(p);
-			if (correctBox != b) {
+			if (checkCorrectBox && correctBox != b) {
 				int c = (correctBox - grid)/sizeof(*correctBox);
 				fprintf(stderr, "Particle is in box %d, "
 					"should be in %ld\n", i, (correctBox -
