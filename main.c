@@ -29,6 +29,7 @@
 #define DEF_INTEGRATOR			LANGEVIN
 
 
+/* Static global configuration variables */
 static MeasurementConf verboseConf =
 {
 	.measureSamples = -1, /* loop forever */
@@ -40,6 +41,7 @@ static RenderConf renderConf =
 	.framerate = DEF_RENDER_FRAMERATE,
 	.radius    = DEF_RENDER_RADIUS * LENGTH_FACTOR,
 };
+static bool render;
 
 static void printUsage(void)
 {
@@ -63,12 +65,6 @@ static void printUsage(void)
 	printf(" -b <num>  number of Boxes per dimension\n");
 	printf("             default: max so that boxsize >= potential truncation length\n");
 	printf(" -v <int>  Verbose: dump statistics every <flt> femtoseconds\n");
-	printf(" -E <flt>  dump Energy statistics every <flt> femtoseconds.\n");
-	printf("           Don't forget to set the number of samples with '-s'!\n");
-	printf(" -s <int>  accumulate <int> measurement Samples\n");
-	printf("             default: Don't sample, loop forever\n");
-	printf(" -w <flt>  Wait <flt> femtoseconds before starting the measurements\n");
-	printf("             default: %f\n", DEF_MEASUREMENT_WAIT);
 	printf(" -i <type> Integrator to use. Values for <type>:\n");
 	printf("             l: Langevin (velocity BBK) [default]\n");
 	printf("             v: velocity Verlet with Berendsen thermostat\n");
@@ -87,8 +83,6 @@ static void parseArguments(int argc, char **argv)
 	int c;
 
 	/* defaults */
-	config.measureSamples   = -1; /* loop indefinitely */
-	config.measureWait	= DEF_MEASUREMENT_WAIT * TIME_FACTOR;
 	config.timeStep 	= DEF_TIMESTEP * TIME_FACTOR;
 	config.thermostatTemp	= DEF_TEMPERATURE;
 	config.truncationLen    = DEF_TRUNCATION_LENGTH;
@@ -98,10 +92,9 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.worldSize = -1;
 	config.thermostatTau = -1;
-	config.measureInterval = -1;
 	config.numBoxes = -1;
 
-	while ((c = getopt(argc, argv, ":t:T:g:c:f:rR:l:S:b:v:E:s:w:i:h")) != -1)
+	while ((c = getopt(argc, argv, ":t:T:g:c:f:rR:l:S:b:v:i:h")) != -1)
 	{
 		switch (c)
 		{
@@ -132,7 +125,7 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid framerate %s\n", optarg);
 			break;
 		case 'r':
-			config.render = true;
+			render = true;
 			break;
 		case 'R':
 			renderConf.radius = atof(optarg) * LENGTH_FACTOR;
@@ -158,23 +151,6 @@ static void parseArguments(int argc, char **argv)
 			if (verboseConf.measureInterval <= 0)
 				die("Verbose: invalid verbose interval %s\n",
 						optarg);
-			break;
-		case 'E':
-			config.measureInterval = atof(optarg) * TIME_FACTOR;
-			if (config.measureInterval <= 0)
-				die("Verbose: invalid measurement interval %s\n",
-						optarg);
-			break;
-		case 's':
-			config.measureSamples = atol(optarg);
-			if (config.measureSamples < 0)
-				die("Invalid number of samples %d\n",
-						config.measureSamples);
-			break;
-		case 'w':
-			config.measureWait = atof(optarg) * TIME_FACTOR;
-			if (config.measureWait < 0)
-				die("Invalid wait time %f\n", config.measureWait);
 			break;
 		case 'i':
 			if (optarg[0] == '\0' || optarg[1] != '\0')
@@ -222,18 +198,6 @@ static void parseArguments(int argc, char **argv)
 	if (config.thermostatTau < 0)
 		config.thermostatTau = DEF_COUPLING_TIMESTEP_FACTOR
 						* config.timeStep;
-
-	if (config.measureInterval > 0 
-			&& config.measureInterval < config.timeStep)
-		die("Measurement interval %f smaller than timestep of %f!\n",
-				config.measureInterval / TIME_FACTOR,
-				config.timeStep / TIME_FACTOR);
-	if (config.measureInterval > 0 
-			&& config.measureInterval < 5 * config.timeStep)
-		printf("WARNING: Measurement interval %f not much larger than "
-				"timestep of %f! Exact timing will be off!\n",
-				config.measureInterval / TIME_FACTOR,
-				config.timeStep / TIME_FACTOR);
 
 	if (config.truncationLen < 0) {
 		/* Disable truncation -> no space partitioning */
@@ -291,7 +255,7 @@ int main(int argc, char **argv)
 
 
 	Task *tasks[3];
-	tasks[0] = (config.render ? &renderTask : NULL);
+	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
 	Task task = sequence(tasks, 3);

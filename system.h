@@ -13,9 +13,6 @@ typedef enum integratorEnum
 typedef struct config
 {
 	double timeStep;        /* The timestep (dt) in the simulation */
-	double measureInterval; /* Time between performing measurements */
-	long   measureSamples;  /* Number of samples to measure */
-	double measureWait;     /* Time to wait before starting measurement */
 	int    numMonomers;     /* Number of monomers in the DNA strand TODO */
 	Integrator integrator;	/* The integrator to use for the simulation */
 	double thermostatTemp;  /* Thermostat temperature */
@@ -24,7 +21,6 @@ typedef struct config
 	double worldSize;       /* World = periodic cube with edges of this length */
 	double truncationLen;	/* Length at which potentials are truncated */
 	int    numBoxes;	/* Number of boxes in each dimension */
-	bool   render;          /* Whether or not to render the simulation */
 	double saltConcentration; /* Na+ concentration in the environment */
 } Config;
 
