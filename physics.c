@@ -87,6 +87,7 @@ bool allocWorld(int numStrands, double worldSize)
 	if (world.strands == NULL)
 		return false;
 	config.worldSize = worldSize; //TODO better place for this?
+	world.numStrands = numStrands;
 	return true;
 }
 
@@ -139,6 +140,10 @@ static Vec3 randNormVec(void)
  * responsibility to free the strand afterwards (either via freeStrand() or 
  * freeWorld()).
  *
+ * Flags:
+ * complementarySequence: Use the complement of the given base sequence.
+ * complementaryHelix:    Build the helix turning the other way around.
+ *
  * Indices work like this:
  *
  *        .  y
@@ -172,7 +177,8 @@ static Vec3 randNormVec(void)
  *  ''' 
  * 
  */
-void fillStrand(Strand *s, const char *baseSequence)
+static void fillStrandHelper(Strand *s, const char *baseSequence,
+		bool complementarySequence, bool complementaryHelix)
 {
 	int n = strlen(baseSequence);
 	allocStrand(s, n);
@@ -185,10 +191,14 @@ void fillStrand(Strand *s, const char *baseSequence)
 	double posStdev = spacing / 100;
 
 	for (int i = 0; i < n; i++) {
-		
 		/* screw factor */
 		double screwFactorCos = cos(i * SCREW_SYM_PHI);
 		double screwFactorSin = sin(i * SCREW_SYM_PHI);
+
+		if (complementaryHelix) {
+			screwFactorCos *= -1;
+			screwFactorSin *= -1;
+		}
 		
 		/* Positions */
 		s->Ss[i].pos.x = ws/2 + (xoffset - D_SA) * screwFactorCos;
@@ -225,98 +235,32 @@ void fillStrand(Strand *s, const char *baseSequence)
 		s->Ps[i].m = MASS_P;
 
 		/* Type */
-		s->Ss[i].type = SUGAR;
-		s->Ps[i].type = PHOSPHATE;
-		
+		ParticleType b;
 		switch (baseSequence[i]) {
-		case 'A': s->Bs[i].type = BASE_A; break;
-		case 'T': s->Bs[i].type = BASE_T; break;
-		case 'C': s->Bs[i].type = BASE_C; break;
-		case 'G': s->Bs[i].type = BASE_G; break;
+		case 'A': b = complementarySequence ? BASE_T : BASE_A; break;
+		case 'T': b = complementarySequence ? BASE_A : BASE_T; break;
+		case 'C': b = complementarySequence ? BASE_G : BASE_C; break;
+		case 'G': b = complementarySequence ? BASE_C : BASE_G; break;
 		default: 
 			fprintf(stderr, "Unknown base type '%c' at "
 				"position %d in base sequence %s. "
 				"Defaulting to Adenine!\n",
 				baseSequence[i], i, baseSequence);
-			s->Bs[i].type = BASE_A;
+			b = BASE_A;
 		}
-	}
-}
 
-void fillCompStrand(Strand *s, const char *baseSequence)
-{
-	int n = strlen(baseSequence);
-	allocStrand(s, n);
-
-	double ws = config.worldSize;
-	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
-	double xoffset = -D_SA / 2;
-	double zoffset = -D_SA / 2;
-	double yoffset = (ws - n * spacing) / 2;
-	double posStdev = spacing / 100;
-
-	for (int i = 0; i < n; i++) {
-		
-		/* screw factor */
-		double screwFactorCos = cos(i * SCREW_SYM_PHI);
-		double screwFactorSin = sin(i * SCREW_SYM_PHI);
-		
-		/* Complimentary Strand */
-		screwFactorCos *= -1;
-		screwFactorSin *= -1;
-		
-		/* Positions */
-		s->Ss[i].pos.x = ws/2 + (xoffset - D_SA) * screwFactorCos;
-		s->Bs[i].pos.x = ws/2 + (xoffset       ) * screwFactorCos;
-		s->Ps[i].pos.x = ws/2 + (xoffset - D_SA) * screwFactorCos;
-
-		s->Ss[i].pos.y = yoffset + i*spacing;
-		s->Bs[i].pos.y = yoffset + i*spacing;
-		s->Ps[i].pos.y = yoffset + i*spacing + D_S5P;
-		
-		
-		s->Ss[i].pos.z = ws/2 + (zoffset - D_SA) * screwFactorSin;
-		s->Bs[i].pos.z = ws/2 + (zoffset       ) * screwFactorSin;
-		s->Ps[i].pos.z = ws/2 + (zoffset - D_SA) * screwFactorSin;
-
-		s->Ss[i].pos.x += posStdev * randNorm();
-		s->Ss[i].pos.y += posStdev * randNorm();
-		s->Ss[i].pos.z += posStdev * randNorm();
-		s->Bs[i].pos.x += posStdev * randNorm();
-		s->Bs[i].pos.y += posStdev * randNorm();
-		s->Bs[i].pos.z += posStdev * randNorm();
-		s->Ps[i].pos.x += posStdev * randNorm();
-		s->Ps[i].pos.y += posStdev * randNorm();
-		s->Ps[i].pos.z += posStdev * randNorm();
-
-		/* Velocity */
-		s->Ss[i].vel = (Vec3) {0, 0, 0};
-		s->Bs[i].vel = (Vec3) {0, 0, 0};
-		s->Ps[i].vel = (Vec3) {0, 0, 0};
-
-		/* Mass */
-		s->Ss[i].m = MASS_S;
-		s->Bs[i].m = MASS_A;
-		s->Ps[i].m = MASS_P;
-
-		/* Type */
+		s->Bs[i].type = b;
 		s->Ss[i].type = SUGAR;
 		s->Ps[i].type = PHOSPHATE;
-		
-		/* Complementary Strand! */
-		switch (baseSequence[i]) {
-		case 'A': s->Bs[i].type = BASE_T; break;
-		case 'T': s->Bs[i].type = BASE_A; break;
-		case 'C': s->Bs[i].type = BASE_G; break;
-		case 'G': s->Bs[i].type = BASE_C; break;
-		default: 
-			fprintf(stderr, "Unknown base type '%c' at "
-				"position %d in base sequence %s. "
-				"Defaulting to Thymine!\n",
-				baseSequence[i], i, baseSequence);
-			s->Bs[i].type = BASE_T;
-		}
 	}
+}
+void fillStrand(Strand *s, const char *baseSequence)
+{
+	fillStrandHelper(s, baseSequence, false, false);
+}
+void fillComplementaryStrand(Strand *s, const char *baseSequence)
+{
+	fillStrandHelper(s, baseSequence, true, true);
 }
 
 void freeStrand(Strand *strand)

@@ -21,7 +21,7 @@ typedef struct
 bool allocWorld(int numStrands, double worldSize);
 bool allocStrand(Strand *s, int numMonomers);
 void fillStrand(Strand *s, const char *sequence);
-void fillCompStrand(Strand *s, const char *baseSequence);
+void fillComplementaryStrand(Strand *s, const char *baseSequence);
 void freeWorld(void);
 void freeStrand(Strand *strand);
 void dumpStats(void);

@@ -50,6 +50,7 @@ static IntegratorConf integratorConf =
 	.numBoxes   = -1, /* guard */
 };
 static const char* baseSequence = DEF_BASE_SEQUENCE;
+static bool buildCompStrand = false;
 
 
 static void printUsage(void)
@@ -59,8 +60,7 @@ static void printUsage(void)
 	printf("Flags:\n");
 	printf(" -s <str>  base Sequence of the DNA strand to simulate\n");
 	printf("             default: %s\n", DEF_BASE_SEQUENCE);
-	printf(" -n <num>  if 1, build complementary strand\n");
-	printf("	     default: 0 (no complementary strand\n");
+	printf(" -d        build a Double helix with complementary strand as well\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
 	printf(" -T <flt>  Temperature\n");
@@ -104,19 +104,16 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.worldSize = -1;
 	config.thermostatTau = -1;
-	int buildCompStrand = 0;
 
-	while ((c = getopt(argc, argv, ":s:n:t:T:g:c:f:rR:l:S:b:v:i:h")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:T:g:c:f:rR:l:S:b:v:i:h")) != -1)
 	{
 		switch (c)
 		{
 		case 's':
 			baseSequence = optarg;
 			break;
-		case 'n':
-			buildCompStrand = atoi(optarg);
-			if ((buildCompStrand < 0) || (buildCompStrand > 1))
-				die("Invalid argument for buildCompStrand=%i\n", buildCompStrand);
+		case 'd':
+			buildCompStrand = true;
 			break;
 		case 't':
 			config.timeStep = atof(optarg) * TIME_FACTOR;
@@ -211,11 +208,7 @@ static void parseArguments(int argc, char **argv)
 	if (config.worldSize < 0)
 		config.worldSize = LENGTH_FACTOR * strlen(baseSequence)
 					* DEF_MONOMER_WORLDSIZE_FACTOR;
-	if (buildCompStrand==1) 
-		world.compStrand = 1;
-	else
-		world.compStrand = 0;
-			
+
 	if (config.thermostatTau < 0)
 		config.thermostatTau = DEF_COUPLING_TIMESTEP_FACTOR
 						* config.timeStep;
@@ -261,17 +254,14 @@ int main(int argc, char **argv)
 
 	parseArguments(argc, argv);
 	
-	if (world.compStrand==0)
-		world.numStrands = 1;
+	if (buildCompStrand)
+		allocWorld(2, config.worldSize);
 	else
-		world.numStrands = 2;
-	
-	allocWorld(world.numStrands, config.worldSize);
+		allocWorld(1, config.worldSize);
+
 	fillStrand(&world.strands[0], baseSequence);
-	
-	// if asked, fill complementary strand
-	if (world.numStrands==2)
-		fillCompStrand(&world.strands[1], baseSequence);
+	if (buildCompStrand)
+		fillComplementaryStrand(&world.strands[1], baseSequence);
 
 	Measurement verbose;
 	verbose.measConf = verboseConf;
