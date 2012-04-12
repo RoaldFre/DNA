@@ -72,6 +72,7 @@ typedef struct strand
 typedef struct world
 {
 	int numStrands;
+	int compStrand;
 	Strand *strands;
 } World;
 

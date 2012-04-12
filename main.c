@@ -17,12 +17,12 @@
 #define DATA_FILE_NAME "/tmp/data.txt"
 
 /* Defaults */
-#define DEF_BASE_SEQUENCE		"TCGATTGAGAACTCAACATCGATTATCGT"
+#define DEF_BASE_SEQUENCE		"TCGATTGAGAACCCCTTCTCAATCGATCGAT"
 #define DEF_TIMESTEP 			1.0
 #define DEF_TEMPERATURE 		300.0
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
-#define DEF_TRUNCATION_LENGTH		20.0
+#define DEF_TRUNCATION_LENGTH		20.0 
 #define DEF_MONOMER_WORLDSIZE_FACTOR    9.0
 #define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_MEASUREMENT_WAIT 		4e4
@@ -59,6 +59,8 @@ static void printUsage(void)
 	printf("Flags:\n");
 	printf(" -s <str>  base Sequence of the DNA strand to simulate\n");
 	printf("             default: %s\n", DEF_BASE_SEQUENCE);
+	printf(" -n <num>  if 1, build complementary strand\n");
+	printf("	     default: 0 (no complementary strand\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
 	printf(" -T <flt>  Temperature\n");
@@ -102,13 +104,19 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.worldSize = -1;
 	config.thermostatTau = -1;
+	int buildCompStrand = 0;
 
-	while ((c = getopt(argc, argv, ":s:t:T:g:c:f:rR:l:S:b:v:i:h")) != -1)
+	while ((c = getopt(argc, argv, ":s:n:t:T:g:c:f:rR:l:S:b:v:i:h")) != -1)
 	{
 		switch (c)
 		{
 		case 's':
 			baseSequence = optarg;
+			break;
+		case 'n':
+			buildCompStrand = atoi(optarg);
+			if ((buildCompStrand < 0) || (buildCompStrand > 1))
+				die("Invalid argument for buildCompStrand=%i\n", buildCompStrand);
 			break;
 		case 't':
 			config.timeStep = atof(optarg) * TIME_FACTOR;
@@ -203,6 +211,11 @@ static void parseArguments(int argc, char **argv)
 	if (config.worldSize < 0)
 		config.worldSize = LENGTH_FACTOR * strlen(baseSequence)
 					* DEF_MONOMER_WORLDSIZE_FACTOR;
+	if (buildCompStrand==1) 
+		world.compStrand = 1;
+	else
+		world.compStrand = 0;
+			
 	if (config.thermostatTau < 0)
 		config.thermostatTau = DEF_COUPLING_TIMESTEP_FACTOR
 						* config.timeStep;
@@ -247,9 +260,18 @@ int main(int argc, char **argv)
 	srand(time(NULL)); //seed random generator
 
 	parseArguments(argc, argv);
-
-	allocWorld(1, config.worldSize);
+	
+	if (world.compStrand==0)
+		world.numStrands = 1;
+	else
+		world.numStrands = 2;
+	
+	allocWorld(world.numStrands, config.worldSize);
 	fillStrand(&world.strands[0], baseSequence);
+	
+	// if asked, fill complementary strand
+	if (world.numStrands==2)
+		fillCompStrand(&world.strands[1], baseSequence);
 
 	Measurement verbose;
 	verbose.measConf = verboseConf;

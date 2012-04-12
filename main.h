@@ -7,4 +7,5 @@
 
 void die(const char *fmt, ...);
 
+
 #endif
