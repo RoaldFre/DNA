@@ -37,6 +37,8 @@ double temperature(void);
 /* Returns the position vector of the Center Of Mass. */
 Vec3 getCOM(Particle *ps, int num);
 
+double VbasePair(Particle *p1, Particle *p2);
+
 Task makeIntegratorTask(IntegratorConf *conf);
 
 #endif

@@ -1,6 +1,7 @@
 #include "main.h" //TODO for LENGTH_FACTOR
 #include "samplers.h"
 #include "physics.h"
+#include "spgrid.h"
 
 /* Simple sampler start that just passes the configuration data as the 
  * state pointer. */
@@ -178,5 +179,45 @@ static bool particlesSquaredDisplacementSample(long i, void *state)
 					/ (LENGTH_FACTOR * LENGTH_FACTOR);
 	printf("%f\n", squaredDisplacement);
 	return true;
+}
+
+
+
+/* BASE PAIRING */
+
+typedef struct
+{
+	int count;
+	double threshold;
+} BasePairingCounterData;
+static void basePairingCounter(Particle *p1, Particle *p2, void *data)
+{
+	BasePairingCounterData *bpcd = (BasePairingCounterData*) data;
+	double V = VbasePair(p1, p2);
+	if (V < bpcd->threshold)
+		bpcd->count++;
+}
+static bool basePairingSample(long i, void *state)
+{
+	UNUSED(i);
+	double *threshold = (double*) state;
+	BasePairingCounterData bpcd;
+	bpcd.count = 0;
+	bpcd.threshold = *threshold;
+	forEveryPairD(&basePairingCounter, &bpcd);
+	printf("%d\n", bpcd.count);
+	return true;
+}
+Sampler basePairingSampler(double energyThreshold)
+{
+	Sampler sampler;
+	double *thresholdCpy = malloc(sizeof(*thresholdCpy));
+	*thresholdCpy = energyThreshold;
+
+	sampler.samplerConf = thresholdCpy;
+	sampler.start  = &passConf;
+	sampler.sample = &basePairingSample;
+	sampler.stop   = &freeState;
+	return sampler;
 }
 

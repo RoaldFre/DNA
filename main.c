@@ -268,14 +268,12 @@ int main(int argc, char **argv)
 	verbose.sampler = dumpStatsSampler();
 	Task verboseTask = measurementTask(&verbose);
 
-#if 0
-	Measurement COM;
-	COM.sampler = strandCOMSquaredDisplacementSampler(&world.strands[0]);
-	COM.measConf.measureSamples = -1; /* loop forever */
-	COM.measConf.measureInterval = 100 * TIME_FACTOR;
-	COM.measConf.measureWait = 0;
-	Task COMTask = measurementTask(&COM);
-#endif
+	Measurement basePairing;
+	basePairing.sampler = basePairingSampler(-0.1 * 1.81e-21); /* -0.1*EPSILON */
+	basePairing.measConf.measureSamples = -1; /* loop forever */
+	basePairing.measConf.measureInterval = 100 * TIME_FACTOR;
+	basePairing.measConf.measureWait = 0;
+	Task basePairingTask = measurementTask(&basePairing);
 
 
 	Task renderTask = makeRenderTask(&renderConf);
@@ -286,8 +284,7 @@ int main(int argc, char **argv)
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
-	//tasks[3] = &COMTask;
-	tasks[3] = NULL;
+	tasks[3] = &basePairingTask;
 	Task task = sequence(tasks, 4);
 	run(&task);
 	return 0;

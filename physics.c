@@ -279,6 +279,7 @@ void freeWorld(void)
 	return;
 }
 
+
 static int numParticles(void)
 {
 	int num = 0;
@@ -286,7 +287,6 @@ static int numParticles(void)
 		num += world.strands[s].numMonomers;
 	return 3*num; /* three particles per monomer. */
 }
-
 
 
 
@@ -515,7 +515,7 @@ static double calcVBasePair(double coupling, double rij0, double rijVar2)
 	
 	return coupling*(5*rfrac12 - 6*rfrac10 + 1);
 }
-static double VbasePair(Particle *p1, Particle *p2)
+double VbasePair(Particle *p1, Particle *p2)
 {
 	double rij = nearestImageDistance(&p1->pos, &p2->pos);
 	if (rij > config.truncationLen)
