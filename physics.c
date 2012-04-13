@@ -505,7 +505,7 @@ static void Fstack(Particle *p1, Particle *p2)
 }
 
 
-static double calcVBasePai(double coupling, double rij0, double rijVar2)
+static double calcVBasePair(double coupling, double rij0, double rijVar2)
 {
 	double rfrac2 = rij0 * rij0 / rijVar2;
 	double rfrac4 = rfrac2 * rfrac2;
@@ -540,8 +540,8 @@ static double VbasePair(Particle *p1, Particle *p2)
 		bpForceDist = DISTANCE_r0_AT;
 		/* calculate the correction by which the force should be lifted */
 		double truncLen2 = config.truncationLen * config.truncationLen;
-		truncCorrection = calcVBasePai(bpCoupling, bpForceDist, truncLen2);
-		bpPotential = calcVBasePai(bpCoupling, bpForceDist, rij2) - truncCorrection;
+		truncCorrection = calcVBasePair(bpCoupling, bpForceDist, truncLen2);
+		bpPotential = calcVBasePair(bpCoupling, bpForceDist, rij2) - truncCorrection;
 		
 	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
 			|| (p1->type==BASE_C && p2->type==BASE_G)) {
@@ -549,8 +549,8 @@ static double VbasePair(Particle *p1, Particle *p2)
 		bpForceDist = DISTANCE_r0_GC;
 		/* calculate the correction by which the force should be lifted */
 		double truncLen2 = config.truncationLen * config.truncationLen;
-		truncCorrection = calcVBasePai(bpCoupling, bpForceDist, truncLen2);
-		bpPotential = calcVBasePai(bpCoupling, bpForceDist, rij2) - truncCorrection;
+		truncCorrection = calcVBasePair(bpCoupling, bpForceDist, truncLen2);
+		bpPotential = calcVBasePair(bpCoupling, bpForceDist, rij2) - truncCorrection;
 		
 	/* Else, no L-J potential and return potential = 0 */
 	} else {
