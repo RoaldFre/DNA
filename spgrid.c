@@ -26,7 +26,7 @@ static double boxSize = 0; /* Linear length of one box. */
 static int nb = 0; /* Number of Boxes in one dimension. Total number of 
 		      boxes is nb^3. Total volume of the grid is 
 		      (nb*boxSize)^3. */
-static int numParticles = 0; /* Total number of particles in the grid. For 
+static int gridNumParticles = 0; /* Total number of particles in the grid. For 
 				consistency checking only! */
 
 bool allocGrid(int numBoxes, double size)
@@ -60,13 +60,13 @@ void freeGrid()
 		for (int j = 0; j < n; j++) {
 			Particle *next = p->next;
 			removeFromBox(p, box);
-			numParticles--;
+			gridNumParticles--;
 			p = next;
 		}
 		assert(box->n == 0  &&  box->p == NULL);
 	}
 	assert(sanityCheck(true));
-	assert(numParticles == 0);
+	assert(gridNumParticles == 0);
 
 	nb = 0;
 	free(grid);
@@ -76,7 +76,7 @@ void addToGrid(Particle *p) {
 	periodic(nb * boxSize, &p->pos, &p->pos);
 	Box *box = boxFromParticle(p);
 	addToBox(p, box);
-	numParticles++;
+	gridNumParticles++;
 
 	assert(sanityCheck(false));
 }
@@ -290,13 +290,25 @@ static void pairWrapper(Particle *p1, Particle *p2, void *data)
 static void forEVERYpair(void (*f)(Particle *p1, Particle *p2, void *data), 
 			 void *data)
 {
+	/* Pairs within the same box */
+	for (int b = 0; b < nb*nb*nb; b++) {
+		Particle *p1 = grid[b].p;
+		for (int i = 0; i < grid[b].n; i++) { /* i'th particle in box */
+			Particle *p2 = p1->next;
+			for (int j = i + 1; j < grid[b].n; j++) {
+				f(p1, p2, data);
+				p2 = p2->next;
+			}
+		}
+	}
 
+	/* Pairs in different boxes */
 	for (int b1 = 0; b1 < nb*nb*nb; b1++) {
 		Particle *p1 = grid[b1].p;
 		for (int i1 = 0; i1 < grid[b1].n; i1++) {
-			for (int b2 = 0; b2 < nb*nb*nb; b2++) {
-				Particle *p2 = grid[b1].p;
-				for (int i2 = 0; i2 < grid[b1].n; i2++) {
+			for (int b2 = b1 + 1; b2 < nb*nb*nb; b2++) {
+				Particle *p2 = grid[b2].p;
+				for (int i2 = 0; i2 < grid[b2].n; i2++) {
 					f(p1, p2, data);
 					p2 = p2->next;
 				}
@@ -305,6 +317,87 @@ static void forEVERYpair(void (*f)(Particle *p1, Particle *p2, void *data),
 		}
 	}
 }
+
+
+Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2)
+{
+	Vec3 diff;
+	double L = nb * boxSize;
+	/* +5*L/2 instead of simply +L/2 to make sure that the first 
+	 * argument of fmod is positive. Otherwise, this won't work! */
+	diff.x = fmod(v2->x - v1->x + 5*L/2, L)  -  L/2;
+	diff.y = fmod(v2->y - v1->y + 5*L/2, L)  -  L/2;
+	diff.z = fmod(v2->z - v1->z + 5*L/2, L)  -  L/2;
+	return diff;
+}
+
+double nearestImageDistance(Vec3 *v1, Vec3 *v2)
+{
+	Vec3 rijVec = nearestImageVector(v1, v2);
+	double rijLength = length(&rijVec);
+	
+	return rijLength;
+}
+
+
+Vec3 nearestImageUnitVector(Vec3 *v1, Vec3 *v2)
+{
+	Vec3 rijUnit;
+	
+	Vec3 rijVec = nearestImageVector(v1, v2);
+	double rijLength = length(&rijVec);
+	
+	scale(&rijVec, rijLength, &rijUnit);
+	return rijUnit;
+}
+
+
+
+
+
+
+
+
+
+
+
+/* TEST ROUTINES */
+
+typedef struct
+{
+	int count;
+	bool illegalPair;
+} ForEveryPairCheckData;
+static void forEveryPairCheckHelper(Particle *p1, Particle *p2, void *data)
+{
+	ForEveryPairCheckData *fepcd = (ForEveryPairCheckData*) data;
+	//printf("fepch %d %p %p\n",(void*)p1, (void*)p2, fepcd->count);
+	fepcd->count++;
+	if (p1 == p2) {
+		fepcd->illegalPair = true;
+		fprintf(stderr, "forEveryPair gave illegal pair with "
+				"particle %p\n", (void*)p1);
+	}
+}
+bool forEveryPairCheck(void)
+{
+	ForEveryPairCheckData data;
+	data.count = 0;
+	data.illegalPair = false;
+
+	forEveryPairD(&forEveryPairCheckHelper, &data);
+
+	int n = gridNumParticles;
+	int correctCount = n * (n - 1) / 2;
+	if (data.count != correctCount) {
+		fprintf(stderr, "forEveryPair ran over %d pairs, but should "
+				"be %d\n", data.count, correctCount);
+		return false;
+	}
+
+	return !data.illegalPair;
+}
+
 
 bool sanityCheck(bool checkCorrectBox)
 {
@@ -382,52 +475,21 @@ bool sanityCheck(bool checkCorrectBox)
 		nParts2 += b->n;
 	}
 
-	if (nParts1 != numParticles)
+	if (nParts1 != gridNumParticles)
 	{
 		fprintf(stderr, "1: Found a total of %d particles, "
-			"should be %d\n", nParts1, numParticles);
+			"should be %d\n", nParts1, gridNumParticles);
 		OK = false;
 	}
 
-	if (nParts2 != numParticles)
+	if (nParts2 != gridNumParticles)
 	{
 		fprintf(stderr, "2: Found a total of %d particles, "
-			"should be %d\n", nParts2, numParticles);
+			"should be %d\n", nParts2, gridNumParticles);
 		OK = false;
 	}
+
+	OK = OK && forEveryPairCheck();
 
 	return OK;
 }
-
-Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2)
-{
-	Vec3 diff;
-	double L = nb * boxSize;
-	/* +5*L/2 instead of simply +L/2 to make sure that the first 
-	 * argument of fmod is positive. Otherwise, this won't work! */
-	diff.x = fmod(v2->x - v1->x + 5*L/2, L)  -  L/2;
-	diff.y = fmod(v2->y - v1->y + 5*L/2, L)  -  L/2;
-	diff.z = fmod(v2->z - v1->z + 5*L/2, L)  -  L/2;
-	return diff;
-}
-
-double nearestImageDistance(Vec3 *v1, Vec3 *v2)
-{
-	Vec3 rijVec = nearestImageVector(v1, v2);
-	double rijLength = length(&rijVec);
-	
-	return rijLength;
-}
-
-
-Vec3 nearestImageUnitVector(Vec3 *v1, Vec3 *v2)
-{
-	Vec3 rijUnit;
-	
-	Vec3 rijVec = nearestImageVector(v1, v2);
-	double rijLength = length(&rijVec);
-	
-	scale(&rijVec, rijLength, &rijUnit);
-	return rijUnit;
-}
-
