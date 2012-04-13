@@ -525,37 +525,27 @@ static double VbasePair(Particle *p1, Particle *p2)
 	
 	double bpCoupling;
 	double bpForceDist;
-	double bpPotential;
-	double truncCorrection = 0;
 	
 	/* Apply right potential constant for AT-bonding and GC-bonding, 
 	 * if not AT or GC then zero */
 	
 	/* Lennard-Jones potential:
 	 * potential = bpCoupling * 5*(r0 / r)^12 - 6*(r0/r)^10 + 1. */
-	
 	if ((p1->type==BASE_A && p2->type==BASE_T) 
 			|| (p1->type==BASE_T && p2->type==BASE_A)) {
 		bpCoupling = COUPLING_BP_AT;
 		bpForceDist = DISTANCE_r0_AT;
-		/* calculate the correction by which the force should be lifted */
-		double truncLen2 = config.truncationLen * config.truncationLen;
-		truncCorrection = calcVBasePair(bpCoupling, bpForceDist, truncLen2);
-		bpPotential = calcVBasePair(bpCoupling, bpForceDist, rij2) - truncCorrection;
 		
 	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
 			|| (p1->type==BASE_C && p2->type==BASE_G)) {
 		bpCoupling = COUPLING_BP_GC;
 		bpForceDist = DISTANCE_r0_GC;
-		/* calculate the correction by which the force should be lifted */
-		double truncLen2 = config.truncationLen * config.truncationLen;
-		truncCorrection = calcVBasePair(bpCoupling, bpForceDist, truncLen2);
-		bpPotential = calcVBasePair(bpCoupling, bpForceDist, rij2) - truncCorrection;
-		
-	/* Else, no L-J potential and return potential = 0 */
 	} else {
-		return 0; 
+		return 0; /* no L-J potential */
 	}
+	double truncLen2 = config.truncationLen * config.truncationLen;
+	double truncCorrection = calcVBasePair(bpCoupling, bpForceDist, truncLen2);
+	double bpPotential = calcVBasePair(bpCoupling, bpForceDist, rij2) - truncCorrection;
 
 	return bpPotential;
 }
