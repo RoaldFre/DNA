@@ -16,6 +16,10 @@ typedef struct measurementConf
 
 	/* Time to wait before starting measurement */
 	double measureWait;
+
+	/* Path to a file to dump the measurement in. NULL means dump to 
+	 * stdout. */
+	const char *measureFile;
 } MeasurementConf;
 
 /* A Sampler does the actual measurement by sampling the state of the 

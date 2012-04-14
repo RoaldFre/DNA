@@ -1,6 +1,11 @@
 #include "measure.h"
 #include "main.h" //for TIME_FACTOR, TODO put somewhere else
 #include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <stdio.h>
 
 void *measStart(void *initialData);
 bool measTick(void *state);
@@ -27,6 +32,56 @@ Task measurementTask(Measurement *measurement)
 	return task;
 }
 
+
+/* STUFF FOR REDIRECTING STDOUT. POSIX-ONLY. */
+
+typedef struct {
+	int newfd; /* fd we want to switch to */
+} StreamState;
+
+static StreamState makeStreamState(const char *filename)
+{
+	StreamState s;
+	s.newfd = open(filename, O_WRONLY | O_CREAT, 0644);
+	printf("started stdout is %d, fd is %d\n", fileno(stdout), s.newfd);
+	if (s.newfd < 0) {
+		perror("Error opening file");
+		assert(false);
+	}
+	return s;
+}
+
+/* Switch the current stdout to the stream given in s.
+ * At the end of this function: s->fd is an fd to stdout as it was when 
+ * calling this fuction; s->pos is the position in that stream an that 
+ * time.
+ * If s is NULL, or s.newfd < 0: do noting. */
+static void switchStdout(StreamState *s)
+{
+	if (s == NULL  ||  s->newfd < 0)
+		return;
+	
+	fflush(stdout);
+	int oldStdout = dup(1);
+	dup2(s->newfd, 1);
+	close(s->newfd);
+	s->newfd = oldStdout;
+}
+
+/* Flushes the new stream in s and closes it. */
+static void stopRedirection(StreamState *s)
+{
+	if (s == NULL  ||  s->newfd < 0)
+		return;
+	close(s->newfd);
+	s->newfd = 0;
+}
+
+
+
+
+/* MEASUREMENT TASK STUFF */
+
 typedef struct measTaskState
 {
 	Sampler sampler;
@@ -35,6 +90,7 @@ typedef struct measTaskState
 	enum {RELAXING, SAMPLING} measStatus;
 	MeasurementConf measConf;
 	double intervalTime; /* Time since last sample (or start). */
+	StreamState streamState; /* For stdout redirection */
 } MeasTaskState;
 
 void *measStart(void *initialData)
@@ -42,16 +98,25 @@ void *measStart(void *initialData)
 	Measurement *meas = (Measurement*) initialData;
 	assert(meas != NULL);
 	Sampler *sampler = &meas->sampler;
-
 	MeasTaskState *state = malloc(sizeof(*state));
+
+	if (meas->measConf.measureFile != NULL) {
+		state->streamState = makeStreamState(
+				meas->measConf.measureFile);
+	} else {
+		state->streamState.newfd = -1;
+	}
 
 	state->intervalTime = 0;
 	state->sample = 0;
 	state->sampler = meas->sampler; /* struct copy */
-	state->samplerState = samplerStart(sampler);
 	state->measConf = meas->measConf; /* struct copy */
 	state->measStatus = (meas->measConf.measureWait > 0 ?
 				RELAXING : SAMPLING);
+
+	switchStdout(&state->streamState); /* Switch stdout to file */
+	state->samplerState = samplerStart(sampler);
+	switchStdout(&state->streamState); /* Switch stdout back */
 
 	free(initialData);
 	return state;
@@ -70,6 +135,7 @@ bool measTick(void *state)
 
 	if (measInterval < 0)
 		return ret;
+
 
 	switch (measState->measStatus) {
 	case RELAXING:
@@ -92,8 +158,10 @@ bool measTick(void *state)
 			break;
 
 		measState->intervalTime -= measInterval;
+		switchStdout(&measState->streamState); /* Switch stdout to file */
 		ret = samplerSample(sampler, measState->sample, 
 				measState->samplerState);
+		switchStdout(&measState->streamState); /* Switch stdout back */
 		measState->sample++;
 		
 		if (measConf->measureSamples < 0)
@@ -111,6 +179,8 @@ bool measTick(void *state)
 		fprintf(stderr, "Unknown measurement status!\n");
 		assert(false);
 	}
+
+
 	return ret;
 }
 
@@ -119,7 +189,10 @@ void measStop(void *state)
 	MeasTaskState *measState = (MeasTaskState*) state;
 	Sampler *sampler = &measState->sampler;
 
+	switchStdout(&measState->streamState); /* Switch stdout to file */
 	samplerStop(sampler, measState->sample, measState->samplerState);
+	switchStdout(&measState->streamState); /* Switch stdout back */
+	stopRedirection(&measState->streamState);
 
 	free(measState);
 }
@@ -127,7 +200,7 @@ void measStop(void *state)
 
 
 
-/* Some wrappers for samplers: */
+/* SOME WRAPPERS FOR SAMPLERS: */
 
 /* Returns the state pointer that gets returned from sampler.start(), or 
  * NULL if sampler.start == NULL */
