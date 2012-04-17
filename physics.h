@@ -5,6 +5,7 @@
 #include "system.h"
 #include "vmath.h"
 #include "task.h"
+#include "world.h"
 
 
 /* Masses (in kg) */

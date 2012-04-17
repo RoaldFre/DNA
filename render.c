@@ -125,12 +125,6 @@ static bool handleEvents(void)
 				config.thermostatTemp /= 1.1;
 				printf("Temperature: %f\n", config.thermostatTemp);
 				break;
-			case SDLK_z:
-				if (SDL_GetModState() & KMOD_SHIFT)
-					config.worldSize *= 1.05;
-				else
-					config.worldSize /= 1.05;
-				break;
 			case SDLK_RETURN:
 				SDL_WM_ToggleFullScreen(surface);
 				break;
@@ -180,7 +174,7 @@ static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear,
 static void initRender(void)
 {
 	int flags = 0;
-	double ws = config.worldSize;
+	double ws = world.worldSize;
 	const SDL_VideoInfo *vidinfo;
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -279,7 +273,7 @@ static void renderStrand(Strand *s, RenderConf *rc) {
 /* Renders the frame and calls calcFps() */
 static void render(RenderConf *rc)
 {
-	double ws = config.worldSize;
+	double ws = world.worldSize;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -395,7 +389,7 @@ static void renderBase(Particle *p, RenderConf *rc)
 }
 static void renderConnection(Particle *p1, Particle *p2, RenderConf *rc)
 {
-	if (distance(&p1->pos, &p2->pos) > config.worldSize / 2)
+	if (distance(&p1->pos, &p2->pos) > world.worldSize / 2)
 		return; /* To avoid periodic boundary clutter */
 	drawCilinder(&p1->pos, &p2->pos, CILINDER_FACES,
 			rc->radius / CILINDER_RADIUS_DIVISOR);

@@ -728,7 +728,7 @@ static void *integratorTaskStart(void *initialData)
 {
 	IntegratorConf *ic = (IntegratorConf*) initialData;
 
-	if(!allocGrid(ic->numBoxes, config.worldSize))
+	if(!allocGrid(ic->numBoxes, world.worldSize))
 		return NULL;
 
 	forEveryParticle(&addToGrid);

@@ -3,6 +3,8 @@
 #include "physics.h" /* for spacings/angles/... */
 #include <string.h>
 
+World world;
+
 /* Allocates the world to hold the given number of strands, and sets this 
  * value in world.
  * Precondition: allocWorld must not already have been called (unless 
@@ -13,7 +15,7 @@ bool allocWorld(int numStrands, double worldSize)
 	world.strands = calloc(numStrands, sizeof(*world.strands));
 	if (world.strands == NULL)
 		return false;
-	config.worldSize = worldSize; //TODO better place for this?
+	world.worldSize = worldSize;
 	world.numStrands = numStrands;
 	return true;
 }
@@ -89,7 +91,7 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	int n = strlen(baseSequence);
 	allocStrand(s, n);
 
-	double ws = config.worldSize;
+	double ws = world.worldSize;
 	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
 	double xoffset = -D_SA / 2;
 	double zoffset = -D_SA / 2;

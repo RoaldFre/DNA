@@ -1,7 +1,6 @@
 #include "system.h"
 #include "task.h"
 
-World world;
 Config config;
 
 static double sim_time = 0;

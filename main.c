@@ -50,6 +50,7 @@ static IntegratorConf integratorConf =
 };
 static const char* baseSequence = DEF_BASE_SEQUENCE;
 static bool buildCompStrand = false;
+static double worldSize = -1; /* guard */
 
 
 static void printUsage(void)
@@ -101,7 +102,6 @@ static void parseArguments(int argc, char **argv)
 	config.langevinGamma	= DEF_LANGEVIN_GAMMA;
 
 	/* guards */
-	config.worldSize = -1;
 	config.thermostatTau = -1;
 
 	while ((c = getopt(argc, argv, ":s:dt:T:g:c:f:rR:l:S:b:v:i:h")) != -1)
@@ -152,8 +152,8 @@ static void parseArguments(int argc, char **argv)
 			config.truncationLen = atof(optarg) * LENGTH_FACTOR;
 			break;
 		case 'S':
-			config.worldSize = atof(optarg) * 1e-10;
-			if (config.worldSize <= 0)
+			worldSize = atof(optarg) * 1e-10;
+			if (worldSize <= 0)
 				die("Invalid world size %s\n", optarg);
 			break;
 		case 'b':
@@ -204,8 +204,8 @@ static void parseArguments(int argc, char **argv)
 		die("\nFound unrecognised option(s) at the command line!\n");
 	}
 
-	if (config.worldSize < 0)
-		config.worldSize = LENGTH_FACTOR * strlen(baseSequence)
+	if (worldSize < 0)
+		worldSize = LENGTH_FACTOR * strlen(baseSequence)
 					* DEF_MONOMER_WORLDSIZE_FACTOR;
 
 	if (config.thermostatTau < 0)
@@ -215,24 +215,24 @@ static void parseArguments(int argc, char **argv)
 	if (config.truncationLen < 0) {
 		/* Disable truncation -> no space partitioning */
 		integratorConf.numBoxes = 1;
-		config.truncationLen = config.worldSize / 2.0;
+		config.truncationLen = worldSize / 2.0;
 		/* Due to (cubic) periodicity, we still need to truncate at 
 		 * worldsize/2 to have correct energy conservation and to 
 		 * make sure every particle 'sees' the same (spherical) 
 		 * potential, no matter where it is within the cube. */
-	} else if (config.truncationLen > config.worldSize / 2.0)
-		config.truncationLen = config.worldSize / 2.0; /* same reason */
+	} else if (config.truncationLen > worldSize / 2.0)
+		config.truncationLen = worldSize / 2.0; /* same reason */
 
 	if (integratorConf.numBoxes == -1) {
-		integratorConf.numBoxes = config.worldSize / config.truncationLen;
+		integratorConf.numBoxes = worldSize / config.truncationLen;
 		if (integratorConf.numBoxes  < 1)
 			integratorConf.numBoxes = 1;
 	}
 
-	if (config.worldSize / integratorConf.numBoxes < config.truncationLen)
+	if (worldSize / integratorConf.numBoxes < config.truncationLen)
 		die("The boxsize (%f) is smaller than the potential "
 			"truncation radius (%f)!\n",
-			config.worldSize / integratorConf.numBoxes,
+			worldSize / integratorConf.numBoxes,
 			config.truncationLen);
 }
 
@@ -254,9 +254,9 @@ int main(int argc, char **argv)
 	parseArguments(argc, argv);
 	
 	if (buildCompStrand)
-		allocWorld(2, config.worldSize);
+		allocWorld(2, worldSize);
 	else
-		allocWorld(1, config.worldSize);
+		allocWorld(1, worldSize);
 
 	fillStrand(&world.strands[0], baseSequence);
 	if (buildCompStrand)
