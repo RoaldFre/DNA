@@ -52,8 +52,8 @@
 #define DIHEDRAL_S3_P_5S_A	(  50.69 * TO_RADIANS)
 
 /* Base-Pair couplings */
-#define COUPLING_BP_AT 	19.28e-11  /* 2.77 kcal/mol (per particle) */
-#define COUPLING_BP_GC	28.96e-11  /* 4.16 kcal/mol (per particle) */
+#define COUPLING_BP_AT 	1.928e-20  /* 2.77 kcal/mol (per particle) */
+#define COUPLING_BP_GC	2.896e-20  /* 4.16 kcal/mol (per particle) */
 #define DISTANCE_r0_AT	2.9002e-10 /* Knotts et al 2007, table III, 2.9002 A */
 #define DISTANCE_r0_GC	2.8694e-10 /* Knotts et al 2007, table III, 2.8694 A */
 
