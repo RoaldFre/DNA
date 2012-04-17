@@ -9,8 +9,7 @@
 #include <sys/resource.h>
 #include <string.h>
 #include "main.h"
-#include "vmath.h"
-#include "physics.h"
+#include "world.h"
 #include "render.h"
 #include "samplers.h"
 

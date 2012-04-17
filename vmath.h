@@ -2,6 +2,7 @@
 #define _VMATH_H_
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <assert.h>
 
@@ -143,6 +144,27 @@ static __inline__ void periodic(double period, const Vec3 *v, Vec3 *dest)
 	assert(0 <= v->x  &&  v->x < period);
 	assert(0 <= v->y  &&  v->y < period);
 	assert(0 <= v->z  &&  v->z < period);
+}
+
+/* Returns a number sampled from a standard normal distribution. */
+static __inline__ double randNorm(void)
+{
+	/* Box-Muller transform */
+	double u1 = ((double) rand()) / RAND_MAX;
+	double u2 = ((double) rand()) / RAND_MAX;
+
+	return sqrt(-2*log(u1)) * cos(2*M_PI*u2);
+}
+
+/* Returns a vector with components sampled from a standard normal 
+ * distribution. */
+static __inline__ Vec3 randNormVec(void)
+{
+	Vec3 res;
+	res.x = randNorm();
+	res.y = randNorm();
+	res.z = randNorm();
+	return res;
 }
 
 #endif
