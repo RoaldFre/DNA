@@ -7,6 +7,7 @@ typedef struct
 {
 	int framerate; /* The desired framerate */
 	double radius; /* The radius of the particles to render */
+	bool drawForces; /* Draw the forces on the particles? */
 } RenderConf;
 
 Task makeRenderTask(RenderConf *rc);

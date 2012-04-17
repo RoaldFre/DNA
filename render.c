@@ -7,8 +7,6 @@
 #include "physics.h"
 #include "task.h"
 
-#define DRAWFORCES 0
-
 #define SCREEN_W 1000
 #define SCREEN_H 1000
 
@@ -257,17 +255,17 @@ static void renderStrand(Strand *s, RenderConf *rc) {
 		renderConnection(&s->Ss[i], &s->Ps[i-1], rc);
 	}
 
-#if DRAWFORCES
 	/* Forces */
-	glColor3f(0.8, 0.0, 0.0);
-	glBegin(GL_LINES);
-		for(int i = 0; i < 3 * config.numMonomers; i++) {
-			Vec3 tmp;
-			add(&s->all[i].pos, &s->all[i].F, &tmp);
-			drawLine(&s->all[i].pos, &tmp);
-		}
-	glEnd();
-#endif
+	if (rc->drawForces) {
+		glColor3f(0.8, 0.0, 0.0);
+		glBegin(GL_LINES);
+			for(int i = 0; i < 3 * s->numMonomers; i++) {
+				Vec3 tmp;
+				add(&s->all[i].pos, &s->all[i].F, &tmp);
+				drawLine(&s->all[i].pos, &tmp);
+			}
+		glEnd();
+	}
 }
 
 /* Renders the frame and calls calcFps() */

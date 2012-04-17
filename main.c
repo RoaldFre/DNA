@@ -41,6 +41,7 @@ static RenderConf renderConf =
 {
 	.framerate = DEF_RENDER_FRAMERATE,
 	.radius    = DEF_RENDER_RADIUS * LENGTH_FACTOR,
+	.drawForces = false,
 };
 static bool render;
 static IntegratorConf integratorConf =
@@ -70,6 +71,7 @@ static void printUsage(void)
 	printf("             default: %f)\n", DEF_RENDER_FRAMERATE);
 	printf(" -R <flt>  Radius (in Angstrom) of the particles when rendering\n");
 	printf("             default: %f\n", DEF_RENDER_RADIUS);
+	printf(" -F        draw Forces on particles when rendering\n");
 	printf(" -l <flt>  truncation Length of potentials (in Angstrom).\n");
 	printf("             negative value: sets truncation to worldsize/2\n");
 	printf("             default: %f\n", DEF_TRUNCATION_LENGTH);
@@ -104,7 +106,7 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:T:g:c:f:rR:l:S:b:v:i:h")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:T:g:c:f:rR:Fl:S:b:v:i:h")) != -1)
 	{
 		switch (c)
 		{
@@ -147,6 +149,9 @@ static void parseArguments(int argc, char **argv)
 			renderConf.radius = atof(optarg) * LENGTH_FACTOR;
 			if (renderConf.radius <= 0)
 				die("Invalid radius %s\n", optarg);
+			break;
+		case 'F':
+			renderConf.drawForces = true;
 			break;
 		case 'l':
 			config.truncationLen = atof(optarg) * LENGTH_FACTOR;
