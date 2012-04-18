@@ -218,6 +218,7 @@ static void parseArguments(int argc, char **argv)
 						* config.timeStep;
 
 	if (config.truncationLen < 0) {
+		printf("Disabling space partitioning\n");
 		/* Disable truncation -> no space partitioning */
 		integratorConf.numBoxes = 1;
 		config.truncationLen = worldSize / 2.0;
@@ -225,8 +226,12 @@ static void parseArguments(int argc, char **argv)
 		 * worldsize/2 to have correct energy conservation and to 
 		 * make sure every particle 'sees' the same (spherical) 
 		 * potential, no matter where it is within the cube. */
-	} else if (config.truncationLen > worldSize / 2.0)
+	} else if (config.truncationLen > worldSize / 2.0) {
+		printf("Truncation (%e) > worldSize/2 (%e)\n"
+				"   => Disabling space partitioning\n",
+				config.truncationLen, worldSize/2);
 		config.truncationLen = worldSize / 2.0; /* same reason */
+	}
 
 	if (integratorConf.numBoxes == -1) {
 		integratorConf.numBoxes = worldSize / config.truncationLen;
@@ -235,10 +240,10 @@ static void parseArguments(int argc, char **argv)
 	}
 
 	if (worldSize / integratorConf.numBoxes < config.truncationLen)
-		die("The boxsize (%f) is smaller than the potential "
-			"truncation radius (%f)!\n",
-			worldSize / integratorConf.numBoxes,
-			config.truncationLen);
+		die("The boxsize (%e) is smaller than the potential "
+			"truncation radius (%e)!\n",
+			worldSize / integratorConf.numBoxes / LENGTH_FACTOR,
+			config.truncationLen / LENGTH_FACTOR);
 }
 
 void die(const char *fmt, ...)

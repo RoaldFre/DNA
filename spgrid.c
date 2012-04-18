@@ -17,7 +17,6 @@ static Box *boxFromParticle(const Particle *p);
 static Box *boxFromNonPeriodicIndex(int ix, int iy, int iz);
 static void forEVERYpair(void (*f)(Particle *p1, Particle *p2, void *data), 
 			 void *data);
-static void pairWrapper(Particle *p1, Particle *p2, void *data);
 
 
 /* Globals */
@@ -37,7 +36,7 @@ bool allocGrid(int numBoxes, double size)
 		return false;
 	nb = numBoxes;
 	boxSize = size / numBoxes;
-	assert(sanityCheck(true));
+	assert(sanityCheck(true, false));
 	return true;
 }
 
@@ -65,7 +64,7 @@ void freeGrid()
 		}
 		assert(box->n == 0  &&  box->p == NULL);
 	}
-	assert(sanityCheck(true));
+	assert(sanityCheck(true, true));
 	assert(gridNumParticles == 0);
 
 	nb = 0;
@@ -78,14 +77,14 @@ void addToGrid(Particle *p) {
 	addToBox(p, box);
 	gridNumParticles++;
 
-	assert(sanityCheck(false));
+	assert(sanityCheck(false, false));
 }
 
 void reboxParticles(void)
 {
 	double gridSize = nb * boxSize;
 
-	assert(sanityCheck(false));
+	assert(sanityCheck(false, true));
 
 	for (int i = 0; i < nb*nb*nb; i++) {
 		Box *currentBox = &grid[i];
@@ -114,7 +113,7 @@ void reboxParticles(void)
 			p = next;
 		}
 	}
-	assert(sanityCheck(true));
+	assert(sanityCheck(true, true));
 }
 
 /* Precondition: particle must be within the grid. */
@@ -265,14 +264,6 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 	}
 }
 
-void forEveryPair(void (*f)(Particle *p1, Particle *p2))
-{
-	/* I *hope* the compiler can optimize this deep chain of function 
-	 * pointer magic. TODO: Check this and deal with the ISO C warnings 
-	 * somehow. */
-	forEveryPairD(&pairWrapper, (void*) f);
-}
-
 /* This is a bit of a hack, but it works and avoids code duplication. Ask 
  * the non-data function poiner as the data argument. */
 static void pairWrapper(Particle *p1, Particle *p2, void *data)
@@ -281,8 +272,40 @@ static void pairWrapper(Particle *p1, Particle *p2, void *data)
 			(void (*)(Particle *p1, Particle *p2)) data;
 	f(p1, p2);
 }
-	
+void forEveryPair(void (*f)(Particle *p1, Particle *p2))
+{
+	/* I *hope* the compiler can optimize this deep chain of function 
+	 * pointer magic. TODO: Check this and deal with the ISO C warnings 
+	 * somehow. */
+	forEveryPairD(&pairWrapper, (void*) f);
+}
 
+
+
+typedef struct {
+	void (*f)(Particle*, Particle*, Particle*, Particle*, void*);
+	void *data;
+} ForEveryConnectionPairData;
+static void forEveryConnectionPairHelper(Particle *p1, Particle *p2, void *data)
+{
+	ForEveryConnectionPairData *fecpd = (ForEveryConnectionPairData*) data;
+
+	Particle *q1 = getConnectedParticle(p1);
+	Particle *q2 = getConnectedParticle(p2);
+	if (q1 == NULL  ||  q2 == NULL)
+		return;
+
+	fecpd->f(p1, q1, p2, q2, fecpd->data);
+}
+
+void forEveryConnectionPairD(void (*f)(Particle *p1, Particle *p2,
+		Particle *p3, Particle *p4, void *data), void *data)
+{
+	ForEveryConnectionPairData fecpd;
+	fecpd.f = f;
+	fecpd.data = data;
+	forEveryPairD(&forEveryConnectionPairHelper, &fecpd);
+}
 
 
 /* Brute force over *every single* pair, including those that are more than 
@@ -359,47 +382,112 @@ Vec3 nearestImageUnitVector(Vec3 *v1, Vec3 *v2)
 
 
 
-
-
 /* TEST ROUTINES */
 
 typedef struct
 {
 	int count;
-	bool illegalPair;
-} ForEveryPairCheckData;
+	bool error;
+} ForEveryCheckData;
 static void forEveryPairCheckHelper(Particle *p1, Particle *p2, void *data)
 {
-	ForEveryPairCheckData *fepcd = (ForEveryPairCheckData*) data;
-	//printf("fepch %d %p %p\n",(void*)p1, (void*)p2, fepcd->count);
-	fepcd->count++;
+	ForEveryCheckData *fecd = (ForEveryCheckData*) data;
+	fecd->count++;
 	if (p1 == p2) {
-		fepcd->illegalPair = true;
+		fecd->error = true;
 		fprintf(stderr, "forEveryPair gave illegal pair with "
 				"particle %p\n", (void*)p1);
 	}
 }
 bool forEveryPairCheck(void)
 {
-	ForEveryPairCheckData data;
+	ForEveryCheckData data;
 	data.count = 0;
-	data.illegalPair = false;
+	data.error = false;
 
 	forEveryPairD(&forEveryPairCheckHelper, &data);
 
-	int n = gridNumParticles;
-	int correctCount = n * (n - 1) / 2;
+	int correctCount = 0;
+	if (nb < 3) {
+		int n = gridNumParticles;
+		correctCount = n * (n - 1) / 2;
+	} else {
+		for (int ix = 0; ix < nb; ix++)
+		for (int iy = 0; iy < nb; iy++)
+		for (int iz = 0; iz < nb; iz++) {
+			Box *box = boxFromIndex(ix, iy, iz);
+			/* Pairs in this box */
+			int n1 = box->n;
+			correctCount += n1 * (n1 - 1) / 2;
+
+			/* Loop over pair with adjacent boxes to the box 
+			 * of p. We need a total ordering on the boxes so 
+			 * we don't check the same box twice. We use the 
+			 * pointer value for this.
+			 * However, due to periodic boundary conditions, 
+			 * this ONLY works when there are AT LEAST 3 boxes 
+			 * in each dimension! */
+			for (int dix = -1; dix <= 1; dix++)
+			for (int diy = -1; diy <= 1; diy++)
+			for (int diz = -1; diz <= 1; diz++) {
+				Box *b = boxFromNonPeriodicIndex(
+						ix+dix, iy+diy, iz+diz);
+				if (b <= box)
+					continue;
+					/* if b == box: it's our own box!
+					 * else: only check boxes that have 
+					 * a strictly larger pointer value 
+					 * to avoid double counting. */
+				int n2 = b->n;
+				correctCount += n1 * n2;
+			}
+		}
+	}
+
 	if (data.count != correctCount) {
 		fprintf(stderr, "forEveryPair ran over %d pairs, but should "
 				"be %d\n", data.count, correctCount);
 		return false;
 	}
 
-	return !data.illegalPair;
+	return !data.error;
+}
+
+static void forEveryConnectionPairCheckHelper(Particle *a1, Particle *a2, 
+		Particle *b1, Particle *b2, void *data)
+{
+	ForEveryCheckData *fecd = (ForEveryCheckData*) data;
+	fecd->count++;
+	if (a1 == NULL || a2 == NULL || b1 == NULL || b2 == NULL
+			|| a1 == a2 || b1 == b2
+			|| (a1 == b1 && a2 == b2)
+			|| (a1 == b2 && a2 == b1)
+			|| (a2 != getConnectedParticle(a1))
+			|| (b2 != getConnectedParticle(b1))) {
+		fecd->error = false;
+		fprintf(stderr, "forEveryConnectionPair gave illegal "
+				"connection pair! %p %p %p %p\n",
+				(void*)a1, (void*)a2, (void*)b1, (void*)b2);
+	}
+}
+bool forEveryConnectionPairCheck(void)
+{
+	ForEveryCheckData data;
+	data.count = 0;
+	data.error = false;
+
+	forEveryConnectionPairD(&forEveryConnectionPairCheckHelper, &data);
+
+	//TODO determine the correct count to check.
+	//printf("Connection pairs: %d\n", data.count);
+
+	return !data.error;
 }
 
 
-bool sanityCheck(bool checkCorrectBox)
+
+
+bool sanityCheck(bool checkCorrectBox, bool checkConnections)
 {
 	int nParts1 = 0;
 	int nParts2 = 0;
@@ -490,6 +578,9 @@ bool sanityCheck(bool checkCorrectBox)
 	}
 
 	OK = OK && forEveryPairCheck();
+
+	if (checkConnections)
+		OK = OK && forEveryConnectionPairCheck();
 
 	return OK;
 }

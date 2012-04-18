@@ -10,7 +10,9 @@ typedef enum particleType
 	BASE_A,
 	BASE_T,
 	BASE_C,
-	BASE_G 
+	BASE_G,
+	/* WARNING, if for some reason you want to change the ordering of 
+	 * this enum, watch out to avoid breaking getConnectedParticle() ! */
 } ParticleType;
 
 typedef struct particle
@@ -21,6 +23,8 @@ typedef struct particle
 	Vec3 F;   /* Force */
 	ParticleType type;
 	struct particle *prev, *next; /* Previous/Next particle in box */
+	struct strand *strand; /* The strand I belong to */
+	int strandIndex; /* My index in the appropriate array of my strand */
 } Particle;
 
 typedef struct strand
@@ -81,4 +85,17 @@ void forEveryParticleOf(Strand *s, void (*f)(Particle *p));
 void forEveryParticleOfD(Strand *s,
 			void (*f)(Particle *p, void *data), void *data);
 
+/* Returns the connected particle to the given one, as determined by the 
+ * strand it's in. Returns NULL if no such particle exists.
+ * Particles are ordered to avoid doubles: this has the pleasant 
+ * consequence that there is at most one particle that can be returned.
+ * Depending on the given particle, the returned particle is:
+ *
+ * given     | returned
+ * ----------+-----------------------------------------------------
+ * Phosphate | Sugar of same monomer
+ * Base      | Sugar of same monomer
+ * Sugar     | Phosphate of next monomer or NULL if no such monomer
+ */
+Particle *getConnectedParticle(Particle *p);
 #endif

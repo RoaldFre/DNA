@@ -160,6 +160,11 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		s->Bs[i].type = b;
 		s->Ss[i].type = SUGAR;
 		s->Ps[i].type = PHOSPHATE;
+
+		/* Particle's strand */
+		s->Ss[i].strand = s; s->Ss[i].strandIndex = i;
+		s->Bs[i].strand = s; s->Bs[i].strandIndex = i;
+		s->Ps[i].strand = s; s->Ps[i].strandIndex = i;
 	}
 }
 void fillStrand(Strand *s, const char *baseSequence)
@@ -227,4 +232,22 @@ void forEveryParticleOfD(Strand *s,
 		f(&s->all[i], data);
 }
 
+Particle *getConnectedParticle(Particle *p)
+{
+	Strand *s = p->strand;
+	assert(s != NULL);
+	int i = p->strandIndex;
+	int n = s->numMonomers;
+
+	switch (p->type) {
+	case PHOSPHATE:
+		return &s->Ss[i];
+	case SUGAR:
+		if (i+1 >= n)
+			return NULL;
+		return &s->Ps[i+1];
+	default: /* Base */
+		return &s->Ss[i];
+	}
+}
 
