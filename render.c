@@ -381,6 +381,7 @@ static void renderBase(Particle *p, RenderConf *rc)
 		case BASE_G: col = G_col; break;
 		default: /* not a base */
 		     assert(false);
+		     col = gray;
 	}
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, col);
 	renderParticle(p, rc);
