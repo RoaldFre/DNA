@@ -46,6 +46,8 @@ void forEveryPair(void (*f)(Particle *p1, Particle *p2));
  */
 void forEveryConnectionPairD(void (*f)(Particle *a1, Particle *a2,
 		Particle *b1, Particle *b2, void *data), void *data);
+void forEveryConnectionPair(void (*f)(Particle *a1, Particle *a2, 
+		Particle *b1, Particle *b2));
 
 /* Check whether internal structure is still consistent. If checkCorrectBox 
  * is true, then also check if all particles are in their correct boxes.
@@ -59,7 +61,7 @@ bool sanityCheck(bool checkCorrectBox, bool checkConnections);
  * Returns true if everything is OK, false otherwise. */
 bool forEveryPairCheck(void);
 /* Analogous to forEveryPairCheck() */
-bool forEveryConnectionCheck(void);
+bool forEveryConnectionPairCheck(void);
 
 /* Returns the shortest vector that points from v1 to v2, taking into 
  * account the periodic boundary conditions. 

@@ -304,6 +304,23 @@ void forEveryConnectionPairD(void (*f)(Particle *p1, Particle *p2,
 	forEveryPairD(&forEveryConnectionPairHelper, &fecpd);
 }
 
+static void connectionPairWrapper(Particle *p1, Particle *p2,
+		Particle *p3, Particle *p4, void *data)
+{
+	void (**f)(Particle*, Particle*, Particle*, Particle*) =
+			(void (**)(Particle*, Particle*, Particle*, Particle*)) data;
+	(*f)(p1, p2, p3, p4);
+}
+void forEveryConnectionPair(void (*f)(Particle*, Particle*, Particle*, Particle*))
+{
+	/* I *hope* the compiler can optimize this deep chain of (function) 
+	 * pointer magic. TODO: Check this! */
+	forEveryConnectionPairD(&connectionPairWrapper, (void*) &f);
+}
+
+
+
+
 
 /* Brute force over *every single* pair, including those that are more than 
  * a boxlength apart. */
