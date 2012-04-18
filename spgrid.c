@@ -28,6 +28,7 @@ static int nb = 0; /* Number of Boxes in one dimension. Total number of
 static int gridNumParticles = 0; /* Total number of particles in the grid. For 
 				consistency checking only! */
 
+
 bool allocGrid(int numBoxes, double size)
 {
 	assert(grid == NULL && nb == 0);
@@ -203,6 +204,9 @@ static void addToBox(Particle *p, Box *b)
 	b->n++;
 }
 
+
+
+/* ITERATION OVER PAIRS */
 void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data)
 {
 	int n1, n2;
@@ -277,8 +281,43 @@ void forEveryPair(void (*f)(Particle *p1, Particle *p2))
 	forEveryPairD(&pairWrapper, (void*) &f);
 }
 
+/* Brute force over *every single* pair, including those that are more than 
+ * a boxlength apart. */
+static void forEVERYpair(void (*f)(Particle *p1, Particle *p2, void *data), 
+			 void *data)
+{
+	/* Pairs within the same box */
+	for (int b = 0; b < nb*nb*nb; b++) {
+		Particle *p1 = grid[b].p;
+		for (int i = 0; i < grid[b].n; i++) { /* i'th particle in box */
+			Particle *p2 = p1->next;
+			for (int j = i + 1; j < grid[b].n; j++) {
+				f(p1, p2, data);
+				p2 = p2->next;
+			}
+		}
+	}
+
+	/* Pairs in different boxes */
+	for (int b1 = 0; b1 < nb*nb*nb; b1++) {
+		Particle *p1 = grid[b1].p;
+		for (int i1 = 0; i1 < grid[b1].n; i1++) {
+			for (int b2 = b1 + 1; b2 < nb*nb*nb; b2++) {
+				Particle *p2 = grid[b2].p;
+				for (int i2 = 0; i2 < grid[b2].n; i2++) {
+					f(p1, p2, data);
+					p2 = p2->next;
+				}
+			}
+			p1 = p1->next;
+		}
+	}
+}
 
 
+
+
+/* ITERATION OVER CONNECTION PAIRS */
 typedef struct {
 	void (*f)(Particle*, Particle*, Particle*, Particle*, void*);
 	void *data;
@@ -321,41 +360,7 @@ void forEveryConnectionPair(void (*f)(Particle*, Particle*, Particle*, Particle*
 
 
 
-
-/* Brute force over *every single* pair, including those that are more than 
- * a boxlength apart. */
-static void forEVERYpair(void (*f)(Particle *p1, Particle *p2, void *data), 
-			 void *data)
-{
-	/* Pairs within the same box */
-	for (int b = 0; b < nb*nb*nb; b++) {
-		Particle *p1 = grid[b].p;
-		for (int i = 0; i < grid[b].n; i++) { /* i'th particle in box */
-			Particle *p2 = p1->next;
-			for (int j = i + 1; j < grid[b].n; j++) {
-				f(p1, p2, data);
-				p2 = p2->next;
-			}
-		}
-	}
-
-	/* Pairs in different boxes */
-	for (int b1 = 0; b1 < nb*nb*nb; b1++) {
-		Particle *p1 = grid[b1].p;
-		for (int i1 = 0; i1 < grid[b1].n; i1++) {
-			for (int b2 = b1 + 1; b2 < nb*nb*nb; b2++) {
-				Particle *p2 = grid[b2].p;
-				for (int i2 = 0; i2 < grid[b2].n; i2++) {
-					f(p1, p2, data);
-					p2 = p2->next;
-				}
-			}
-			p1 = p1->next;
-		}
-	}
-}
-
-
+/* PERIODIC VECTOR FUNCTIONS */
 Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2)
 {
 	Vec3 diff;
@@ -375,7 +380,6 @@ double nearestImageDistance(Vec3 *v1, Vec3 *v2)
 	
 	return rijLength;
 }
-
 
 Vec3 nearestImageUnitVector(Vec3 *v1, Vec3 *v2)
 {
