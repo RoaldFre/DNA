@@ -21,7 +21,7 @@
 #define DEF_TEMPERATURE 		300.0
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
-#define DEF_TRUNCATION_LENGTH		20.0 
+#define DEF_TRUNCATION_LENGTH		20.0 //TODO sane?
 #define DEF_MONOMER_WORLDSIZE_FACTOR    9.0
 #define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_MEASUREMENT_WAIT 		4e4
@@ -100,7 +100,7 @@ static void parseArguments(int argc, char **argv)
 	/* defaults */
 	config.timeStep 	= DEF_TIMESTEP * TIME_FACTOR;
 	config.thermostatTemp	= DEF_TEMPERATURE;
-	config.truncationLen    = DEF_TRUNCATION_LENGTH;
+	config.truncationLen    = DEF_TRUNCATION_LENGTH * LENGTH_FACTOR;
 	config.langevinGamma	= DEF_LANGEVIN_GAMMA;
 
 	/* guards */
