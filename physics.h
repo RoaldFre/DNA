@@ -65,7 +65,8 @@
 #define DEBYE_LENGTH 		13.603e-10 /* 13.603 Angstrom for 50mM = [Na+]*/
 
 /* Rope dynamics */
-#define ROPE_COUPLING		1.00e1
+#define ROPE_COUPLING		(10 * EPSILON) /* TODO sane value? */
+#define ROPE_DIST		(0.1e-10) /* characteristic length TODO sane? */
 #define ROPE_TRUNCATION		5e-10 /* 5 Angstrom */
 
 /* Thermodynamics */
@@ -91,7 +92,6 @@ typedef struct
 } IntegratorConf;
 
 void dumpStats(void);
-void dumpEnergies(FILE *stream);
 bool physicsCheck(void);
 
 double temperature(void);

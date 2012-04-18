@@ -396,7 +396,7 @@ static void FCoulomb(Particle *p1, Particle *p2)
 }
 
 /* Fuzzy rope dynamics */
-static void FRope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
+static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 {
 	Vec3 *pos1 = &p1->pos;
 	Vec3 *pos2 = &p3->pos;
@@ -420,7 +420,7 @@ static void FRope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	double coupling = ROPE_COUPLING;
 	Vec3 forceVec;
 	Vec3 direction;
-	double rInv = 1/dist;
+	double rInv = ROPE_DIST / dist;
 	double rInv2 = rInv * rInv;
 	double rInv4 = rInv2 * rInv2;
 	double rInv6 = rInv4 * rInv2;
@@ -441,7 +441,7 @@ static void FRope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	sub(&p4->F, &forceVec, &p4->F);
 }
 
-static double VRope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
+static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 {
 	/* break if points p1/p3 are further apart than 2*truncation length */
 	double posDiff = nearestImageDistance(&p1->pos, &p3->pos);
@@ -463,7 +463,7 @@ static double VRope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 		
 	/* calculate the fuzzy rope force size */
 	double coupling = ROPE_COUPLING;
-	double rInv = 1/dist;
+	double rInv = ROPE_DIST / dist;
 	double rInv2 = rInv * rInv;
 	double rInv4 = rInv2 * rInv2;
 	double rInv7 = rInv4 * rInv2 * rInv;
@@ -544,6 +544,9 @@ static void calculateForces(void)
 
 	/* Particle-based forces */
 	forEveryPair(&pairForces);
+
+	/* Connection-based forces */
+	forEveryConnectionPair(&Frope);
 }
 
 
@@ -569,7 +572,7 @@ double temperature(void)
 
 
 typedef struct PotentialEnergies {
-	double bond, angle, dihedral, stack, basePair, Coulomb;
+	double bond, angle, dihedral, stack, basePair, Coulomb, rope;
 } PotentialEnergies;
 static void pairPotentials(Particle *p1, Particle *p2, void *data)
 {
@@ -577,6 +580,13 @@ static void pairPotentials(Particle *p1, Particle *p2, void *data)
 	
 	pe->basePair += VbasePair(p1, p2);
 	pe->Coulomb  += VCoulomb(p1, p2);
+}
+
+static void addRopePotentialEnergy(Particle *p1, Particle *p2,
+		Particle *p3, Particle *p4, void *data)
+{
+	double *V = (double*)data;
+	*V += Vrope(p1, p2, p3, p4);
 }
 
 /* Add energy stats of given strand, in electronvolts. */
@@ -622,11 +632,13 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 /* Return energy stats of world, in electronvolts. */
 static PotentialEnergies calcPotentialEnergies(void) {
 	
-	PotentialEnergies pe = {0, 0, 0, 0, 0, 0};
+	PotentialEnergies pe = {0, 0, 0, 0, 0, 0, 0};
 	for (int s = 0; s < world.numStrands; s++)
 		addPotentialEnergies(&world.strands[s], &pe);
 	
 	forEveryPairD(&pairPotentials, &pe);
+
+	forEveryConnectionPairD(&addRopePotentialEnergy, &pe.rope);
 	
 	/* Convert to eV */
 	pe.bond     *= ENERGY_FACTOR;
@@ -635,6 +647,7 @@ static PotentialEnergies calcPotentialEnergies(void) {
 	pe.stack    *= ENERGY_FACTOR;
 	pe.basePair *= ENERGY_FACTOR;
 	pe.Coulomb  *= ENERGY_FACTOR;
+	pe.rope     *= ENERGY_FACTOR;
 	
 	return pe;
 }
@@ -858,24 +871,10 @@ void dumpStats()
 	double T = temperature();
 	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb;
 
-	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, T = %f\n",
-			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, T);
+	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Vr = %e T = %f\n",
+			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.rope, T);
 }
 
-void dumpEnergies(FILE *stream)
-{
-#if 1
-	assert(stream != NULL);
-	PotentialEnergies pe = calcPotentialEnergies();
-	double K = kineticEnergy() * ENERGY_FACTOR;
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb;
-	fprintf(stream, "%e %e %e %e %e %e %e %e %e \n",
-			getTime(), E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb);
-#else
-	/* DEBUG equipartition theorem */
-	dumpEquipartitionStats();
-#endif
-}
 
 
 /* ===== MISC FUNCTIONS ===== */
