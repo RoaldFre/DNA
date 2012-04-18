@@ -395,8 +395,88 @@ static void FCoulomb(Particle *p1, Particle *p2)
 	sub(&p2->F, &forceVec, &p2->F);
 }
 
+/* Fuzzy rope dynamics */
+static void FRope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
+{
 
+	Vec3 pos1 = p1->pos;
+	Vec3 pos2 = p3->pos;
+	
+	// break if points are further apart than 2*truncation length
+	double posDiff = nearestImageDistance(&p1->pos, &p3->pos);
+	if (posDiff > (2*ROPE_TRUNCATION))
+		return;
+	
+	Vec3 dir1 = nearestImageUnitVector(&p1->pos, &p2->pos);
+	Vec3 dir2 = nearestImageUnitVector(&p3->pos, &p4->pos);
+	
+	// calculate shortest distance between the two (infinite) lines
+	double dist = nearestLineDistance(&pos1, &pos2, &dir1, &dir2);
+	
+	// break if further apart than truncation length
+	if (dist > ROPE_TRUNCATION)
+		return;
+		
+	// calculate the fuzzy rope force size
+	double coupling = ROPE_COUPLING;
+	double force;
+	Vec3 forceVec;
+	Vec3 direction;
+	double rInv = 1/dist;
+	
+	force = coupling*(rInv*rInv*rInv*rInv*rInv*rInv);
+	
+	// calculate and normalize the direction in which the force works
+	direction = cross(&dir1, &dir2);
+	normalize(&direction, &direction);
+	
+	// scale direction with calculated force
+	scale(&direction, force, &forceVec);
+	
+	// add force to particle objects (add for 1,2; sub for 3,4)
+	add(&p1->F, &forceVec, &p1->F);
+	add(&p2->F, &forceVec, &p2->F);
+	sub(&p3->F, &forceVec, &p3->F);
+	sub(&p4->F, &forceVec, &p4->F);
+}
 
+static double VRope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
+{
+
+	// break if points p1/p3 are further apart than 2*truncation length
+	double posDiff = nearestImageDistance(&p1->pos, &p3->pos);
+	if (posDiff > (2*ROPE_TRUNCATION))
+		return 0;
+		
+	Vec3 pos1 = p1->pos;
+	Vec3 pos2 = p3->pos;	
+	
+	Vec3 dir1 = nearestImageUnitVector(&p1->pos, &p2->pos);
+	Vec3 dir2 = nearestImageUnitVector(&p3->pos, &p4->pos);
+	
+	// calculate shortest distance between the two (infinite) lines
+	double dist = nearestLineDistance(&pos1, &pos2, &dir1, &dir2);
+	
+	// break if further apart than truncation length
+	if (dist > ROPE_TRUNCATION)
+		return 0;
+		
+	// calculate the fuzzy rope force size
+	double coupling = ROPE_COUPLING;
+	double potential;
+	double rInv = 1/dist;
+	
+	potential = 6*coupling*(rInv*rInv*rInv*rInv*rInv*rInv*rInv);
+	
+	// correct the potential to be zero at truncation length
+	double rInvTr = 1/ROPE_TRUNCATION;
+	double potentialCorr = 6*coupling*(rInvTr*rInvTr*rInvTr*rInvTr*rInvTr
+					*rInvTr*rInvTr);
+	potential -= potentialCorr;
+	
+	return potential;
+	
+}
 
 
 /* ===== FORCE FUNCTIONS ===== */

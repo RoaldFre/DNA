@@ -64,6 +64,10 @@
 #define COUPLING_EPS_H2O	(78*VACUUM_PERMITTIVITY) /* 78 epsilon_0 */
 #define DEBYE_LENGTH 		13.603e-10 /* 13.603 Angstrom for 50mM = [Na+]*/
 
+/* Rope dynamics */
+#define ROPE_COUPLING		1.00e1
+#define ROPE_TRUNCATION		5e-10 /* 5 Angstrom */
+
 /* Thermodynamics */
 #define ENERGY_FACTOR	      (1/1.602177e-19) /* Energy in electronvolt */
 #define BOLTZMANN_CONSTANT    1.38065e-23
