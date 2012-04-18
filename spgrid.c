@@ -134,6 +134,21 @@ static Box *boxFromParticle(const Particle *p)
 
 	return boxFromIndex(nx, ny, nz);
 }
+/* Precondition: particle must be within one worldlength distance from 
+ * grid. */
+static Box *boxFromNonPeriodicParticle(const Particle *p)
+{
+	int nx, ny, nz;
+
+	assert(p != NULL);
+	assert(!isnan(p->pos.x) && !isnan(p->pos.y) && !isnan(p->pos.z));
+
+	nx = p->pos.x / boxSize;
+	ny = p->pos.y / boxSize;
+	nz = p->pos.z / boxSize;
+
+	return boxFromNonPeriodicIndex(nx, ny, nz);
+}
 
 static Box *boxFromNonPeriodicIndex(int ix, int iy, int iz)
 {
@@ -552,7 +567,7 @@ bool sanityCheck(bool checkCorrectBox, bool checkConnections)
 		p = first;
 		int j = 0;
 		do {
-			Box *correctBox = boxFromParticle(p);
+			Box *correctBox = boxFromNonPeriodicParticle(p);
 			if (checkCorrectBox && correctBox != b) {
 				int c = (correctBox - grid)/sizeof(*correctBox);
 				fprintf(stderr, "Particle is in box %d, "
