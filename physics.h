@@ -66,7 +66,8 @@
 
 /* Rope dynamics */
 #define ROPE_COUPLING		(10 * EPSILON) /* TODO sane value? */
-#define ROPE_DIST		(0.1e-10) /* characteristic length TODO sane? */
+//#define ROPE_COUPLING		0
+#define ROPE_DIST		(1.0e-10) /* characteristic length TODO sane? */
 #define ROPE_TRUNCATION		5e-10 /* 5 Angstrom */
 
 /* Thermodynamics */

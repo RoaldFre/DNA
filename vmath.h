@@ -70,6 +70,7 @@ static __inline__ void scale(const Vec3 *v, double lambda, Vec3 *dest)
 static __inline__ void normalize(const Vec3 *v, Vec3 *w)
 {
 	double l = length(v);
+	assert(l != 0);
 	scale(v, 1/l, w);
 }
 

@@ -426,6 +426,14 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	double rInv6 = rInv4 * rInv2;
 	double force = coupling * rInv6;
 
+
+	//TODO DEBUG
+	if (force > 1) {
+		printf("force %e\n", force);
+		return;
+	}
+
+
 	/* calculate and normalize the direction in which the force works */
 	direction = cross(&dir1, &dir2);
 	normalize(&direction, &direction);
@@ -434,7 +442,7 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	scale(&direction, force, &forceVec);
 	
 	/* add force to particle objects (add for 1,2; sub for 3,4) */
-	//TODO properly distribute?
+	//TODO is this properly distributed?
 	add(&p1->F, &forceVec, &p1->F);
 	add(&p2->F, &forceVec, &p2->F);
 	sub(&p3->F, &forceVec, &p3->F);
@@ -869,7 +877,7 @@ void dumpStats()
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double T = temperature();
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb;
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.rope;
 
 	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Vr = %e T = %f\n",
 			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.rope, T);
