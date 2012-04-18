@@ -36,6 +36,7 @@ static MeasurementConf verboseConf =
 	.measureSamples = -1, /* loop forever */
 	.measureInterval = -1, /* default: disable */
 	.measureWait = 0,
+	.measureFile = NULL,
 };
 static RenderConf renderConf =
 {
@@ -282,6 +283,7 @@ int main(int argc, char **argv)
 	basePairing.measConf.measureSamples = -1; /* loop forever */
 	basePairing.measConf.measureInterval = 100 * TIME_FACTOR;
 	basePairing.measConf.measureWait = 0;
+	basePairing.measConf.measureFile = NULL;
 	Task basePairingTask = measurementTask(&basePairing);
 
 
