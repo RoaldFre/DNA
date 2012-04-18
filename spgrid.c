@@ -264,20 +264,17 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 	}
 }
 
-/* This is a bit of a hack, but it works and avoids code duplication. Ask 
- * the non-data function poiner as the data argument. */
 static void pairWrapper(Particle *p1, Particle *p2, void *data)
 {
-	void (*f)(Particle *p1, Particle *p2) = 
-			(void (*)(Particle *p1, Particle *p2)) data;
-	f(p1, p2);
+	void (**f)(Particle *p1, Particle *p2) =
+			(void (**)(Particle *p1, Particle *p2)) data;
+	(*f)(p1, p2);
 }
 void forEveryPair(void (*f)(Particle *p1, Particle *p2))
 {
-	/* I *hope* the compiler can optimize this deep chain of function 
-	 * pointer magic. TODO: Check this and deal with the ISO C warnings 
-	 * somehow. */
-	forEveryPairD(&pairWrapper, (void*) f);
+	/* I *hope* the compiler can optimize this deep chain of (function) 
+	 * pointer magic. TODO: Check this! */
+	forEveryPairD(&pairWrapper, (void*) &f);
 }
 
 
