@@ -43,7 +43,6 @@ static StreamState makeStreamState(const char *filename)
 {
 	StreamState s;
 	s.newfd = open(filename, O_WRONLY | O_CREAT, 0644);
-	printf("started stdout is %d, fd is %d\n", fileno(stdout), s.newfd);
 	if (s.newfd < 0) {
 		perror("Error opening file");
 		assert(false);
