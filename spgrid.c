@@ -344,7 +344,6 @@ static void forEveryConnectionPairHelper(Particle *p1, Particle *p2, void *data)
 
 	Particle *q1 = getConnectedParticle(p1);
 	Particle *q2 = getConnectedParticle(p2);
-	printf("  %p, %p\n", (void*)q1, (void*)q2);
 	if (q1 == NULL  ||  q2 == NULL)
 		return;
 
