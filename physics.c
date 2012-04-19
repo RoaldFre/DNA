@@ -456,9 +456,13 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 
 static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 {
-	/* break if points p1/p3 are further apart than 2*truncation length */
-	double posDiff = nearestImageDistance(&p1->pos, &p3->pos);
-	if (posDiff > (2*ROPE_TRUNCATION))
+	double posDiff1 = nearestImageDistance(&p1->pos, &p3->pos);
+	double posDiff2 = nearestImageDistance(&p1->pos, &p4->pos);
+	double posDiff3 = nearestImageDistance(&p2->pos, &p3->pos);
+	double posDiff4 = nearestImageDistance(&p2->pos, &p4->pos);
+	
+	if ( (posDiff1> (2*ROPE_TRUNCATION)) && (posDiff2 > (2*ROPE_TRUNCATION))
+	&& (posDiff3 > (2*ROPE_TRUNCATION)) && (posDiff4 > (2*ROPE_TRUNCATION)) )
 		return 0;
 		
 	Vec3 *pos1 = &p1->pos;
