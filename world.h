@@ -95,7 +95,7 @@ void forEveryParticleOfD(Strand *s,
  * ----------+-----------------------------------------------------
  * Phosphate | Sugar of same monomer
  * Base      | Sugar of same monomer
- * Sugar     | Phosphate of next monomer or NULL if no such monomer
+ * Sugar     | Phosphate of previous monomer or NULL if no such monomer
  */
 Particle *getConnectedParticle(Particle *p);
 #endif

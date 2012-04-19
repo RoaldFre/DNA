@@ -237,15 +237,14 @@ Particle *getConnectedParticle(Particle *p)
 	Strand *s = p->strand;
 	assert(s != NULL);
 	int i = p->strandIndex;
-	int n = s->numMonomers;
 
 	switch (p->type) {
 	case PHOSPHATE:
 		return &s->Ss[i];
 	case SUGAR:
-		if (i+1 >= n)
+		if (i-1 < 0)
 			return NULL;
-		return &s->Ps[i+1];
+		return &s->Ps[i-1];
 	default: /* Base */
 		return &s->Ss[i];
 	}
