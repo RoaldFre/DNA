@@ -401,9 +401,14 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	Vec3 *pos1 = &p1->pos;
 	Vec3 *pos2 = &p3->pos;
 	
-	/* break if points are further apart than 2*truncation length */
-	double posDiff = nearestImageDistance(&p1->pos, &p3->pos);
-	if (posDiff > (2*ROPE_TRUNCATION))
+	/* break if all points are further apart than 2*truncation length */
+	double posDiff1 = nearestImageDistance(&p1->pos, &p3->pos);
+	double posDiff2 = nearestImageDistance(&p1->pos, &p4->pos);
+	double posDiff3 = nearestImageDistance(&p2->pos, &p3->pos);
+	double posDiff4 = nearestImageDistance(&p2->pos, &p4->pos);
+	
+	if ( (posDiff1> (2*ROPE_TRUNCATION)) && (posDiff2 > (2*ROPE_TRUNCATION))
+	&& (posDiff3 > (2*ROPE_TRUNCATION)) && (posDiff4 > (2*ROPE_TRUNCATION)) )
 		return;
 	
 	Vec3 dir1 = nearestImageUnitVector(&p1->pos, &p2->pos);
@@ -422,9 +427,9 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	Vec3 direction;
 	double rInv = ROPE_DIST / dist;
 	double rInv2 = rInv * rInv;
-	double rInv4 = rInv2 * rInv2;
-	double rInv6 = rInv4 * rInv2;
-	double force = coupling * rInv6;
+	//double rInv4 = rInv2 * rInv2;
+	//double rInv6 = rInv4 * rInv2;
+	double force = coupling * rInv2;
 
 
 	//TODO DEBUG
@@ -473,17 +478,19 @@ static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	double coupling = ROPE_COUPLING;
 	double rInv = ROPE_DIST / dist;
 	double rInv2 = rInv * rInv;
-	double rInv4 = rInv2 * rInv2;
-	double rInv7 = rInv4 * rInv2 * rInv;
+	double rInv3 = rInv2 * rInv;
+	// double rInv4 = rInv2 * rInv2;
+	// double rInv7 = rInv4 * rInv2 * rInv;
 
-	double potential = 6 * coupling * rInv7;
+	double potential = 2 * coupling * rInv3;
 	
 	/* correct the potential to be zero at truncation length */
 	double rInvTr = 1/ROPE_TRUNCATION;
 	double rInvTr2 = rInvTr * rInvTr;
-	double rInvTr4 = rInvTr2 * rInvTr2;
-	double rInvTr7 = rInvTr4 * rInvTr2 * rInvTr;
-	double potentialCorr = 6 * coupling * rInvTr7;
+	double rInvTr3 = rInvTr2 * rInvTr;
+	//double rInvTr4 = rInvTr2 * rInvTr2;
+	//double rInvTr7 = rInvTr4 * rInvTr2 * rInvTr;
+	double potentialCorr = 2 * coupling * rInvTr3;
 	potential -= potentialCorr;
 	
 	return potential;
