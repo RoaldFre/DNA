@@ -12,7 +12,7 @@
 
 #define SPHERE_SLICES 10
 #define CILINDER_FACES 6
-#define CILINDER_RADIUS_DIVISOR 10
+#define CILINDER_RADIUS_DIVISOR 4
 
 typedef struct {
 	GLfloat x, y, z;

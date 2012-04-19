@@ -295,7 +295,8 @@ int main(int argc, char **argv)
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
-	tasks[3] = &basePairingTask;
+	//tasks[3] = &basePairingTask;
+	tasks[3] = NULL;
 	Task task = sequence(tasks, 4);
 	run(&task);
 	return 0;

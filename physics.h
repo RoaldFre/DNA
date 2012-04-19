@@ -65,10 +65,8 @@
 #define DEBYE_LENGTH 		13.603e-10 /* 13.603 Angstrom for 50mM = [Na+]*/
 
 /* Rope dynamics */
-#define ROPE_COUPLING		(10 * EPSILON) /* TODO sane value? */
-//#define ROPE_COUPLING		0
-#define ROPE_DIST		(1.0e-10) /* characteristic length TODO sane? */
-#define ROPE_TRUNCATION		3e-10 /* 3 Angstrom */
+#define ROPE_COUPLING		(100 * EPSILON) /* TODO sane value? */
+#define ROPE_DIST		(0.5e-10) /* characteristic length TODO sane? */
 
 /* Thermodynamics */
 #define ENERGY_FACTOR	      (1/1.602177e-19) /* Energy in electronvolt */

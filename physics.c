@@ -398,8 +398,40 @@ static void FCoulomb(Particle *p1, Particle *p2)
 /* Fuzzy rope dynamics */
 static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 {
+	/* If the connections are on the same strand and on the same 
+	 * particle: ignore. For instance something like this:
+	 *
+	 *   p1 (P[i])
+	 *   |
+	 *   |
+	 * p2=p3 (S[i])
+	 *   |
+	 *   |
+	 *   p4 (P[i+1])
+	 *
+	 * or:
+	 *
+	 *   p1 (P[i])
+	 *   |
+	 *   |
+	 * p2=p4 (S[i]) --- p3 (B[i])
+	 *
+	 * etc...
+	 *
+	 * This gives a zero-distance because both connections meet at the 
+	 * shared particle!
+	 *
+	 * TODO Currently brute forcing combinations. Smarter would be to 
+	 * only test combinations that are possible (given the way how 
+	 * forEveryConnection loops over particles). [Does that simplify 
+	 * things?]
+	 * */
+	if (p1 == p3 || p1 == p4 || p2 == p3 || p2 == p4)
+		return;
+
 	Vec3 *pos1 = &p1->pos;
 	Vec3 *pos2 = &p3->pos;
+	double truncLen = config.truncationLen;
 	
 	/* break if all points are further apart than 2*truncation length */
 	double posDiff1 = nearestImageDistance(&p1->pos, &p3->pos);
@@ -407,8 +439,8 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	double posDiff3 = nearestImageDistance(&p2->pos, &p3->pos);
 	double posDiff4 = nearestImageDistance(&p2->pos, &p4->pos);
 	
-	if ( (posDiff1> (2*ROPE_TRUNCATION)) && (posDiff2 > (2*ROPE_TRUNCATION))
-	&& (posDiff3 > (2*ROPE_TRUNCATION)) && (posDiff4 > (2*ROPE_TRUNCATION)) )
+	if ( (posDiff1> (2*truncLen)) && (posDiff2 > (2*truncLen))
+	&& (posDiff3 > (2*truncLen)) && (posDiff4 > (2*truncLen)) )
 		return;
 	
 	Vec3 dir1 = nearestImageUnitVector(&p1->pos, &p2->pos);
@@ -418,7 +450,11 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	double dist = nearestLineDistance(pos1, pos2, &dir1, &dir2);
 	
 	/* break if further apart than truncation length */
-	if (dist > ROPE_TRUNCATION)
+	if (dist > truncLen)
+		return;
+
+	//DEBUG XXX TODO
+	if (dist < 1e-30)
 		return;
 		
 	/* calculate the fuzzy rope force size */
@@ -432,13 +468,6 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	double force = coupling * rInv2;
 
 
-	//TODO DEBUG
-	if (force > 1) {
-		printf("force %e\n", force);
-		return;
-	}
-
-
 	/* calculate and normalize the direction in which the force works */
 	direction = cross(&dir1, &dir2);
 	normalize(&direction, &direction);
@@ -446,12 +475,19 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	/* scale direction with calculated force */
 	scale(&direction, force, &forceVec);
 	
+	assert(!(isnan(forceVec.x) || isnan(forceVec.y) || isnan(forceVec.z)));
+
 	/* add force to particle objects (add for 1,2; sub for 3,4) */
 	//TODO is this properly distributed?
 	add(&p1->F, &forceVec, &p1->F);
 	add(&p2->F, &forceVec, &p2->F);
 	sub(&p3->F, &forceVec, &p3->F);
 	sub(&p4->F, &forceVec, &p4->F);
+
+	assert(isSaneVector(&p1->F));
+	assert(isSaneVector(&p2->F));
+	assert(isSaneVector(&p3->F));
+	assert(isSaneVector(&p4->F));
 }
 
 static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
@@ -460,9 +496,10 @@ static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	double posDiff2 = nearestImageDistance(&p1->pos, &p4->pos);
 	double posDiff3 = nearestImageDistance(&p2->pos, &p3->pos);
 	double posDiff4 = nearestImageDistance(&p2->pos, &p4->pos);
+	double truncLen = config.truncationLen;
 	
-	if ( (posDiff1> (2*ROPE_TRUNCATION)) && (posDiff2 > (2*ROPE_TRUNCATION))
-	&& (posDiff3 > (2*ROPE_TRUNCATION)) && (posDiff4 > (2*ROPE_TRUNCATION)) )
+	if ( (posDiff1> (2*truncLen)) && (posDiff2 > (2*truncLen))
+	&& (posDiff3 > (2*truncLen)) && (posDiff4 > (2*truncLen)) )
 		return 0;
 		
 	Vec3 *pos1 = &p1->pos;
@@ -475,7 +512,7 @@ static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	double dist = nearestLineDistance(pos1, pos2, &dir1, &dir2);
 	
 	/* break if further apart than truncation length */
-	if (dist > ROPE_TRUNCATION)
+	if (dist > truncLen)
 		return 0;
 		
 	/* calculate the fuzzy rope force size */
@@ -489,7 +526,7 @@ static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	double potential = 2 * coupling * rInv3;
 	
 	/* correct the potential to be zero at truncation length */
-	double rInvTr = 1/ROPE_TRUNCATION;
+	double rInvTr = 1/truncLen;
 	double rInvTr2 = rInvTr * rInvTr;
 	double rInvTr3 = rInvTr2 * rInvTr;
 	//double rInvTr4 = rInvTr2 * rInvTr2;
@@ -520,13 +557,16 @@ static void strandForces(Strand *s) {
 	/* Bottom monomer */
 	Fbond(&s->Ss[0], &s->Bs[0], D_SA);
 	Fbond(&s->Ss[0], &s->Ps[0], D_S5P);
+#if 0
 	Fangle(&s->Ps[0], &s->Ss[0], &s->Bs[0], ANGLE_P_5S_A);
+#endif
 	/* Rest of the monomers */
 	for (int i = 1; i < s->numMonomers; i++) {
 		Fbond(&s->Ss[i], &s->Bs[i],   D_SA);
 		Fbond(&s->Ss[i], &s->Ps[i],   D_S5P);
 		Fbond(&s->Ss[i], &s->Ps[i-1], D_S3P);
 
+#if 0
 		Fstack(&s->Bs[i], &s->Bs[i-1]);
 
 		Fangle(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_5S_A);
@@ -543,6 +583,7 @@ static void strandForces(Strand *s) {
 		if (i >= 2)
 		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
 							DIHEDRAL_S3_P_5S3_P);
+#endif
 	}
 }
 
@@ -561,8 +602,10 @@ static void calculateForces(void)
 	for (int s = 0; s < world.numStrands; s++)
 		strandForces(&world.strands[s]);
 
+#if 0
 	/* Particle-based forces */
 	forEveryPair(&pairForces);
+#endif
 
 	/* Connection-based forces */
 	forEveryConnectionPair(&Frope);
@@ -574,6 +617,8 @@ static void calculateForces(void)
 
 static void kineticHelper(Particle *p, void *data)
 {
+	assert(isSaneVector(&p->vel));
+
 	double *twiceK = (double*) data;
 	*twiceK += p->m * length2(&p->vel);
 }
@@ -581,6 +626,7 @@ static double kineticEnergy(void)
 {
 	double twiceK = 0;
 	forEveryParticleD(&kineticHelper, (void*) &twiceK);
+	assert(isSaneNumber(twiceK));
 	return twiceK/2;
 }
 double temperature(void)
@@ -724,6 +770,8 @@ static void thermostat(void)
 	double tau = config.thermostatTau;
 	double lambda = sqrt(1 + dt/tau * (T0/Tk - 1));
 
+	assert(isSaneNumber(lambda));
+
 	forEveryParticleD(&thermostatHelper, (void*) &lambda);
 }
 
@@ -732,24 +780,35 @@ static void verletHelper1(Particle *p)
 	double dt = config.timeStep;
 	Vec3 tmp;
 
+	assert(isSaneVector(&p->pos));
+	assert(isSaneVector(&p->vel));
+	assert(isSaneVector(&p->F));
+
 	/* vel(t + dt/2) = vel(t) + acc(t)*dt/2 */
 	scale(&p->F, dt / (2 * p->m), &tmp);
 	add(&p->vel, &tmp, &p->vel);
 
-	assert(!isnan(p->vel.x) && !isnan(p->vel.y) && !isnan(p->vel.z));
-
 	/* pos(t + dt) = pos(t) + vel(t + dt/2)*dt */
 	scale(&p->vel, dt, &tmp);
 	add(&p->pos, &tmp, &p->pos);
+
+	assert(isSaneVector(&p->pos));
+	assert(isSaneVector(&p->vel));
 }
 static void verletHelper2(Particle *p)
 {
 	double dt = config.timeStep;
 	Vec3 tmp;
 
+	assert(isSaneVector(&p->pos));
+	assert(isSaneVector(&p->vel));
+	assert(isSaneVector(&p->F));
+
 	/* vel(t + dt) = vel(t + dt/2) + acc(t + dt)*dt/2 */
 	scale(&p->F, dt / (2 * p->m), &tmp);
 	add(&p->vel, &tmp, &p->vel);
+
+	assert(isSaneVector(&p->vel));
 }
 static void verlet(void)
 {
@@ -767,6 +826,10 @@ static void langevinBBKhelper1(Particle *p)
 
 	Vec3 tmp1, tmp2;
 
+	assert(isSaneVector(&p->pos));
+	assert(isSaneVector(&p->vel));
+	assert(isSaneVector(&p->F));
+
 	/* from v(t) to v(t + dt/2) */
 	scale(&p->vel, 1 - gamma*dt/2, &tmp1);
 
@@ -778,6 +841,9 @@ static void langevinBBKhelper1(Particle *p)
 	/* from r(t) to r(t + dt) */
 	scale(&p->vel, dt, &tmp1);
 	add(&p->pos, &tmp1, &p->pos);
+
+	assert(isSaneVector(&p->pos));
+	assert(isSaneVector(&p->vel));
 }
 static void langevinBBKhelper2(Particle *p)
 {
@@ -785,14 +851,17 @@ static void langevinBBKhelper2(Particle *p)
 	double gamma = config.langevinGamma;
 	double T     = config.thermostatTemp;
 
+	assert(isSaneVector(&p->pos));
+	assert(isSaneVector(&p->vel));
+	assert(isSaneVector(&p->F));
+
 	/* Regular forces have been calculated. Add the random force due 
 	 * to collisions to the total force. The result is:
 	 * p->F = F(t + dt) + R(t + dt) */
 	/* TODO check that compiler inlines this and precalculates the 
 	 * prefactor before p->m when looping over all particles. */
 	double Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * gamma * p->m / dt);
-	Vec3 R = randNormVec();
-	scale(&R, Rstddev, &R);
+	Vec3 R = randNormVec(Rstddev);
 	add(&p->F, &R, &p->F);
 
 	/* from v(t + dt/2) to v(t + dt) */
@@ -800,6 +869,9 @@ static void langevinBBKhelper2(Particle *p)
 	scale(&p->F, dt / (2 * p->m), &tmp);
 	add(&p->vel, &tmp, &tmp);
 	scale(&tmp, 1 / (1 + gamma*dt/2), &p->vel);
+
+	assert(isSaneVector(&p->pos));
+	assert(isSaneVector(&p->F));
 }
 
 /* BBK integrator for Langevin dynamics. Uses the one based on 

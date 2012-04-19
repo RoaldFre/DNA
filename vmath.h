@@ -161,12 +161,12 @@ static __inline__ double randNorm(void)
 
 /* Returns a vector with components sampled from a standard normal 
  * distribution. */
-static __inline__ Vec3 randNormVec(void)
+static __inline__ Vec3 randNormVec(double stdDev)
 {
 	Vec3 res;
-	res.x = randNorm();
-	res.y = randNorm();
-	res.z = randNorm();
+	res.x = randNorm() * stdDev;
+	res.y = randNorm() * stdDev;
+	res.z = randNorm() * stdDev;
 	return res;
 }
 
@@ -190,6 +190,19 @@ static __inline__ double nearestLineDistance(const Vec3 *pos1,
 	
 	return dist;
 	
+}
+
+static __inline__ bool isSaneNumber(double x)
+{
+	return !isnan(x) && !isinf(x);
+}
+
+static __inline__ bool isSaneVector(const Vec3 *v)
+{
+	return v != NULL
+			&& isSaneNumber(v->x)
+			&& isSaneNumber(v->y)
+			&& isSaneNumber(v->z);
 }
 
 #endif

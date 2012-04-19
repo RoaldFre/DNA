@@ -97,6 +97,7 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	double zoffset = -D_SA / 2;
 	double yoffset = (ws - n * spacing) / 2;
 	double posStdev = spacing / 100;
+	double velStdev = sqrt(config.thermostatTemp);
 
 	for (int i = 0; i < n; i++) {
 		/* screw factor */
@@ -133,9 +134,9 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		s->Ps[i].pos.z += posStdev * randNorm();
 
 		/* Velocity */
-		s->Ss[i].vel = (Vec3) {0, 0, 0};
-		s->Bs[i].vel = (Vec3) {0, 0, 0};
-		s->Ps[i].vel = (Vec3) {0, 0, 0};
+		s->Ss[i].vel = randNormVec(velStdev);
+		s->Bs[i].vel = randNormVec(velStdev);
+		s->Ps[i].vel = randNormVec(velStdev);
 
 		/* Mass */
 		s->Ss[i].m = MASS_S;
