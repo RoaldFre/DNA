@@ -15,7 +15,7 @@ static void removeFromBox(Particle *p, Box *b);
 static Box *boxFromIndex(int ix, int iy, int iz);
 static Box *boxFromParticle(const Particle *p);
 static Box *boxFromNonPeriodicIndex(int ix, int iy, int iz);
-static void forEVERYpair(void (*f)(Particle *p1, Particle *p2, void *data), 
+static void forEveryPairBruteForce(void (*f)(Particle *p1, Particle *p2, void *data), 
 			 void *data);
 
 
@@ -228,7 +228,7 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 
 	if (nb < 3) {
 		/* Brute force. Reason: see comment below */
-		forEVERYpair(f, data);
+		forEveryPairBruteForce(f, data);
 		return;
 	}
 
@@ -298,7 +298,7 @@ void forEveryPair(void (*f)(Particle *p1, Particle *p2))
 
 /* Brute force over *every single* pair, including those that are more than 
  * a boxlength apart. */
-static void forEVERYpair(void (*f)(Particle *p1, Particle *p2, void *data), 
+static void forEveryPairBruteForce(void (*f)(Particle*, Particle*, void*), 
 			 void *data)
 {
 	/* Pairs within the same box */
@@ -310,6 +310,7 @@ static void forEVERYpair(void (*f)(Particle *p1, Particle *p2, void *data),
 				f(p1, p2, data);
 				p2 = p2->next;
 			}
+			p1 = p1->next;
 		}
 	}
 
@@ -343,6 +344,7 @@ static void forEveryConnectionPairHelper(Particle *p1, Particle *p2, void *data)
 
 	Particle *q1 = getConnectedParticle(p1);
 	Particle *q2 = getConnectedParticle(p2);
+	printf("  %p, %p\n", (void*)q1, (void*)q2);
 	if (q1 == NULL  ||  q2 == NULL)
 		return;
 
@@ -606,10 +608,10 @@ bool sanityCheck(bool checkCorrectBox, bool checkConnections)
 		OK = false;
 	}
 
-	OK = OK && forEveryPairCheck();
+	OK = forEveryPairCheck() && OK;
 
 	if (checkConnections)
-		OK = OK && forEveryConnectionPairCheck();
+		OK = forEveryConnectionPairCheck() && OK;
 
 	return OK;
 }
