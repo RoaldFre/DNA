@@ -1,8 +1,8 @@
-OBJECTS = system.o task.o measure.o samplers.o physics.o world.o spgrid.o render.o main.o
+OBJECTS = font.o system.o task.o measure.o samplers.o physics.o world.o spgrid.o render.o main.o
 WARNINGS = -pedantic -Wextra -Wall -Wwrite-strings -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes
 PROFILE = 
-OPTIM = -O4 -flto -DNDEBUG -fexcess-precision=fast -ffast-math -finline-limit=2000 
-CFLAGS = $(WARNINGS) -std=c99 -pipe -march=native -ggdb $(OPTIM) $(PROFILE)
+OPTIM = -O4 -DNDEBUG -ffast-math -finline-limit=2000
+CFLAGS = $(WARNINGS) -std=c99 -pipe -march=native -ggdb $(OPTIM) $(PROFILE) -I/usr/include/freetype2
 
 all: main
 profile:
@@ -20,7 +20,7 @@ O3:
 
 main: $(OBJECTS)
 	@echo "LD	main"
-	@gcc -o main $(CFLAGS) $(OBJECTS) -lm -lSDL -lGL -ggdb $(PROFILE)
+	@gcc -o main $(CFLAGS) $(OBJECTS) -lfreetype -lm -lSDL -lGL -ggdb $(PROFILE)
 
 .c.o:
 	@echo "CC	$@"
