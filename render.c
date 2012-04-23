@@ -178,7 +178,7 @@ static void initRender(void)
 	int flags = 0;
 	const SDL_VideoInfo *vidinfo;
 
-	font = font_load("DejaVuLGCSans.ttf");
+	font = font_load("fonts/Terminus.ttf");
 	if (font == NULL)
 		die("Font not loaded");
 
@@ -255,7 +255,7 @@ static void renderSet2D(void)
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glMatrixMode(GL_PROKECTION);
+	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0, SCREEN_W, 0, SCREEN_H, -1, +1);
 }
@@ -338,11 +338,11 @@ static void render(RenderConf *rc)
 
 	glLoadIdentity();
 	glTranslatef(10, 10, 0);
-	text_create_and_render(font, 20, "Дезоксирибонуклеи́новая кислота́ (Desoxyribonucleic acid)");
+	text_create_and_render(font, 15, "(Desoxyribonucleic acid)");
 
 	glLoadIdentity();
 	glTranslatef(30, SCREEN_H - 50, 0);
-	text_create_and_render(font, 20, fps_string);
+	text_create_and_render(font, 15, fps_string);
 
 	SDL_GL_SwapBuffers();
 
