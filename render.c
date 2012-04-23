@@ -6,6 +6,7 @@
 #include "render.h"
 #include "physics.h"
 #include "task.h"
+#include "font.h"
 
 #define SCREEN_W 1000
 #define SCREEN_H 1000
@@ -40,8 +41,10 @@ static int numIndices;
 static Vertex3 *sphereVertex;
 static GLushort *sphereIndex;
 
+static Font *font;
 static SDL_Surface *surface;
 static GLfloat view_angle;
+static char fps_string[32];
 
 static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numInd,
 		GLushort **indices);
@@ -54,6 +57,8 @@ static void renderConnection(Particle *p1, Particle *p2, RenderConf *rc);
 static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear, 
 		GLfloat zFar);
 
+static void renderSet3D(void);
+static void renderSet2D(void);
 static void initRender(void);
 static void calcFps(void);
 void renderIfWeMust(RenderConf *rc);
@@ -68,15 +73,14 @@ static void calcFps()
 	static long tock = 0;
 	static int frames = 0;
 	long tick;
-	char string[32];
 
 	frames++;
 	tick = SDL_GetTicks(); /* mili seconds */
 
 	if (tick - tock > 1000) {
 		tock = tick;
-		sprintf(string, "%u FPS", frames);
-		SDL_WM_SetCaption(string, string);
+		sprintf(fps_string, "%u FPS", frames);
+		SDL_WM_SetCaption(fps_string, fps_string);
 		frames = 0;
 	}
 	return;
@@ -172,8 +176,11 @@ static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear,
 static void initRender(void)
 {
 	int flags = 0;
-	double ws = world.worldSize;
 	const SDL_VideoInfo *vidinfo;
+
+	font = font_load("DejaVuLGCSans.ttf");
+	if (font == NULL)
+		die("Font not loaded");
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		die(SDL_GetError());
@@ -205,11 +212,8 @@ static void initRender(void)
 	//atexit(SDL_Quit); //Do it when we stop our render task.
 
 	/* OpenGL Init */
-	glEnable(GL_DEPTH_TEST);
 	glShadeModel(GL_SMOOTH);
 	glEnable(GL_NORMALIZE);
-
-	glEnable(GL_LIGHTING);
 
 	glEnable(GL_LIGHT0);
 	glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
@@ -226,13 +230,34 @@ static void initRender(void)
 			&numIndices, &sphereIndex);
 	glVertexPointer(3, GL_FLOAT, sizeof(Vertex3), sphereVertex);
 	glNormalPointer(   GL_FLOAT, sizeof(Vertex3), sphereVertex);
+}
+
+static void renderSet3D(void)
+{
+	double ws = world.worldSize;
+
+	glEnable( GL_DEPTH_TEST);
+	glEnable( GL_LIGHTING);
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_BLEND);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(35, SCREEN_W/(double)SCREEN_H, ws/1000, 100*ws);
+}
 
-	glMatrixMode(GL_MODELVIEW);
+static void renderSet2D(void)
+{
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_LIGHTING);
+	glEnable( GL_TEXTURE_2D);
+	glEnable( GL_BLEND);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glMatrixMode(GL_PROKECTION);
 	glLoadIdentity();
+	glOrtho(0, SCREEN_W, 0, SCREEN_H, -1, +1);
 }
 
 static void renderStrand(Strand *s, RenderConf *rc) {
@@ -275,6 +300,9 @@ static void render(RenderConf *rc)
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	/* 3D */
+	renderSet3D();
+
 /*	view_angle += 0.01;*/
 
 	glMatrixMode(GL_MODELVIEW);
@@ -302,6 +330,19 @@ static void render(RenderConf *rc)
 
 	for (int s = 0; s < world.numStrands; s++)
 		renderStrand(&world.strands[s], rc);
+
+	/* Prepare for text rendering */
+	renderSet2D();
+
+	glMatrixMode(GL_MODELVIEW);
+
+	glLoadIdentity();
+	glTranslatef(10, 10, 0);
+	text_create_and_render(font, 20, "Дезоксирибонуклеи́новая кислота́ (Desoxyribonucleic acid)");
+
+	glLoadIdentity();
+	glTranslatef(30, SCREEN_H - 50, 0);
+	text_create_and_render(font, 20, fps_string);
 
 	SDL_GL_SwapBuffers();
 
