@@ -1,4 +1,4 @@
-OBJECTS = font.o system.o task.o measure.o samplers.o physics.o world.o spgrid.o render.o main.o
+OBJECTS = font.o system.o task.o measure.o samplers.o physics.o world.o spgrid.o render.o mathlib/vector.o mathlib/quaternion.o mathlib/matrix.o main.o
 WARNINGS = -pedantic -Wextra -Wall -Wwrite-strings -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes
 PROFILE = 
 OPTIM = -O4 -flto -DNDEBUG -fexcess-precision=fast -ffast-math -finline-limit=2000

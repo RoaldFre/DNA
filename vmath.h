@@ -1,6 +1,7 @@
 #ifndef _VMATH_H_
 #define _VMATH_H_
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
