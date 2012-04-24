@@ -443,8 +443,8 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	&& (posDiff3 > (2*truncLen)) && (posDiff4 > (2*truncLen)) )
 		return;
 	
-	Vec3 dir1 = nearestImageUnitVector(&p1->pos, &p2->pos);
-	Vec3 dir2 = nearestImageUnitVector(&p3->pos, &p4->pos);
+	Vec3 dir1 = nearestImageVector(&p1->pos, &p2->pos);
+	Vec3 dir2 = nearestImageVector(&p3->pos, &p4->pos);
 	
 	/* calculate shortest distance between the two lines */
 	double dist = nearestLineDistance(pos1, pos2, &dir1, &dir2);
