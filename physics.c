@@ -505,8 +505,8 @@ static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	Vec3 *pos1 = &p1->pos;
 	Vec3 *pos2 = &p3->pos;
 	
-	Vec3 dir1 = nearestImageUnitVector(&p1->pos, &p2->pos);
-	Vec3 dir2 = nearestImageUnitVector(&p3->pos, &p4->pos);
+	Vec3 dir1 = nearestImageVector(&p1->pos, &p2->pos);
+	Vec3 dir2 = nearestImageVector(&p3->pos, &p4->pos);
 	
 	/* calculate shortest distance between the two (infinite) lines */
 	double dist = nearestLineDistance(pos1, pos2, &dir1, &dir2);
