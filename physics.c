@@ -446,7 +446,7 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	Vec3 dir1 = nearestImageUnitVector(&p1->pos, &p2->pos);
 	Vec3 dir2 = nearestImageUnitVector(&p3->pos, &p4->pos);
 	
-	/* calculate shortest distance between the two (infinite) lines */
+	/* calculate shortest distance between the two lines */
 	double dist = nearestLineDistance(pos1, pos2, &dir1, &dir2);
 	
 	/* break if further apart than truncation length */
@@ -474,8 +474,15 @@ static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	
 	/* scale direction with calculated force */
 	scale(&direction, force, &forceVec);
-	
+
+#if 0
+	if (force > 1e-12)
+		printf("%e\t%e\n",dist, force);
+#endif
+
 	assert(!(isnan(forceVec.x) || isnan(forceVec.y) || isnan(forceVec.z)));
+
+	force = -force; //TODO this is correct sign?
 
 	/* add force to particle objects (add for 1,2; sub for 3,4) */
 	//TODO is this properly distributed?
@@ -545,7 +552,7 @@ double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2)
 	double D0;
 	
 	/* ugly hack */
-	double eps = 0.001e-10;
+	double eps = 0.00001e-40; /* Angstrom^4 */
 	
 	rVec = nearestImageVector(pos1, pos2);
 		
@@ -556,6 +563,13 @@ double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2)
 	b2 = dot(dist2, &rVec);
 	
 	D0 = a11 * a22 - a12 * a12;
+
+#if 0
+	//DEBUG
+	printVector(dist1);
+	printVector(dist2);
+	printf("%e\n",D0);
+#endif
 
 	double sc, sN, sD = D0;
 	double tc, tN, tD = D0;
@@ -692,9 +706,11 @@ static void calculateForces(void)
 	/* Reset forces */
 	forEveryParticle(&resetForce);
 
+#if 0
 	/* Strand-based forces */
 	for (int s = 0; s < world.numStrands; s++)
 		strandForces(&world.strands[s]);
+#endif
 
 #if 0
 	/* Particle-based forces */
