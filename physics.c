@@ -537,6 +537,100 @@ static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	return potential;
 }
 
+double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2)
+{
+	Vec3 rVec;
+	double a11, a12,a22;
+	double b1,b2;
+	double D0;
+	
+	/* ugly hack */
+	double eps = 0.000001;
+	
+	rVec = nearestImageVector(pos1, pos2);
+		
+	a11 = dot(dist1, dist1);
+	a22 = dot(dist2, dist2);
+	a12 = dot(dist1, dist2);
+	b1 = dot(dist1, &rVec);
+	b2 = dot(dist2, &rVec);
+	
+	D0 = a11 * a22 - a12 * a12;
+
+	double sc, sN, sD = D0;
+	double tc, tN, tD = D0;
+	
+	/* check endpoints */
+	
+	if (D0 < eps) {
+		sN = 0.0;
+		sD = 1.0;
+		tN = b2;
+		tD = a22;
+	} else {
+		sN = (a12 * b2 - a22 * b1);
+		tN = (a11 * b2 - a12 * b1);
+		
+		if (sN < 0.0) {
+			sN = 0.0;
+			tN = b2;
+			tD = a22;
+		} else if (sN > sD) {
+			sN = sD;
+			tN = b2 + a12;
+			tD = a22;
+		}
+	}
+	
+	if (tN < 0.0) {
+		tN = 0.0;
+ 
+		if (-b1 < 0.0)
+			sN = 0.0;
+		else if (-b1 > a11)
+			sN = sD;
+		else {
+			sN = -b1;
+			sD = a11;
+		}
+	}
+	
+	else if (tN > tD) {
+		tN = tD;
+		
+		if ((-b1 + a12) < 0.0)
+			sN = 0;
+		else if ((-b1 + a12) > a11)
+			sN = sD;
+		else {
+			sN = (-b1 + a12);
+			sD = a11;
+		}
+	}
+	
+	if (fabs(sN) < eps)
+		sc = 0.0;
+	else
+		sc = sN / sD;
+	
+	if (fabs(tN) < eps)
+		tc = 0.0;
+	else
+		tc = tN / tD;
+		
+	Vec3 distVec1, distVec2, distVec3, distVecFinal;
+	
+	/* distVecFinal = rVec + sc*dist1 - tc*dist2 */
+	
+	scale(dist1, sc, &distVec1);
+	scale(dist2, tc, &distVec2);
+	sub(&distVec1, &distVec2, &distVec3);
+	add(&distVec3, &rVec, &distVecFinal);
+	
+	 
+	return length(&distVecFinal);
+	
+}
 
 
 /* ===== FORCE FUNCTIONS ===== */
