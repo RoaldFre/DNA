@@ -28,8 +28,6 @@ static __inline__ double length2(const Vec3 *v);
 static __inline__ double length(const Vec3 *v);
 static __inline__ double distance2(const Vec3 *a, const Vec3 *b);
 static __inline__ double distance(const Vec3 *a, const Vec3 *b);
-static __inline__ double nearestLineDistance(const Vec3 *pos1, const Vec3 *pos2,
-					const Vec3 *dist1, const Vec3 *dist2);
 
 static __inline__ void fprintVector(FILE *stream, const Vec3 *v)
 {
@@ -172,25 +170,6 @@ static __inline__ Vec3 randNormVec(double stdDev)
 
 /* Calculate shortest distance between two lines parametrized by a point
  * and a direction vector */
-static __inline__ double nearestLineDistance(const Vec3 *pos1, 
-		const Vec3 *pos2, const Vec3 *dist1, const Vec3 *dist2)
-{
-	double dotProdLength;
-	double dist;
-	double crossDistLength;
-	Vec3 diff;
-	Vec3 crossDist;
-	
-	sub(pos2, pos1, &diff);
-	crossDist = cross(dist1, dist2);
-	crossDistLength = length(&crossDist);
-	
-	dotProdLength = dot(&diff, &crossDist);
-	dist = fabs(dotProdLength/crossDistLength);
-	
-	return dist;
-	
-}
 
 static __inline__ bool isSaneNumber(double x)
 {
