@@ -258,7 +258,7 @@ void die(const char *fmt, ...)
 	exit(1);
 }
 
-void buildRopeTestWorld(void)
+static void buildRopeTestWorld(void)
 {
 	allocWorld(2, worldSize);
 

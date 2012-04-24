@@ -41,14 +41,14 @@ Quaternion quat_sub(Quaternion a, Quaternion b)
 	return c;
 }
 
-Quaternion quat_scale(Quaternion p, double scale)
+Quaternion quat_scale(Quaternion p, double lambda)
 {
 	Quaternion q;
 
-	q.w = scale * p.w;
-	q.x = scale * p.x;
-	q.y = scale * p.y;
-	q.z = scale * p.z;
+	q.w = lambda * p.w;
+	q.x = lambda * p.x;
+	q.y = lambda * p.y;
+	q.z = lambda * p.z;
 
 	return q;
 }
@@ -85,13 +85,13 @@ Quaternion quat_multiply(Quaternion p, Quaternion q)
 	return r;
 }
 
-Quaternion quat_from_angle_axis(double angle, double ax,
+Quaternion quat_from_angle_axis(double alpha, double ax,
 		double ay, double az)
 {
 	Quaternion q;
 
 	double l2 = ax*ax + ay*ay + az*az;
-	double l = sqrt(l2), s = sin(angle/2), c = cos(angle/2);
+	double l = sqrt(l2), s = sin(alpha/2), c = cos(alpha/2);
 
 	/* If the axis is invalid, return the identity */
 	if (l2 == 0.0)
@@ -215,7 +215,7 @@ Quaternion quat_nlerp(Quaternion a, Quaternion b, double t)
 
 Quaternion quat_slerp(Quaternion a, Quaternion b, double t)
 {
-	double cosa, angle, interangle;
+	double cosa, alpha, interAngle;
 	Quaternion q0, q1;
 
 	cosa = quat_dot(a, b);
@@ -227,16 +227,16 @@ Quaternion quat_slerp(Quaternion a, Quaternion b, double t)
 	if (cosa > 1-1e-6)
 		return quat_nlerp(a, b, t);
 
-	angle = acos(cosa);
-	interangle = angle*t;
+	alpha = acos(cosa);
+	interAngle = alpha*t;
 
 	q0 = a;
 	/* q1 = b - (a.b) a */
 	q1 = quat_normalize(quat_add(b, quat_scale(a,-cosa)));
 
-	/* return q0 * cos(interangle) + q1 * sin(interangle) */
-	return quat_add(quat_scale(q0, cos(interangle)),
-	                quat_scale(q1, sin(interangle)));
+	/* return q0 * cos(interAngle) + q1 * sin(interAngle) */
+	return quat_add(quat_scale(q0, cos(interAngle)),
+	                quat_scale(q1, sin(interAngle)));
 }
 
 Quaternion quat_euler(double t1, double t2, double t3)

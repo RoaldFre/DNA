@@ -33,12 +33,12 @@ double vec3_length(Vec3 a)
 	return sqrt(vec3_dot(a, a));
 }
 
-Vec3 vec3_scale(Vec3 a, double scale)
+Vec3 vec3_scale(Vec3 a, double lambda)
 {
 	Vec3 b;
-	b.x = a.x * scale;
-	b.y = a.y * scale;
-	b.z = a.z * scale;
+	b.x = a.x * lambda;
+	b.y = a.y * lambda;
+	b.z = a.z * lambda;
 
 	return b;
 }
