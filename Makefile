@@ -27,5 +27,5 @@ main: $(OBJECTS)
 	@gcc -o $@ $(CFLAGS) -c $<
 
 clean:
-	rm -f *.o matlib/*.o
+	rm -f *.o mathlib/*.o
 
