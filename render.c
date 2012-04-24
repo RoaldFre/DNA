@@ -45,7 +45,8 @@ static GLushort *sphereIndex;
 static Font *font;
 static SDL_Surface *surface;
 static GLfloat view_angle;
-static char fps_string[32];
+#define FPS_STRING_CHARS 32
+static char fps_string[FPS_STRING_CHARS];
 static Quaternion cam_orientation;
 static Vec3 cam_position;
 
@@ -82,7 +83,7 @@ static void calcFps()
 
 	if (tick - tock > 1000) {
 		tock = tick;
-		sprintf(fps_string, "%u FPS", frames);
+		snprintf(fps_string, FPS_STRING_CHARS, "%u FPS", frames);
 		SDL_WM_SetCaption(fps_string, fps_string);
 		frames = 0;
 	}
@@ -407,13 +408,20 @@ static void render(RenderConf *rc)
 
 	glMatrixMode(GL_MODELVIEW);
 
+	char string[32];
+	snprintf(string, 32, "dt = %f fs", config.timeStep * 1e15);
+	glLoadIdentity();
+	glTranslatef(10, 30, 0);
+	text_create_and_render(font, 13, string);
+
+	snprintf(string, 32, "T = %f K", temperature());
 	glLoadIdentity();
 	glTranslatef(10, 10, 0);
-	text_create_and_render(font, 15, "(Desoxyribonucleic acid)");
+	text_create_and_render(font, 13, string);
 
 	glLoadIdentity();
 	glTranslatef(30, SCREEN_H - 50, 0);
-	text_create_and_render(font, 15, fps_string);
+	text_create_and_render(font, 13, fps_string);
 
 	SDL_GL_SwapBuffers();
 
