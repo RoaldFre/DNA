@@ -99,6 +99,8 @@ Vec3 getCOM(Particle *ps, int num);
 
 double VbasePair(Particle *p1, Particle *p2);
 
+double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2);
+
 Task makeIntegratorTask(IntegratorConf *conf);
 
 #endif
