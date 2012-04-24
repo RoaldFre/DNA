@@ -545,7 +545,7 @@ double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2)
 	double D0;
 	
 	/* ugly hack */
-	double eps = 0.000001;
+	double eps = 0.001e-10;
 	
 	rVec = nearestImageVector(pos1, pos2);
 		
