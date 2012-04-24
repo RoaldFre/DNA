@@ -7,29 +7,66 @@
 #include "task.h"
 #include "world.h"
 
-/* Units */
-#define RAD	(M_PI / 180)
-#define A	(1e-10)
 
+/* Disable interactions by commenting these defines */
+#define ENABLE_BOND
+#define ENABLE_ANGLE
+#define ENABLE_DIHEDRAL
+#define ENABLE_STACK
+//#define ENABLE_BASE_PAIR //TODO VIOLATES ENERGY CONSERVATION
+//#define ENABLE_COULOMB //TODO VIOLATES ENERGY CONSERVATION
+
+
+
+/* Units */
+#define RAD	(M_PI / 180)	/* Radian */
+#define A	(1e-10)		/* Angstrom */
+#define AU	(1.660539e-27)	/* Atomic unit */
+
+/* Energy unit */
+#define EPSILON 1.81e-21 /* 0.26kcal/mol == 1.81 * 10^-21 J (per particle) */
+
+
+/* Structure of the helix. See table I in Knotts */
+
+#define HELIX_DELTA_Z   (3.38 * A) 	/* vertical spacing between layers */
+#define HELIX_DELTA_PHI (36 * RAD)	/* twist at each consecutive layer */
+
+/* Angles */
+#define P_PHI (94.038 * RAD)
+#define S_PHI (70.197 * RAD)
+#define A_PHI (41.905 * RAD)
+#define T_PHI (86.119 * RAD)
+#define C_PHI (85.027 * RAD)
+#define G_PHI (40.691 * RAD)
+/* Radial distance */
+#define P_R (8.916 * A)
+#define S_R (6.981 * A)
+#define A_R (0.773 * A)
+#define T_R (2.349 * A)
+#define C_R (2.296 * A)
+#define G_R (0.828 * A)
+/* Heights */
+#define P_Z (2.186 * A)
+#define S_Z (1.280 * A)
+#define A_Z (0.051 * A)
+#define T_Z (0.191 * A)
+#define C_Z (0.187 * A)
+#define G_Z (0.053 * A)
 /* Masses (in kg) */
-#define AU      1.660539e-27
-#define MASS_P  (94.97 * AU)
-#define MASS_S  (83.11 * AU)
-#define MASS_A  (134.1 * AU)
-#define MASS_T  (125.1 * AU)
-#define MASS_C  (110.1 * AU)
-#define MASS_G  (150.1 * AU)
+#define P_M (94.97 * AU)
+#define S_M (83.11 * AU)
+#define A_M (134.1 * AU)
+#define T_M (125.1 * AU)
+#define C_M (110.1 * AU)
+#define G_M (150.1 * AU)
 
 /* Equilibrium distance of bonds (in m) */
 #define D_S5P   3.899e-10
 #define D_S3P   3.559e-10
 #define D_SA    6.430e-10
 
-/* Equilibrium distance of stacking potential (in m) */
-#define STACK_SIGMA  (3.414e-10)
 
-/* Energy unit */
-#define EPSILON 1.81e-21 /* 0.26kcal/mol == 1.81 * 10^-21 J (per particle) */
 
 
 /* Bond stretch */
@@ -37,14 +74,10 @@
 #define BOND_K2      (100e20 * EPSILON) /* in J*A^-2 */
 /* Bond bend */
 #define BOND_Ktheta  (400 * EPSILON) /* per radian^2 */
-/* Bond twist */
+/* Bond dihedral */
 #define BOND_Kphi    (4 * EPSILON)
 /* Bond stack */
 #define BOND_STACK   EPSILON
-
-/* Screw symmetry constants */
-#define SCREW_SYM_PHI	(36 * RAD)
-// #define SCREW_SYM_Z		(3.38e-10) /* 3.38 angstrom */
 
 /* Bond angle */
 #define ANGLE_S5_P_3S	( 94.49 * RAD)
@@ -80,6 +113,45 @@
 
 #define DIELECTRIC_CST_H20    80
 #define AVOGADRO              6.023e23 /* particles per mol */
+
+
+
+
+/* Disable attractions by redefining their strenghts to zero */
+#ifndef ENABLE_BOND
+#undef  BOND_K1
+#undef  BOND_K2
+#define BOND_K1 0
+#define BOND_K2 0
+#endif
+
+#ifndef ENABLE_ANGLE
+#undef  BOND_Ktheta
+#define BOND_Ktheta 0
+#endif
+
+#ifndef ENABLE_DIHEDRAL
+#undef  BOND_Kphi
+#define BOND_Kphi 0
+#endif
+
+#ifndef ENABLE_STACK
+#undef  BOND_STACK
+#define BOND_STACK 0
+#endif
+
+#ifndef ENABLE_BASE_PAIR
+#undef  COUPLING_BP_AT
+#undef  COUPLING_BP_GC
+#define COUPLING_BP_AT 0
+#define COUPLING_BP_GC 0
+#endif
+
+#ifndef ENABLE_COULOMB
+#undef  CHARGE_ELECTRON
+#define CHARGE_ELECTRON 0
+#endif
+
 
 
 typedef enum

@@ -5,34 +5,6 @@
 #include <string.h>
 
 
-/* Structure of the helix. See table I in Knotts */
-
-#define HELIX_DELTA_Z   (3.38*A) 	/* vertical spacing between layers */
-#define HELIX_DELTA_PHI (36*RAD)	/* twist at each consecutive layer */
-
-/* Angles */
-#define P_PHI (94.038*RAD)
-#define S_PHI (70.197*RAD)
-#define A_PHI (41.905*RAD)
-#define T_PHI (86.119*RAD)
-#define C_PHI (85.027*RAD)
-#define G_PHI (40.691*RAD)
-/* Radial distance */
-#define P_R (8.916*A)
-#define S_R (6.981*A)
-#define A_R (0.773*A)
-#define T_R (2.349*A)
-#define C_R (2.296*A)
-#define G_R (0.828*A)
-/* Heights */
-#define P_Z (2.186*A)
-#define S_Z (1.280*A)
-#define A_Z (0.051*A)
-#define T_Z (0.191*A)
-#define C_Z (0.187*A)
-#define G_Z (0.053*A)
-
-
 World world;
 
 /* Allocates the world to hold the given number of strands, and sets this 
@@ -136,35 +108,35 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	for (int i = 0; i < n; i++) {
 		/* Default to Adenine */
 		ParticleType b_t = BASE_A;
-		double b_m = MASS_A;
+		double b_m = A_M;
 		double b_r = A_R;
 		double b_z = A_Z;
 		double b_phi = A_PHI;
 		switch (baseSequence[i]) {
 		case 'A':
 			b_t = complementarySequence ? BASE_T : BASE_A;
-			b_m = MASS_A;
+			b_m = A_M;
 			b_r = A_R;
 			b_z = A_Z;
 			b_phi = A_PHI;
 			break;
 		case 'T':
 			b_t = complementarySequence ? BASE_A : BASE_T;
-			b_m = MASS_T;
+			b_m = T_M;
 			b_r = T_R;
 			b_z = T_Z;
 			b_phi = T_PHI;
 			break;
 		case 'C':
 			b_t = complementarySequence ? BASE_G : BASE_C;
-			b_m = MASS_C;
+			b_m = C_M;
 			b_r = C_R;
 			b_z = C_Z;
 			b_phi = C_PHI;
 			break;
 		case 'G':
 			b_t = complementarySequence ? BASE_C : BASE_G;
-			b_m = MASS_G;
+			b_m = G_M;
 			b_r = G_R;
 			b_z = G_Z;
 			b_phi = G_PHI;
@@ -183,8 +155,8 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 
 		/* Mass */
 		s->Bs[i].m = b_m;
-		s->Ss[i].m = MASS_S;
-		s->Ps[i].m = MASS_P;
+		s->Ss[i].m = S_M;
+		s->Ps[i].m = P_M;
 
 		/* Positions */
 		s->Bs[i].pos = fromCilindrical(b_r, phi + b_phi, z + b_z);

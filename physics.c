@@ -8,9 +8,9 @@
 #include "spgrid.h"
 
 
-
 /* ===== FORCES AND POTENTIALS ===== */
 
+/* BOND */
 /* V = k1 * (dr - d0)^2  +  k2 * (d - d0)^4
  * where dr is the distance between the particles */
 static double Vbond(Particle *p1, Particle *p2, double d0)
@@ -39,6 +39,7 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
 	sub(&p2->F, &F, &p2->F);
 }
 
+/* ANGLE */
 /* V = ktheta * (theta - theta0) 
  *
  * p1 \       /p3
@@ -102,6 +103,7 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 		|| fabs(dot(&b, &F3) / length(&b) / length(&F3)) < 1e-5);
 }
 
+/* DIHEDRAL */
 static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 								double phi0)
 {
@@ -152,11 +154,60 @@ static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	FdihedralParticle(p4, p1, p2, p3, p4, Vorig, phi0);
 }
 
-static double Vstack(Particle *p1, Particle *p2)
+/* STACKING */
+#define INV_CUBE_ROOT_OF_TWO 0.793700525984099737375852819636 /* 2^(-1/3) */
+typedef struct {
+	double r, phi, z;
+} HelixInfo;
+static HelixInfo getHelixInfo(ParticleType t)
+{
+	HelixInfo info = (HelixInfo) {0, 0, 0};
+	switch (t) {
+	case PHOSPHATE:	info.r = P_R;  info.phi = P_PHI;  info.z = P_Z;  break;
+	case SUGAR:	info.r = S_R;  info.phi = S_PHI;  info.z = S_Z;  break;
+	case BASE_A:	info.r = A_R;  info.phi = A_PHI;  info.z = A_Z;  break;
+	case BASE_T:	info.r = T_R;  info.phi = T_PHI;  info.z = T_Z;  break;
+	case BASE_C:	info.r = C_R;  info.phi = C_PHI;  info.z = C_Z;  break;
+	case BASE_G:	info.r = G_R;  info.phi = G_PHI;  info.z = G_Z;  break;
+	default: 	assert(false);
+	}
+	return info;
+}
+static double helixDistance2(HelixInfo bot, HelixInfo top,
+		double delta_z, double delta_phi)
+{
+	double dz = top.z - bot.z + delta_z;
+	double dphi = top.phi - bot.phi + delta_phi;
+	Vec3 low  = (Vec3) {bot.r, 0, 0};
+	Vec3 high = (Vec3) {top.r * cos(dphi), top.r * sin(dphi), dz};
+	return distance2(&low, &high);
+}
+
+/* Distance between next neighbouring particles in the beta helix, ie 
+ * particle i and i+2.
+ * Particle 1 is the 'bottom' particle in the helix, particle 2 is the 
+ * 'top' particle of the helix.
+ * monomerDistance:
+ *   1 for immediate neighbours i and i+1
+ *   2 for   next    neighbours i and i+2
+ *   n for           neighbours i and i+n */
+static double neighbourStackDistance2(ParticleType t1, ParticleType t2, int monomerDistance)
+{
+	HelixInfo hi1 = getHelixInfo(t1);
+	HelixInfo hi2 = getHelixInfo(t2);
+	return helixDistance2(hi1, hi2,
+			monomerDistance * HELIX_DELTA_Z,
+			monomerDistance * HELIX_DELTA_PHI);
+}
+/* monomerDistance:
+ *   1 for immediate neighbours (i and i+1)
+ *   2 for   next    neighbours (i and i+2) */
+static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 {
 	double kStack = BOND_STACK;
-	double sigma = STACK_SIGMA;
-	double sigma2 = sigma * sigma;
+	/* sigma = 2^(-1/6) * r_min  =>  sigma^2 = 2^(-1/3) * r_min^2 */
+	double sigma2 = INV_CUBE_ROOT_OF_TWO * neighbourStackDistance2(
+			p1->type, p2->type, monomerDistance);
 	double sigma6 = sigma2 * sigma2 * sigma2;
 	double sigma12 = sigma6 * sigma6;
 	double r2 = distance2(&p1->pos, &p2->pos);
@@ -166,11 +217,11 @@ static double Vstack(Particle *p1, Particle *p2)
 	return kStack * (sigma12/r12 - 2*sigma6/r6 + 1);
 	//return kStack * (sigma12/r12 - 2*sigma6/r6);
 }
-static void Fstack(Particle *p1, Particle *p2)
+static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 {
 	double kStack = BOND_STACK;
-	double sigma = STACK_SIGMA;
-	double sigma2 = sigma * sigma;
+	double sigma2 = INV_CUBE_ROOT_OF_TWO * neighbourStackDistance2(
+			p1->type, p2->type, monomerDistance);
 	double sigma6 = sigma2 * sigma2 * sigma2;
 	double sigma12 = sigma6 * sigma6;
 
@@ -194,6 +245,7 @@ static void Fstack(Particle *p1, Particle *p2)
 }
 
 
+/* BASE PAIRING */
 static double calcVBasePair(double coupling, double rij0, double rijVar2)
 {
 	double rfrac2 = rij0 * rij0 / rijVar2;
@@ -298,6 +350,7 @@ static void FbasePair(Particle *p1, Particle *p2)
 }
 
 
+/* COULOMB */
 static double calcDebyeLength(void)
 {
 	double T = config.thermostatTemp;
@@ -395,6 +448,7 @@ static void FCoulomb(Particle *p1, Particle *p2)
 	sub(&p2->F, &forceVec, &p2->F);
 }
 
+#if 0
 /* Fuzzy rope dynamics */
 static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 {
@@ -543,6 +597,7 @@ static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	
 	return potential;
 }
+#endif
 
 double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2)
 {
@@ -665,17 +720,15 @@ static void strandForces(Strand *s) {
 	/* Bottom monomer */
 	Fbond(&s->Ss[0], &s->Bs[0], D_SA);
 	Fbond(&s->Ss[0], &s->Ps[0], D_S5P);
-#if 0
 	Fangle(&s->Ps[0], &s->Ss[0], &s->Bs[0], ANGLE_P_5S_A);
-#endif
+
 	/* Rest of the monomers */
 	for (int i = 1; i < s->numMonomers; i++) {
 		Fbond(&s->Ss[i], &s->Bs[i],   D_SA);
 		Fbond(&s->Ss[i], &s->Ps[i],   D_S5P);
 		Fbond(&s->Ss[i], &s->Ps[i-1], D_S3P);
 
-#if 0
-		Fstack(&s->Bs[i], &s->Bs[i-1]);
+		Fstack(&s->Bs[i], &s->Bs[i-1], 1);
 
 		Fangle(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_5S_A);
 		Fangle(&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
@@ -691,7 +744,7 @@ static void strandForces(Strand *s) {
 		if (i >= 2)
 		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
 							DIHEDRAL_S3_P_5S3_P);
-#endif
+		Fstack(&s->Bs[i], &s->Bs[i-2], 2);
 	}
 }
 
@@ -706,19 +759,17 @@ static void calculateForces(void)
 	/* Reset forces */
 	forEveryParticle(&resetForce);
 
-#if 0
 	/* Strand-based forces */
 	for (int s = 0; s < world.numStrands; s++)
 		strandForces(&world.strands[s]);
-#endif
 
-#if 0
 	/* Particle-based forces */
 	forEveryPair(&pairForces);
-#endif
 
+#if 0
 	/* Connection-based forces */
 	forEveryConnectionPair(&Frope);
+#endif
 }
 
 
@@ -757,12 +808,14 @@ static void pairPotentials(Particle *p1, Particle *p2, void *data)
 	pe->Coulomb  += VCoulomb(p1, p2);
 }
 
+#if 0
 static void addRopePotentialEnergy(Particle *p1, Particle *p2,
 		Particle *p3, Particle *p4, void *data)
 {
 	double *V = (double*)data;
 	*V += Vrope(p1, p2, p3, p4);
 }
+#endif
 
 /* Add energy stats of given strand, in electronvolts. */
 static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
@@ -780,7 +833,7 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 		Vb += Vbond(&s->Ss[i], &s->Ps[i],   D_S5P);
 		Vb += Vbond(&s->Ss[i], &s->Ps[i-1], D_S3P);
 
-		Vs += Vstack(&s->Bs[i], &s->Bs[i-1]);
+		Vs += Vstack(&s->Bs[i], &s->Bs[i-1], 1);
 
 		Va += Vangle(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_5S_A);
 		Va += Vangle(&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
@@ -796,6 +849,7 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 		if (i >= 2)
 		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
 							DIHEDRAL_S3_P_5S3_P);
+		Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 2);
 	}
 
 	pe->bond     = Vb;
@@ -813,7 +867,9 @@ static PotentialEnergies calcPotentialEnergies(void) {
 	
 	forEveryPairD(&pairPotentials, &pe);
 
+#if 0
 	forEveryConnectionPairD(&addRopePotentialEnergy, &pe.rope);
+#endif
 	
 	/* Convert to eV */
 	pe.bond     *= ENERGY_FACTOR;
@@ -822,7 +878,9 @@ static PotentialEnergies calcPotentialEnergies(void) {
 	pe.stack    *= ENERGY_FACTOR;
 	pe.basePair *= ENERGY_FACTOR;
 	pe.Coulomb  *= ENERGY_FACTOR;
+#if 0
 	pe.rope     *= ENERGY_FACTOR;
+#endif
 	
 	return pe;
 }
@@ -875,12 +933,16 @@ static void thermostat(void)
 
 	/* Mass and Boltzmann constant are 1 */ 
 	double Tk  = temperature();
+	assert(isSaneNumber(Tk));
 	double T0  = config.thermostatTemp;
 	double dt  = config.timeStep;
 	double tau = config.thermostatTau;
-	double lambda = sqrt(1 + dt/tau * (T0/Tk - 1));
-
-	assert(isSaneNumber(lambda));
+	double lambda2 = 1 + dt/tau * (T0/Tk - 1);
+	double lambda;
+	if (lambda2 >= 0)
+		lambda = sqrt(lambda2);
+	else
+		lambda = 1e-20; //TODO sane?
 
 	forEveryParticleD(&thermostatHelper, (void*) &lambda);
 }
