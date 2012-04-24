@@ -7,6 +7,7 @@
 #include "physics.h"
 #include "task.h"
 #include "font.h"
+#include "mathlib/mathlib.h"
 
 #define SCREEN_W 1000
 #define SCREEN_H 1000
@@ -45,6 +46,8 @@ static Font *font;
 static SDL_Surface *surface;
 static GLfloat view_angle;
 static char fps_string[32];
+static Quaternion cam_orientation;
+static Vec3 cam_position;
 
 static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numInd,
 		GLushort **indices);
@@ -75,7 +78,7 @@ static void calcFps()
 	long tick;
 
 	frames++;
-	tick = SDL_GetTicks(); /* mili seconds */
+	tick = SDL_GetTicks(); /* milliseconds */
 
 	if (tick - tock > 1000) {
 		tock = tick;
@@ -86,6 +89,41 @@ static void calcFps()
 	return;
 }
 
+static void camOrbit(int dx, int dy)
+{
+	const double radius = 200;
+	double dist;
+	Vec3 v = cam_position;
+	Quaternion o = cam_orientation;
+	Quaternion q, q2;
+
+	/* We invert the transformation because we are transforming the camera
+	 * and not the scene. */
+	q = quat_conjugate(quat_trackball(dx, dy, radius));
+
+	/* The quaternion q gives us an intrinsic transformation, close to unity.
+	 * To make it extrinsic, we compute q2 = o * q * ~o */
+	q2 = quat_multiply(o, quat_multiply(q, quat_conjugate(o)));
+	q2 = quat_normalize(q2);
+
+	/* As round-off errors accumulate, the distance between the camera and the
+	 * target would normally fluctuate. We take steps to prevent that here. */
+	dist = vec3_length(v);
+	v = quat_transform(q2, v);
+	v = vec3_normalize(v);
+	v = vec3_scale(v, dist);
+
+	cam_position = v;
+	cam_orientation = quat_multiply(q2, cam_orientation);
+}
+
+static void camDolly(int dz)
+{
+	Vec3 v = cam_position;
+
+	v = vec3_scale(v, exp(-0.1*dz));
+	cam_position = v;
+}
 
 /* Handle events.
  * Return true if everything went fine, false if user requested to quit. */
@@ -133,6 +171,19 @@ static bool handleEvents(void)
 			default:
 				break;
 			}
+		}
+		else if (event.type == SDL_MOUSEMOTION) {
+			char ms = SDL_GetMouseState(NULL, NULL);
+			/* We invert the y-coordinate because SDL has the origin in the
+			 * top-left and OpenGL in the bottom-left */
+			if (ms & SDL_BUTTON(SDL_BUTTON_LEFT))
+				camOrbit(event.motion.xrel, -event.motion.yrel);
+		}
+		else if (event.type == SDL_MOUSEBUTTONDOWN) {
+			if (event.button.button == SDL_BUTTON_WHEELUP)
+				camDolly(1);
+			else if (event.button.button == SDL_BUTTON_WHEELDOWN)
+				camDolly(-1);
 		}
 	}
 	return true;
@@ -230,6 +281,9 @@ static void initRender(void)
 			&numIndices, &sphereIndex);
 	glVertexPointer(3, GL_FLOAT, sizeof(Vertex3), sphereVertex);
 	glNormalPointer(   GL_FLOAT, sizeof(Vertex3), sphereVertex);
+
+	cam_position = (Vec3) {0, 0, world.worldSize*2.5};
+	cam_orientation = (Quaternion) {1, 0, 0, 0};
 }
 
 static void renderSet3D(void)
@@ -293,10 +347,24 @@ static void renderStrand(Strand *s, RenderConf *rc) {
 	}
 }
 
+static void mat4_from_mat3(double a[16], Mat3 b)
+{
+#define A(i, j) a[4*j + i]
+#define B(i, j) b[3*j + i]
+	A(0,0) = B(0,0); A(0,1) = B(0,1); A(0,2) = B(0,2); A(0,3) = 0.0;
+	A(1,0) = B(1,0); A(1,1) = B(1,1); A(1,2) = B(1,2); A(1,3) = 0.0;
+	A(2,0) = B(2,0); A(2,1) = B(2,1); A(2,2) = B(2,2); A(2,3) = 0.0;
+	A(3,0) = 0.0;    A(3,1) = 0.0;    A(3,2) = 0.0;    A(3,3) = 1.0;
+#undef B
+#undef A
+}
+
 /* Renders the frame and calls calcFps() */
 static void render(RenderConf *rc)
 {
 	double ws = world.worldSize;
+	Mat3 m3;
+	double m4[16];
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -307,9 +375,12 @@ static void render(RenderConf *rc)
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	glTranslatef(0, 0, -ws*2.5);
+	mat3_from_quat(m3, quat_conjugate(cam_orientation));
+	mat4_from_mat3(m4, m3);
+	glMultMatrixd(m4);
+	glTranslatef(-cam_position.x, -cam_position.y, -cam_position.z);
 
-	glRotatef(view_angle, 0, 1, 0);
+	//glRotatef(view_angle, 0, 1, 0);
 
 	glColor3f(0.0, 1.0, 0.0);
 	glBegin(GL_LINE_LOOP);
