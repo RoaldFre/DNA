@@ -349,6 +349,133 @@ static void FbasePair(Particle *p1, Particle *p2)
 	sub(&p2->F, &forceVec, &p2->F);
 }
 
+static void Fexclusion(Particle *p1, Particle *p2)
+{
+	double sig;
+	Vec3 forceVec;
+	double force;
+	
+	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	if (rij > D_CUT)
+		return; /* Too far away */
+
+	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
+	
+	/* Apply right parameters for types of molecules, 
+	 * if bases and mismatched: SIGMA_0_CST*1.0
+	 * if bases and matched: 0
+	 * otherwise: SIGMA_0_CST*D_CUT */
+	
+	/* Lennard-Jones potential:
+	 * potential = exCoupling ((sigma0 / r)^12 - (sigma0/r)^6) + epsilon.
+	 * 
+	 * For the force we differentiate with respect to r, so we get
+	 * 4*EPSILON*[ - 12* sigma0^12 / r^13 + 6* sigma0^6/r^7 ] */
+
+	if ((p1->type!=SUGAR) && (p1->type!=PHOSPHATE) && (p2->type!=SUGAR) 
+						&& (p2->type!=PHOSPHATE)){
+		
+		if ( ((p1->type==BASE_A && p2->type==BASE_T) 
+			|| (p1->type==BASE_T && p2->type==BASE_A))
+			|| ((p1->type==BASE_G && p2->type==BASE_C) 
+			|| (p1->type==BASE_C && p2->type==BASE_G)) )
+			/* no force */
+			return; 
+		sig = SIGMA_0_CST*1.0;			
+		
+	} else {
+		
+		sig = SIGMA_0_CST*D_CUT;		
+	}
+	
+	double sig2, sig4, sig6, sig12;
+	double rInv, rInv2, rInv4, rInv7, rInv13;
+	
+	sig2 = sig*sig;
+	sig4 = sig2*sig2;
+	sig6 = sig2*sig4;
+	sig12 = sig6*sig6;
+	
+	rInv = 1.0/rij;
+	rInv2 = rInv*rInv;
+	rInv4 = rInv2*rInv2;
+	rInv7 = rInv4*rInv2*rInv;
+	rInv13 = rInv7*rInv4*rInv4;
+
+	force = 4*EPSILON*(-12*sig12*rInv13 + 6*sig6*rInv7); 
+		
+	/* Scale the direction with the calculated force */
+	scale(&direction, force, &forceVec);
+
+	/* Add force to particle objects */
+	add(&p1->F, &forceVec, &p1->F);
+	sub(&p2->F, &forceVec, &p2->F);
+}
+
+static double Vexclusion(Particle *p1, Particle *p2)
+{
+	double sig;
+	double potential;
+	
+	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	if (rij > D_CUT)
+		return 0; /* Too far away */
+
+	
+	/* Apply right parameters for types of molecules, 
+	 * if bases and mismatched: SIGMA_0_CST*1.0
+	 * if bases and matched: 0
+	 * otherwise: SIGMA_0_CST*D_CUT */
+	
+	/* Lennard-Jones potential:
+	 * potential = exCoupling ((sigma0 / r)^12 - (sigma0/r)^6) + epsilon.*/
+
+	if ((p1->type!=SUGAR) && (p1->type!=PHOSPHATE) && (p2->type!=SUGAR) 
+						&& (p2->type!=PHOSPHATE)){
+		
+		if ( ((p1->type==BASE_A && p2->type==BASE_T) 
+			|| (p1->type==BASE_T && p2->type==BASE_A))
+			|| ((p1->type==BASE_G && p2->type==BASE_C) 
+			|| (p1->type==BASE_C && p2->type==BASE_G)) )
+			/* no potential */
+			return 0; 
+		sig = SIGMA_0_CST*1.0;			
+		
+	} else {
+		
+		sig = SIGMA_0_CST*D_CUT;		
+	}
+	
+	double sig2, sig4, sig6, sig12;
+	double rInv, rInv2, rInv4, rInv6, rInv12;
+	
+	sig2 = sig*sig;
+	sig4 = sig2*sig2;
+	sig6 = sig2*sig4;
+	sig12 = sig6*sig6;
+	
+	rInv = 1.0/rij;
+	rInv2 = rInv*rInv;
+	rInv4 = rInv2*rInv2;
+	rInv6 = rInv4*rInv2;
+	rInv12 = rInv6*rInv6;
+
+	potential = 4*EPSILON*(sig12*rInv12 - sig6*rInv6) + EPSILON;
+	
+	/* correct so that at D_CUT, V zero */
+	double dInv, dInv2, dInv4, dInv6, dInv12;
+	dInv = 1.0/D_CUT;
+	dInv2 = dInv*dInv;
+	dInv4 = dInv2*dInv2;
+	dInv6 = dInv4*dInv2;
+	dInv12 = dInv6*dInv6;
+	
+	double correction = 4*EPSILON*(sig12*dInv12 - sig6*dInv6) + EPSILON;
+	potential -= correction;
+		
+	return potential;
+}
+
 
 /* COULOMB */
 static double calcDebyeLength(void)
@@ -689,7 +816,7 @@ double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2)
 		
 	Vec3 distVec1, distVec2, distVec3, distVecFinal;
 	
-	/* distVecFinal = rVec + sc*dist1 - tc*dist2 */
+	/* calculate distVecFinal = rVec + sc*dist1 - tc*dist2 */
 	
 	scale(dist1, sc, &distVec1);
 	scale(dist2, tc, &distVec2);
@@ -752,6 +879,7 @@ static void pairForces(Particle *p1, Particle *p2)
 {
 	FbasePair(p1, p2);
 	FCoulomb(p1, p2);
+	Fexclusion(p1, p2);
 }
 
 static void calculateForces(void)
@@ -798,7 +926,7 @@ double temperature(void)
 
 
 typedef struct PotentialEnergies {
-	double bond, angle, dihedral, stack, basePair, Coulomb, rope;
+	double bond, angle, dihedral, stack, basePair, Coulomb, rope, exclusion;
 } PotentialEnergies;
 static void pairPotentials(Particle *p1, Particle *p2, void *data)
 {
@@ -806,6 +934,7 @@ static void pairPotentials(Particle *p1, Particle *p2, void *data)
 	
 	pe->basePair += VbasePair(p1, p2);
 	pe->Coulomb  += VCoulomb(p1, p2);
+	pe->exclusion += Vexclusion(p1, p2);
 }
 
 #if 0
@@ -861,7 +990,7 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 /* Return energy stats of world, in electronvolts. */
 static PotentialEnergies calcPotentialEnergies(void) {
 	
-	PotentialEnergies pe = {0, 0, 0, 0, 0, 0, 0};
+	PotentialEnergies pe = {0, 0, 0, 0, 0, 0, 0, 0};
 	for (int s = 0; s < world.numStrands; s++)
 		addPotentialEnergies(&world.strands[s], &pe);
 	
@@ -872,15 +1001,16 @@ static PotentialEnergies calcPotentialEnergies(void) {
 #endif
 	
 	/* Convert to eV */
-	pe.bond     *= ENERGY_FACTOR;
-	pe.angle    *= ENERGY_FACTOR;
-	pe.dihedral *= ENERGY_FACTOR;
-	pe.stack    *= ENERGY_FACTOR;
-	pe.basePair *= ENERGY_FACTOR;
-	pe.Coulomb  *= ENERGY_FACTOR;
+	pe.bond      *= ENERGY_FACTOR;
+	pe.angle     *= ENERGY_FACTOR;
+	pe.dihedral  *= ENERGY_FACTOR;
+	pe.stack     *= ENERGY_FACTOR;
+	pe.basePair  *= ENERGY_FACTOR;
+	pe.Coulomb   *= ENERGY_FACTOR;
 #if 0
-	pe.rope     *= ENERGY_FACTOR;
+	pe.rope      *= ENERGY_FACTOR;
 #endif
+	pe.exclusion *= ENERGY_FACTOR;
 	
 	return pe;
 }
@@ -1132,10 +1262,10 @@ void dumpStats()
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double T = temperature();
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.rope;
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.rope + pe.exclusion;
 
-	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Vr = %e T = %f\n",
-			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.rope, T);
+	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Vr = %e, Ve = %e, T = %f\n",
+			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.rope, pe.exclusion, T);
 }
 
 
