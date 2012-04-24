@@ -258,6 +258,7 @@ void die(const char *fmt, ...)
 	exit(1);
 }
 
+#if 0
 static void buildRopeTestWorld(void)
 {
 	allocWorld(2, worldSize);
@@ -278,6 +279,7 @@ static void buildRopeTestWorld(void)
 		add(&s->all[i].vel, &deltaVel, &s->all[i].vel);
 	}
 }
+#endif
 
 int main(int argc, char **argv)
 {
@@ -285,7 +287,6 @@ int main(int argc, char **argv)
 
 	parseArguments(argc, argv);
 	
-#if 0
 	if (buildCompStrand)
 		allocWorld(2, worldSize);
 	else
@@ -294,9 +295,6 @@ int main(int argc, char **argv)
 	fillStrand(&world.strands[0], baseSequence);
 	if (buildCompStrand)
 		fillComplementaryStrand(&world.strands[1], baseSequence);
-#else
-	buildRopeTestWorld();
-#endif
 
 	Measurement verbose;
 	verbose.measConf = verboseConf;

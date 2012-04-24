@@ -1,7 +1,37 @@
+#include "main.h" //for die TODO clean
 #include "world.h"
 #include "spgrid.h"
 #include "physics.h" /* for spacings/angles/... */
 #include <string.h>
+
+
+/* Structure of the helix. See table I in Knotts */
+
+#define HELIX_DELTA_Z   (3.38*A) 	/* vertical spacing between layers */
+#define HELIX_DELTA_PHI (36*RAD)	/* twist at each consecutive layer */
+
+/* Angles */
+#define P_PHI (94.038*RAD)
+#define S_PHI (70.197*RAD)
+#define A_PHI (41.905*RAD)
+#define T_PHI (86.119*RAD)
+#define C_PHI (85.027*RAD)
+#define G_PHI (40.691*RAD)
+/* Radial distance */
+#define P_R (8.916*A)
+#define S_R (6.981*A)
+#define A_R (0.773*A)
+#define T_R (2.349*A)
+#define C_R (2.296*A)
+#define G_R (0.828*A)
+/* Heights */
+#define P_Z (2.186*A)
+#define S_Z (1.280*A)
+#define A_Z (0.051*A)
+#define T_Z (0.191*A)
+#define C_Z (0.187*A)
+#define G_Z (0.053*A)
+
 
 World world;
 
@@ -88,84 +118,94 @@ bool allocStrand(Strand *s, int numMonomers) {
 static void fillStrandHelper(Strand *s, const char *baseSequence,
 		bool complementarySequence, bool complementaryHelix)
 {
+	//TODO complementaryHelix;
+
 	int n = strlen(baseSequence);
 	allocStrand(s, n);
 
 	double ws = world.worldSize;
-	double spacing = D_S5P + D_S3P; /* vertical spacing between monomers */
-	double xoffset = -D_SA / 2;
-	double zoffset = -D_SA / 2;
-	double yoffset = (ws - n * spacing) / 2;
-	double posStdev = spacing / 100;
 	double velStdev = sqrt(config.thermostatTemp);
 
+	Vec3 offset;
+	offset.x = ws / 2;
+	offset.z = ws / 2;
+	offset.y = (ws - n * HELIX_DELTA_Z) / 2;
+
+	double phi = 0;
+	double z = 0;
 	for (int i = 0; i < n; i++) {
-		/* screw factor */
-		double screwFactorCos = cos(i * SCREW_SYM_PHI);
-		double screwFactorSin = sin(i * SCREW_SYM_PHI);
-
-		if (complementaryHelix) {
-			screwFactorCos *= -1;
-			screwFactorSin *= -1;
+		/* Default to Adenine */
+		ParticleType b_t = BASE_A;
+		double b_m = MASS_A;
+		double b_r = A_R;
+		double b_z = A_Z;
+		double b_phi = A_PHI;
+		switch (baseSequence[i]) {
+		case 'A':
+			b_t = complementarySequence ? BASE_T : BASE_A;
+			b_m = MASS_A;
+			b_r = A_R;
+			b_z = A_Z;
+			b_phi = A_PHI;
+			break;
+		case 'T':
+			b_t = complementarySequence ? BASE_A : BASE_T;
+			b_m = MASS_T;
+			b_r = T_R;
+			b_z = T_Z;
+			b_phi = T_PHI;
+			break;
+		case 'C':
+			b_t = complementarySequence ? BASE_G : BASE_C;
+			b_m = MASS_C;
+			b_r = C_R;
+			b_z = C_Z;
+			b_phi = C_PHI;
+			break;
+		case 'G':
+			b_t = complementarySequence ? BASE_C : BASE_G;
+			b_m = MASS_G;
+			b_r = G_R;
+			b_z = G_Z;
+			b_phi = G_PHI;
+			break;
+		default:
+			fprintf(stderr, "Unknown base type '%c' at "
+					"position %d in base sequence '%s'! "
+					"Defaulting to Adenine!\n",
+					baseSequence[i], i, baseSequence);
 		}
-		
-		/* Positions */
-		s->Ss[i].pos.x = ws/2 + (xoffset - D_SA) * screwFactorCos;
-		s->Bs[i].pos.x = ws/2 + (xoffset       ) * screwFactorCos;
-		s->Ps[i].pos.x = ws/2 + (xoffset - D_SA) * screwFactorCos;
-
-		s->Ss[i].pos.y = yoffset + i*spacing;
-		s->Bs[i].pos.y = yoffset + i*spacing;
-		s->Ps[i].pos.y = yoffset + i*spacing + D_S5P;
-		
-		
-		s->Ss[i].pos.z = ws/2 + (zoffset - D_SA) * screwFactorSin;
-		s->Bs[i].pos.z = ws/2 + (zoffset       ) * screwFactorSin;
-		s->Ps[i].pos.z = ws/2 + (zoffset - D_SA) * screwFactorSin;
-
-		s->Ss[i].pos.x += posStdev * randNorm();
-		s->Ss[i].pos.y += posStdev * randNorm();
-		s->Ss[i].pos.z += posStdev * randNorm();
-		s->Bs[i].pos.x += posStdev * randNorm();
-		s->Bs[i].pos.y += posStdev * randNorm();
-		s->Bs[i].pos.z += posStdev * randNorm();
-		s->Ps[i].pos.x += posStdev * randNorm();
-		s->Ps[i].pos.y += posStdev * randNorm();
-		s->Ps[i].pos.z += posStdev * randNorm();
-
-		/* Velocity */
-		s->Ss[i].vel = randNormVec(velStdev);
-		s->Bs[i].vel = randNormVec(velStdev);
-		s->Ps[i].vel = randNormVec(velStdev);
-
-		/* Mass */
-		s->Ss[i].m = MASS_S;
-		s->Bs[i].m = MASS_A;
-		s->Ps[i].m = MASS_P;
 
 		/* Type */
-		ParticleType b;
-		switch (baseSequence[i]) {
-		case 'A': b = complementarySequence ? BASE_T : BASE_A; break;
-		case 'T': b = complementarySequence ? BASE_A : BASE_T; break;
-		case 'C': b = complementarySequence ? BASE_G : BASE_C; break;
-		case 'G': b = complementarySequence ? BASE_C : BASE_G; break;
-		default: 
-			fprintf(stderr, "Unknown base type '%c' at "
-				"position %d in base sequence %s. "
-				"Defaulting to Adenine!\n",
-				baseSequence[i], i, baseSequence);
-			b = BASE_A;
-		}
-
-		s->Bs[i].type = b;
+		s->Bs[i].type = b_t;
 		s->Ss[i].type = SUGAR;
 		s->Ps[i].type = PHOSPHATE;
 
+		/* Mass */
+		s->Bs[i].m = b_m;
+		s->Ss[i].m = MASS_S;
+		s->Ps[i].m = MASS_P;
+
+		/* Positions */
+		s->Bs[i].pos = fromCilindrical(b_r, phi + b_phi, z + b_z);
+		s->Ss[i].pos = fromCilindrical(S_R, phi + S_PHI, z + S_Z);
+		s->Ps[i].pos = fromCilindrical(P_R, phi + P_PHI, z + P_Z);
+		add(&s->Bs[i].pos, &offset, &s->Bs[i].pos);
+		add(&s->Ss[i].pos, &offset, &s->Ss[i].pos);
+		add(&s->Ps[i].pos, &offset, &s->Ps[i].pos);
+
+		/* Velocity */
+		s->Bs[i].vel = randNormVec(velStdev);
+		s->Ss[i].vel = randNormVec(velStdev);
+		s->Ps[i].vel = randNormVec(velStdev);
+
 		/* Particle's strand */
-		s->Ss[i].strand = s; s->Ss[i].strandIndex = i;
 		s->Bs[i].strand = s; s->Bs[i].strandIndex = i;
+		s->Ss[i].strand = s; s->Ss[i].strandIndex = i;
 		s->Ps[i].strand = s; s->Ps[i].strandIndex = i;
+
+		z += HELIX_DELTA_Z;
+		phi += HELIX_DELTA_PHI;
 	}
 }
 void fillStrand(Strand *s, const char *baseSequence)

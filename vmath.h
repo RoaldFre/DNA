@@ -148,6 +148,16 @@ static __inline__ void periodic(double period, const Vec3 *v, Vec3 *dest)
 	assert(0 <= v->z  &&  v->z < period);
 }
 
+/* y axis is the vertical axis */
+static __inline__ Vec3 fromCilindrical(double r, double phi, double height)
+{
+	Vec3 res;
+	res.x = r * cos(phi);
+	res.z = r * sin(phi);
+	res.y = height;
+	return res;
+}
+
 /* Returns a number sampled from a standard normal distribution. */
 static __inline__ double randNorm(void)
 {

@@ -19,7 +19,6 @@
 #define ABS(x) ((a) > 0 ? (a) : -(a))
 #define SQUARE(x) ((x) * (x))
 #define CUBE(x) ((x) * (x) * (x))
-#define RAD(x) ((x) * M_TWO_PI / 360.0)
 
 #include "quaternion.h"
 #include "vector.h"

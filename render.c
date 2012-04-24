@@ -347,16 +347,16 @@ static void renderStrand(Strand *s, RenderConf *rc) {
 	}
 }
 
-static void mat4_from_mat3(double a[16], Mat3 b)
+static void mat4_from_mat3(double m[16], Mat3 n)
 {
-#define A(i, j) a[4*j + i]
-#define B(i, j) b[3*j + i]
-	A(0,0) = B(0,0); A(0,1) = B(0,1); A(0,2) = B(0,2); A(0,3) = 0.0;
-	A(1,0) = B(1,0); A(1,1) = B(1,1); A(1,2) = B(1,2); A(1,3) = 0.0;
-	A(2,0) = B(2,0); A(2,1) = B(2,1); A(2,2) = B(2,2); A(2,3) = 0.0;
-	A(3,0) = 0.0;    A(3,1) = 0.0;    A(3,2) = 0.0;    A(3,3) = 1.0;
-#undef B
-#undef A
+#define M(i, j) m[4*j + i]
+#define N(i, j) n[3*j + i]
+	M(0,0) = N(0,0); M(0,1) = N(0,1); M(0,2) = N(0,2); M(0,3) = 0.0;
+	M(1,0) = N(1,0); M(1,1) = N(1,1); M(1,2) = N(1,2); M(1,3) = 0.0;
+	M(2,0) = N(2,0); M(2,1) = N(2,1); M(2,2) = N(2,2); M(2,3) = 0.0;
+	M(3,0) = 0.0;    M(3,1) = 0.0;    M(3,2) = 0.0;    M(3,3) = 1.0;
+#undef M
+#undef N
 }
 
 /* Renders the frame and calls calcFps() */
