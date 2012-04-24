@@ -258,12 +258,34 @@ void die(const char *fmt, ...)
 	exit(1);
 }
 
+void buildRopeTestWorld(void)
+{
+	allocWorld(2, worldSize);
+
+	fillStrand(&world.strands[0], baseSequence);
+	fillStrand(&world.strands[1], baseSequence);
+
+	Strand *s = &world.strands[1];
+	/* Rotate 90 degrees, small offset, and launch it towards the first 
+	 * strand :-) */
+	Vec3 deltaPos = { 20e-10, 0, 0};
+	Vec3 deltaVel = {-20e+2, 0, 0};
+	for (int i = 0; i < 3 * s->numMonomers; i++) {
+		double tmp = s->all[i].pos.y;
+		s->all[i].pos.y = s->all[i].pos.z;
+		s->all[i].pos.z = tmp;
+		add(&s->all[i].pos, &deltaPos, &s->all[i].pos);
+		add(&s->all[i].vel, &deltaVel, &s->all[i].vel);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	srand(time(NULL)); //seed random generator
 
 	parseArguments(argc, argv);
 	
+#if 0
 	if (buildCompStrand)
 		allocWorld(2, worldSize);
 	else
@@ -272,6 +294,9 @@ int main(int argc, char **argv)
 	fillStrand(&world.strands[0], baseSequence);
 	if (buildCompStrand)
 		fillComplementaryStrand(&world.strands[1], baseSequence);
+#else
+	buildRopeTestWorld();
+#endif
 
 	Measurement verbose;
 	verbose.measConf = verboseConf;
@@ -301,3 +326,4 @@ int main(int argc, char **argv)
 	run(&task);
 	return 0;
 }
+
