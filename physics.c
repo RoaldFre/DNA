@@ -8,10 +8,10 @@
 #include "spgrid.h"
 
 /* Disable interactions by commenting these defines */
-#define ENABLE_BOND		true
-#define ENABLE_ANGLE		true
-#define ENABLE_DIHEDRAL		true
-#define ENABLE_STACK		true
+#define ENABLE_BOND		false
+#define ENABLE_ANGLE		false
+#define ENABLE_DIHEDRAL		false
+#define ENABLE_STACK		false
 #define ENABLE_EXCLUSION	false //TODO SERIOUSLY FUCKED UP
 #define ENABLE_BASE_PAIR	false //TODO VIOLATES ENERGY CONSERVATION
 #define ENABLE_COULOMB		false //TODO VIOLATES ENERGY CONSERVATION

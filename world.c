@@ -96,12 +96,16 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	allocStrand(s, n);
 
 	double ws = world.worldSize;
-	double velStdev = sqrt(config.thermostatTemp);
 
 	Vec3 offset;
 	offset.x = ws / 2;
 	offset.z = ws / 2;
 	offset.y = (ws - n * HELIX_DELTA_Z) / 2;
+
+	/* <v^2> = 3 T k_B / m
+	 * -> per dimension: gaussian with variance T k_B / m */
+	double T = config.thermostatTemp;
+	double velVarPerInvMass = T * BOLTZMANN_CONSTANT;
 
 	double phi = 0;
 	double z = 0;
@@ -167,9 +171,9 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		add(&s->Ps[i].pos, &offset, &s->Ps[i].pos);
 
 		/* Velocity */
-		s->Bs[i].vel = randNormVec(velStdev);
-		s->Ss[i].vel = randNormVec(velStdev);
-		s->Ps[i].vel = randNormVec(velStdev);
+		s->Bs[i].vel = randNormVec(sqrt(velVarPerInvMass / s->Bs[i].m));
+		s->Ss[i].vel = randNormVec(sqrt(velVarPerInvMass / s->Ss[i].m));
+		s->Ps[i].vel = randNormVec(sqrt(velVarPerInvMass / s->Ps[i].m));
 
 		/* Particle's strand */
 		s->Bs[i].strand = s; s->Bs[i].strandIndex = i;
