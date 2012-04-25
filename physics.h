@@ -8,16 +8,6 @@
 #include "world.h"
 
 
-/* Disable interactions by commenting these defines */
-#define ENABLE_BOND
-#define ENABLE_ANGLE
-#define ENABLE_DIHEDRAL
-#define ENABLE_STACK
-//#define ENABLE_BASE_PAIR //TODO VIOLATES ENERGY CONSERVATION
-//#define ENABLE_COULOMB //TODO VIOLATES ENERGY CONSERVATION
-
-
-
 /* Units */
 #define RAD	(M_PI / 180)	/* Radian */
 #define A	(1e-10)		/* Angstrom */
@@ -118,43 +108,6 @@
 #define DIELECTRIC_CST_H20    80
 #define AVOGADRO              6.023e23 /* particles per mol */
 
-
-
-
-/* Disable attractions by redefining their strenghts to zero */
-#ifndef ENABLE_BOND
-#undef  BOND_K1
-#undef  BOND_K2
-#define BOND_K1 0
-#define BOND_K2 0
-#endif
-
-#ifndef ENABLE_ANGLE
-#undef  BOND_Ktheta
-#define BOND_Ktheta 0
-#endif
-
-#ifndef ENABLE_DIHEDRAL
-#undef  BOND_Kphi
-#define BOND_Kphi 0
-#endif
-
-#ifndef ENABLE_STACK
-#undef  BOND_STACK
-#define BOND_STACK 0
-#endif
-
-#ifndef ENABLE_BASE_PAIR
-#undef  COUPLING_BP_AT
-#undef  COUPLING_BP_GC
-#define COUPLING_BP_AT 0
-#define COUPLING_BP_GC 0
-#endif
-
-#ifndef ENABLE_COULOMB
-#undef  CHARGE_ELECTRON
-#define CHARGE_ELECTRON 0
-#endif
 
 
 

@@ -7,6 +7,17 @@
 #include "world.h"
 #include "spgrid.h"
 
+/* Disable interactions by commenting these defines */
+#define ENABLE_BOND		true
+#define ENABLE_ANGLE		true
+#define ENABLE_DIHEDRAL		true
+#define ENABLE_STACK		true
+#define ENABLE_EXCLUSION	false //TODO SERIOUSLY FUCKED UP
+#define ENABLE_BASE_PAIR	false //TODO VIOLATES ENERGY CONSERVATION
+#define ENABLE_COULOMB		false //TODO VIOLATES ENERGY CONSERVATION
+
+
+
 
 /* ===== FORCES AND POTENTIALS ===== */
 
@@ -15,6 +26,8 @@
  * where dr is the distance between the particles */
 static double Vbond(Particle *p1, Particle *p2, double d0)
 {
+	if (!ENABLE_BOND)
+		return 0;
 	double k1 = BOND_K1;
 	double k2 = BOND_K2;
 	double d = nearestImageDistance(&p1->pos, &p2->pos) - d0;
@@ -24,6 +37,8 @@ static double Vbond(Particle *p1, Particle *p2, double d0)
 }
 static void Fbond(Particle *p1, Particle *p2, double d0)
 {
+	if (!ENABLE_BOND)
+		return;
 	double k1 = BOND_K1;
 	double k2 = BOND_K2;
 	Vec3 drVec, drVecNormalized, F;
@@ -50,6 +65,8 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
  */
 static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 {
+	if (!ENABLE_ANGLE)
+		return 0;
 	Vec3 a, b;
 	double ktheta = BOND_Ktheta;
 	
@@ -61,6 +78,8 @@ static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 }
 static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 {
+	if (!ENABLE_ANGLE)
+		return;
 	Vec3 a, b;
 	double ktheta = BOND_Ktheta;
 	
@@ -107,6 +126,8 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 								double phi0)
 {
+	if (!ENABLE_DIHEDRAL)
+		return 0;
 	double kphi = BOND_Kphi;
 	Vec3 r1, r2, r3;
 	sub(&p2->pos, &p1->pos, &r1);
@@ -145,6 +166,8 @@ static void FdihedralParticle(Particle *target,
 static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 								double phi0)
 {
+	if (!ENABLE_DIHEDRAL)
+		return;
 	/* This is a *mess* to do analytically, so we do a numerical 
 	 * differentiation instead. */
 	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
@@ -204,6 +227,8 @@ static double neighbourStackDistance2(ParticleType t1, ParticleType t2, int mono
  *   2 for   next    neighbours (i and i+2) */
 static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 {
+	if (!ENABLE_STACK)
+		return 0;
 	double kStack = BOND_STACK;
 	/* sigma = 2^(-1/6) * r_min  =>  sigma^2 = 2^(-1/3) * r_min^2 */
 	double sigma2 = INV_CUBE_ROOT_OF_TWO * neighbourStackDistance2(
@@ -219,6 +244,8 @@ static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 }
 static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 {
+	if (!ENABLE_STACK)
+		return;
 	double kStack = BOND_STACK;
 	double sigma2 = INV_CUBE_ROOT_OF_TWO * neighbourStackDistance2(
 			p1->type, p2->type, monomerDistance);
@@ -258,6 +285,8 @@ static double calcVBasePair(double coupling, double rij0, double rijVar2)
 }
 double VbasePair(Particle *p1, Particle *p2)
 {
+	if (!ENABLE_BASE_PAIR)
+		return 0;
 	double rij = nearestImageDistance(&p1->pos, &p2->pos);
 	if (rij > config.truncationLen)
 		return 0; /* Too far away */
@@ -304,6 +333,8 @@ static double calcFbasePair(double coupling, double rij0, double rijVar)
 }
 static void FbasePair(Particle *p1, Particle *p2)
 {
+	if (!ENABLE_BASE_PAIR)
+		return;
 	double bpCoupling;
 	double bpForceDist;
 	double truncLen = config.truncationLen;
@@ -351,6 +382,8 @@ static void FbasePair(Particle *p1, Particle *p2)
 
 static void Fexclusion(Particle *p1, Particle *p2)
 {
+	if (!ENABLE_EXCLUSION)
+		return;
 	double sig;
 	Vec3 forceVec;
 	double force;
@@ -414,6 +447,8 @@ static void Fexclusion(Particle *p1, Particle *p2)
 
 static double Vexclusion(Particle *p1, Particle *p2)
 {
+	if (!ENABLE_EXCLUSION)
+		return 0;
 	double sig;
 	double potential;
 	
@@ -509,6 +544,8 @@ static double calcVCoulomb(double distanceLength)
 }
 static double VCoulomb(Particle *p1, Particle *p2)
 {
+	if (!ENABLE_COULOMB)
+		return 0;
 	double rij = nearestImageDistance(&p1->pos, &p2->pos);
 	if (rij > config.truncationLen)
 		return 0; /* Too far away */
@@ -549,6 +586,8 @@ static double calcFCoulomb(double distanceLength)
 }
 static void FCoulomb(Particle *p1, Particle *p2)
 {	
+	if (!ENABLE_COULOMB)
+		return;
 	double truncLen = config.truncationLen;
 	double rij = nearestImageDistance(&p2->pos, &p1->pos);
 	if (rij > truncLen)
