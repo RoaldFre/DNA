@@ -37,7 +37,7 @@ bool allocGrid(int numBoxes, double size)
 		return false;
 	nb = numBoxes;
 	boxSize = size / numBoxes;
-	assert(sanityCheck(true, false));
+	assert(spgridSanityCheck(true, false));
 	return true;
 }
 
@@ -65,7 +65,7 @@ void freeGrid()
 		}
 		assert(box->n == 0  &&  box->p == NULL);
 	}
-	assert(sanityCheck(true, true));
+	assert(spgridSanityCheck(true, true));
 	assert(gridNumParticles == 0);
 
 	nb = 0;
@@ -78,14 +78,14 @@ void addToGrid(Particle *p) {
 	addToBox(p, box);
 	gridNumParticles++;
 
-	assert(sanityCheck(false, false));
+	assert(spgridSanityCheck(false, false));
 }
 
 void reboxParticles(void)
 {
 	double gridSize = nb * boxSize;
 
-	assert(sanityCheck(false, true));
+	assert(spgridSanityCheck(false, true));
 
 	for (int i = 0; i < nb*nb*nb; i++) {
 		Box *currentBox = &grid[i];
@@ -114,7 +114,7 @@ void reboxParticles(void)
 			p = next;
 		}
 	}
-	assert(sanityCheck(true, true));
+	assert(spgridSanityCheck(true, true));
 }
 
 /* Precondition: particle must be within the grid. */
@@ -392,9 +392,12 @@ Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2)
 double nearestImageDistance(Vec3 *v1, Vec3 *v2)
 {
 	Vec3 rijVec = nearestImageVector(v1, v2);
-	double rijLength = length(&rijVec);
-	
-	return rijLength;
+	return length(&rijVec);
+}
+double nearestImageDistance2(Vec3 *v1, Vec3 *v2)
+{
+	Vec3 rijVec = nearestImageVector(v1, v2);
+	return length2(&rijVec);
 }
 
 Vec3 nearestImageUnitVector(Vec3 *v1, Vec3 *v2)
@@ -518,7 +521,7 @@ bool forEveryConnectionPairCheck(void)
 
 
 
-bool sanityCheck(bool checkCorrectBox, bool checkConnections)
+bool spgridSanityCheck(bool checkCorrectBox, bool checkConnections)
 {
 	int nParts1 = 0;
 	int nParts2 = 0;

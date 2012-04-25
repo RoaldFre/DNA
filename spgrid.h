@@ -53,7 +53,7 @@ void forEveryConnectionPair(void (*f)(Particle *a1, Particle *a2,
  * is true, then also check if all particles are in their correct boxes.
  * This check also does a forEveryPairCheck.
  * If checkConnections is true, it also performs a forEveryConnectionCheck. */
-bool sanityCheck(bool checkCorrectBox, bool checkConnections);
+bool spgridSanityCheck(bool checkCorrectBox, bool checkConnections);
 
 /* Test to see if we iterate over the correct number of pairs, and see if 
  * we don't give a single same particle as two constituents of a pair. Does 
@@ -71,5 +71,6 @@ bool forEveryConnectionPairCheck(void);
 Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2);
 Vec3 nearestImageUnitVector(Vec3 *v1, Vec3 *v2);
 double nearestImageDistance(Vec3 *v1, Vec3 *v2);
+double nearestImageDistance2(Vec3 *v1, Vec3 *v2);
 
 #endif
