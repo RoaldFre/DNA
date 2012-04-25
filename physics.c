@@ -415,7 +415,7 @@ static void Fexclusion(Particle *p1, Particle *p2)
 			|| (p1->type==BASE_C && p2->type==BASE_G)) )
 			/* no force */
 			return; 
-		sig = SIGMA_0_CST*1.0;			
+		sig = SIGMA_0_CST*D_CUT_BASE;			
 		
 	} else {
 		

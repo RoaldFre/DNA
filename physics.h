@@ -88,8 +88,9 @@
 #define DISTANCE_r0_GC	(2.8694*A) /* Knotts et al 2007, table III, 2.8694 A */
 
 /* Exlusion Force */
-#define SIGMA_0_CST	0.8908987e-10 	/* 2^(-1/6) Angstrom */
+#define SIGMA_0_CST	0.8908987 	/* 2^(-1/6) Angstrom */
 #define D_CUT	6.86e-10 	/* 6.86 Angstrom */
+#define D_CUT_BASE  1.0e-10
 
 /* Coulomb interaction between phosphates */
 #define CHARGE_ELECTRON		1.602e-19  /* 1.602 Coulomb */
