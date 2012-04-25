@@ -296,6 +296,8 @@ int main(int argc, char **argv)
 	if (buildCompStrand)
 		fillComplementaryStrand(&world.strands[1], baseSequence);
 
+	assert(worldSanityCheck());
+
 	Measurement verbose;
 	verbose.measConf = verboseConf;
 	verbose.sampler = dumpStatsSampler();

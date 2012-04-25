@@ -267,3 +267,58 @@ Particle *getConnectedParticle(Particle *p)
 	}
 }
 
+
+
+
+/* ===== CHECK FUNCTIONS ===== */
+bool strandSanityCheck(Strand *s)
+{
+	assert(s != NULL);
+	bool OK = true;
+	for (int i = 0; i < s->numMonomers; i++) {
+		if (!isBase(s->Bs[i].type)) {
+			fprintf(stderr, "Particle %d of strand %p should be "
+					"a base but isn't!\n", i, (void*)s);
+			OK = false;
+		}
+		if (s->Ps[i].type != PHOSPHATE) {
+			fprintf(stderr, "Particle %d of strand %p should be a "
+					"phosphate but isn't!\n", i, (void*)s);
+			OK = false;
+		}
+		if (s->Ss[i].type != SUGAR) {
+			fprintf(stderr, "Particle %d of strand %p should be "
+					"a sugar but isn't!\n", i, (void*)s);
+			OK = false;
+		}
+		if (s->Bs[i].strand != s || s->Ps[i].strand != s
+				|| s->Ss[i].strand != s) {
+			fprintf(stderr, "Monomer %d of strand %p has "
+					"particles associated with the wrong "
+					"strand!\n", i, (void*)s);
+			OK = false;
+		}
+		if (s->Bs[i].strandIndex != i || s->Ps[i].strandIndex != i
+				|| s->Ss[i].strandIndex != i) {
+			fprintf(stderr, "Monomer %d of strand %p has "
+					"particles with a wrong "
+					"strand index!\n", i, (void*)s);
+			OK = false;
+		}
+	}
+
+	return OK;
+}
+
+bool worldSanityCheck(void)
+{
+	bool OK = true;
+	for (int i = 0; i < world.numStrands; i++) {
+		if (strandSanityCheck(&world.strands[i]))
+			continue;
+		fprintf(stderr, "-> Strand %d had errors!\n\n", i);
+		OK = false;
+	}
+
+	return OK;
+}

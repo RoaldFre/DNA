@@ -98,4 +98,13 @@ void forEveryParticleOfD(Strand *s,
  * Sugar     | Phosphate of previous monomer or NULL if no such monomer
  */
 Particle *getConnectedParticle(Particle *p);
+
+
+/* Checks whether particles of strands are properly associated with their 
+ * type, monomer and strand. */
+bool strandSanityCheck(Strand *s);
+
+/* Checks all the strands in the world */
+bool worldSanityCheck(void);
+
 #endif

@@ -1196,6 +1196,8 @@ static void langevinBBK(void)
 
 static void stepPhysics(Integrator integrator)
 {
+	assert(worldSanityCheck());
+
 	switch(integrator) {
 	case VERLET:
 		verlet();
