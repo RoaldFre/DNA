@@ -12,8 +12,14 @@ typedef enum particleType
 	BASE_C,
 	BASE_G,
 	/* WARNING, if for some reason you want to change the ordering of 
-	 * this enum, watch out to avoid breaking getConnectedParticle() ! */
+	 * this enum, watch out to avoid breaking getConnectedParticle() 
+	 * and isBase() ! */
 } ParticleType;
+
+static __inline__ bool isBase(ParticleType t)
+{
+	return t > SUGAR;
+}
 
 typedef struct particle
 {
