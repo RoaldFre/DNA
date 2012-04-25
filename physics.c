@@ -11,11 +11,10 @@
 #define ENABLE_BOND		true
 #define ENABLE_ANGLE		true
 #define ENABLE_DIHEDRAL		true
-#define ENABLE_STACK		true
+#define ENABLE_STACK		true //TODO check whether distances are correct
 #define ENABLE_EXCLUSION	false //TODO SERIOUSLY FUCKED UP
 #define ENABLE_BASE_PAIR	true
 #define ENABLE_COULOMB		true
-
 
 
 
@@ -227,8 +226,11 @@ static double neighbourStackDistance2(ParticleType t1, ParticleType t2, int mono
  *   2 for   next    neighbours (i and i+2) */
 static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 {
+	assert(isBase(p1->type) && isBase(p2->type));
+
 	if (!ENABLE_STACK)
 		return 0;
+
 	double kStack = BOND_STACK;
 	/* sigma = 2^(-1/6) * r_min  =>  sigma^2 = 2^(-1/3) * r_min^2 */
 	double sigma2 = INV_CUBE_ROOT_OF_TWO * neighbourStackDistance2(
@@ -244,136 +246,114 @@ static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 }
 static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 {
+	assert(isBase(p1->type) && isBase(p2->type));
+
 	if (!ENABLE_STACK)
 		return;
+
 	double kStack = BOND_STACK;
 	double sigma2 = INV_CUBE_ROOT_OF_TWO * neighbourStackDistance2(
 			p1->type, p2->type, monomerDistance);
 	double sigma6 = sigma2 * sigma2 * sigma2;
 	double sigma12 = sigma6 * sigma6;
 
-	Vec3 Fi;
 	Vec3 drVec;
 	sub(&p2->pos, &p1->pos, &drVec);
-	double dr = length(&drVec);
+	double dr2 = length2(&drVec);
 
-	assert(dr != 0);
+	assert(dr2 != 0);
+	double dr4 = dr2 * dr2;
+	double dr8 = dr4 * dr4;
+	double dr14 = dr8 * dr4 * dr2;
 
-	double dr2 = dr*dr;
-	double dr3 = dr*dr*dr;
-	double dr6 = dr3*dr3;
-	double dr8 = dr6*dr2;
-	double dr12 = dr6*dr6;
-	double dr14 = dr12*dr2;
-
-	scale(&drVec, -12 * kStack * (sigma12/dr14 - sigma6/dr8), &Fi);
-	add(&p1->F, &Fi, &p1->F);
-	sub(&p2->F, &Fi, &p2->F);
+	Vec3 F;
+	scale(&drVec, -12 * kStack * (sigma12/dr14 - sigma6/dr8), &F);
+	add(&p1->F, &F, &p1->F);
+	sub(&p2->F, &F, &p2->F);
 }
 
 
 /* BASE PAIRING */
-static double calcVBasePair(double coupling, double rij0, double rijVar2)
+typedef struct {
+	double coupling; /* Coupling strength */
+	double distance2; /* Coupling distance squared */
+} BasePairInfo;
+/* Returns the BasePairInfo for the given types. If the given types do not 
+ * constitute a valid base pair, then coupling and distance are set to -1. */
+static BasePairInfo getBasePairInfo(ParticleType t1, ParticleType t2)
 {
-	double rfrac2 = rij0 * rij0 / rijVar2;
+	BasePairInfo bpi;
+	if ((t1 == BASE_A  &&  t2 == BASE_T)  
+			||  (t1 == BASE_T  &&  t2 == BASE_A)) {
+		bpi.coupling = COUPLING_BP_AT;
+		bpi.distance2 = SQUARE(DISTANCE_r0_AT);
+		
+	} else if ((t1 == BASE_C  &&  t2 == BASE_G)
+			||  (t1 == BASE_G  &&  t2 == BASE_C)) {
+		bpi.coupling = COUPLING_BP_GC;
+		bpi.distance2 = SQUARE(DISTANCE_r0_GC);
+	} else {
+		bpi.coupling = -1;
+		bpi.distance2 = -1;
+	}
+	return bpi;
+}
+static double calcVbasePair(BasePairInfo bpi, double rsquared)
+{
+	double rfrac2 = bpi.distance2 / rsquared;
 	double rfrac4 = rfrac2 * rfrac2;
 	double rfrac8 = rfrac4 * rfrac4;
 	double rfrac10 = rfrac8 * rfrac2;
 	double rfrac12 = rfrac8 * rfrac4;
 	
-	return coupling*(5*rfrac12 - 6*rfrac10 + 1);
+	return bpi.coupling * (5*rfrac12 - 6*rfrac10 + 1);
 }
 double VbasePair(Particle *p1, Particle *p2)
 {
 	if (!ENABLE_BASE_PAIR)
 		return 0;
-	double rij = nearestImageDistance(&p1->pos, &p2->pos);
-	if (rij > config.truncationLen)
+
+	BasePairInfo bpi = getBasePairInfo(p1->type, p2->type);
+	if (bpi.coupling < 0)
+		return 0; /* Wrong pair */
+	
+	double rsq = nearestImageDistance2(&p1->pos, &p2->pos);
+	double truncSq = SQUARE(config.truncationLen);
+	if (rsq > truncSq)
 		return 0; /* Too far away */
 
-	double rij2 = rij*rij;
-	
-	double bpCoupling;
-	double bpForceDist;
-	
-	/* Apply right potential constant for AT-bonding and GC-bonding, 
-	 * if not AT or GC then zero */
-	
-	/* Lennard-Jones potential:
-	 * potential = bpCoupling * 5*(r0 / r)^12 - 6*(r0/r)^10 + 1. */
-	if ((p1->type==BASE_A && p2->type==BASE_T) 
-			|| (p1->type==BASE_T && p2->type==BASE_A)) {
-		bpCoupling = COUPLING_BP_AT;
-		bpForceDist = DISTANCE_r0_AT;
-		
-	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
-			|| (p1->type==BASE_C && p2->type==BASE_G)) {
-		bpCoupling = COUPLING_BP_GC;
-		bpForceDist = DISTANCE_r0_GC;
-	} else {
-		return 0; /* no L-J potential */
-	}
-	double truncLen2 = config.truncationLen * config.truncationLen;
-	double truncCorrection = calcVBasePair(bpCoupling, bpForceDist, truncLen2);
-	double bpPotential = calcVBasePair(bpCoupling, bpForceDist, rij2) - truncCorrection;
-
-	return bpPotential;
+	return calcVbasePair(bpi, rsq) - calcVbasePair(bpi, truncSq);
 }
 
-static double calcFbasePair(double coupling, double rij0, double rijVar)
+static double calcFbasePair(BasePairInfo bpi, double r)
 {
-	double rfrac = rij0 / rijVar;
-	double rfrac2 = rfrac * rfrac;
+	double rfrac2 = bpi.distance2 / (r * r);
 	double rfrac4 = rfrac2 * rfrac2;
 	double rfrac8 = rfrac4 * rfrac4;
 	double rfrac10 = rfrac8 * rfrac2;
 	double rfrac12 = rfrac10 * rfrac2;
 				
-	return coupling*60*( rfrac12 / rijVar - rfrac10 / rijVar );
+	return bpi.coupling * 60 * (rfrac12 - rfrac10) / r;
 }
 static void FbasePair(Particle *p1, Particle *p2)
 {
 	if (!ENABLE_BASE_PAIR)
 		return;
-	double bpCoupling;
-	double bpForceDist;
-	double truncLen = config.truncationLen;
-	Vec3 forceVec;
-	double force;
+
+	BasePairInfo bpi = getBasePairInfo(p1->type, p2->type);
+	if (bpi.coupling < 0)
+		return; /* Wrong pair */
 	
-	double rij = nearestImageDistance(&p1->pos, &p2->pos);
-	if (rij > truncLen)
+	Vec3 rVec = nearestImageVector(&p1->pos, &p2->pos);
+	double r = length(&rVec);
+	if (r > config.truncationLen)
 		return; /* Too far away */
 
-	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
-	
-	/* Apply right force constant for AT-bonding and GC-bonding, 
-	 * if not AT or GC then zero */
-	
-	/* Lennard-Jones potential:
-	 * potential = bpCoupling * 5*(r0 / r)^12 - 6*(r0/r)^10 + 1.
-	 * 
-	 * For the force we differentiate with respect to r, so we get
-	 * bpCoupling * 60*[ r0^10 / r^11 - r0^12/r^13 ] */
+	Vec3 direction;
+	scale(&rVec, 1/r, &direction);
 
-	if ((p1->type==BASE_A && p2->type==BASE_T) 
-			|| (p1->type==BASE_T && p2->type==BASE_A)) {
-		bpCoupling = COUPLING_BP_AT;
-		bpForceDist = DISTANCE_r0_AT;
-		force = calcFbasePair(bpCoupling, bpForceDist, rij);
-		
-	} else if ((p1->type==BASE_G && p2->type==BASE_C) 
-			|| (p1->type==BASE_C && p2->type==BASE_G)) {
-		bpCoupling = COUPLING_BP_GC;
-		bpForceDist = DISTANCE_r0_GC;
-		force = calcFbasePair(bpCoupling, bpForceDist, rij);
-	
-	/* Else, no force and return without modifying particles */
-	} else {
-		return; 
-	}
-
-	/* Scale the direction with the calculated force */
+	double force = calcFbasePair(bpi, r);
+	Vec3 forceVec;
 	scale(&direction, force, &forceVec);
 
 	/* Add force to particle objects */
@@ -873,10 +853,11 @@ static void strandForces(Strand *s) {
 							DIHEDRAL_A_S3_P_5S);
 		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1],
 							DIHEDRAL_S3_P_5S_A);
-		if (i >= 2)
-		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
-							DIHEDRAL_S3_P_5S3_P);
-		Fstack(&s->Bs[i], &s->Bs[i-2], 2);
+		if (i >= 2) {
+			Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1],
+					&s->Ps[i-2], DIHEDRAL_S3_P_5S3_P);
+			Fstack(&s->Bs[i], &s->Bs[i-2], 2);
+		}
 	}
 }
 
@@ -980,10 +961,11 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 							DIHEDRAL_A_S3_P_5S);
 		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1],
 							DIHEDRAL_S3_P_5S_A);
-		if (i >= 2)
-		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
-							DIHEDRAL_S3_P_5S3_P);
-		Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 2);
+		if (i >= 2) {
+			Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1],
+					&s->Ps[i-2], DIHEDRAL_S3_P_5S3_P);
+			Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 2);
+		}
 	}
 
 	pe->bond     = Vb;
