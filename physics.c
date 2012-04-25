@@ -283,11 +283,10 @@ typedef struct {
 static BasePairInfo getBasePairInfo(ParticleType t1, ParticleType t2)
 {
 	BasePairInfo bpi;
-	if ((t1 == BASE_A  &&  t2 == BASE_T)  
+	if ((t1 == BASE_A  &&  t2 == BASE_T) 
 			||  (t1 == BASE_T  &&  t2 == BASE_A)) {
 		bpi.coupling = COUPLING_BP_AT;
 		bpi.distance2 = SQUARE(DISTANCE_r0_AT);
-		
 	} else if ((t1 == BASE_C  &&  t2 == BASE_G)
 			||  (t1 == BASE_G  &&  t2 == BASE_C)) {
 		bpi.coupling = COUPLING_BP_GC;
@@ -853,11 +852,11 @@ static void strandForces(Strand *s) {
 							DIHEDRAL_A_S3_P_5S);
 		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1],
 							DIHEDRAL_S3_P_5S_A);
-		if (i >= 2) {
-			Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1],
-					&s->Ps[i-2], DIHEDRAL_S3_P_5S3_P);
-			Fstack(&s->Bs[i], &s->Bs[i-2], 2);
-		}
+
+		if (i < 2) continue;
+		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
+							DIHEDRAL_S3_P_5S3_P);
+		Fstack(&s->Bs[i], &s->Bs[i-2], 2);
 	}
 }
 
@@ -961,11 +960,11 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 							DIHEDRAL_A_S3_P_5S);
 		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1],
 							DIHEDRAL_S3_P_5S_A);
-		if (i >= 2) {
-			Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1],
-					&s->Ps[i-2], DIHEDRAL_S3_P_5S3_P);
-			Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 2);
-		}
+
+		if (i < 2) continue;
+		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
+							DIHEDRAL_S3_P_5S3_P);
+		Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 2);
 	}
 
 	pe->bond     = Vb;
