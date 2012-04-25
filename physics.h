@@ -92,9 +92,9 @@
 #define D_CUT	6.86e-10 	/* 6.86 Angstrom */
 
 /* Coulomb interaction between phosphates */
-#define CHARGE_ELECTRON		1.602e-19  /* 1.602 Coulomb */
-#define VACUUM_PERMITTIVITY	8.8541e-12 /* 8.854e-12 Farads/m */
-#define COUPLING_EPS_H2O	(78*VACUUM_PERMITTIVITY) /* 78 epsilon_0 */
+#define CHARGE_ELECTRON		1.602e-19  /* Coulomb */
+#define VACUUM_PERMITTIVITY	8.8541e-12 /* Farad/m */
+#define H2O_PERMETTIVITY	(80 * VACUUM_PERMITTIVITY)
 #define DEBYE_LENGTH 		13.603e-10 /* 13.603 Angstrom for 50mM = [Na+]*/
 
 /* Rope dynamics */
@@ -105,7 +105,6 @@
 #define ENERGY_FACTOR	      (1/1.602177e-19) /* Energy in electronvolt */
 #define BOLTZMANN_CONSTANT    1.38065e-23
 
-#define DIELECTRIC_CST_H20    80
 #define AVOGADRO              6.023e23 /* particles per mol */
 
 

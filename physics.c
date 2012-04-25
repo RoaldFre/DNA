@@ -8,13 +8,13 @@
 #include "spgrid.h"
 
 /* Disable interactions by commenting these defines */
-#define ENABLE_BOND		false
-#define ENABLE_ANGLE		false
-#define ENABLE_DIHEDRAL		false
-#define ENABLE_STACK		false
+#define ENABLE_BOND		true
+#define ENABLE_ANGLE		true
+#define ENABLE_DIHEDRAL		true
+#define ENABLE_STACK		true
 #define ENABLE_EXCLUSION	false //TODO SERIOUSLY FUCKED UP
-#define ENABLE_BASE_PAIR	false //TODO VIOLATES ENERGY CONSERVATION
-#define ENABLE_COULOMB		false //TODO VIOLATES ENERGY CONSERVATION
+#define ENABLE_BASE_PAIR	true
+#define ENABLE_COULOMB		true
 
 
 
@@ -514,105 +514,70 @@ static double Vexclusion(Particle *p1, Particle *p2)
 
 
 /* COULOMB */
-static double calcDebyeLength(void)
+static double calcInvDebyeLength(void)
 {
 	double T = config.thermostatTemp;
-	double saltCon = (double)(config.saltConcentration);
-	double elCharge = CHARGE_ELECTRON;
-	double lambdaBDenom, lambdaB, kInvSq, kInv, kDebye;
+	double saltCon = config.saltConcentration;
+	double lambdaBDenom, lambdaB;
 	
-	lambdaBDenom = 4 * M_PI * VACUUM_PERMITTIVITY * DIELECTRIC_CST_H20 *
-			BOLTZMANN_CONSTANT * T;
-	lambdaB = elCharge*elCharge / lambdaBDenom;
-	kInvSq = 8*M_PI*lambdaB*AVOGADRO*saltCon;
-	kInv = sqrt(kInvSq);
-	kDebye = 1/kInv;
-	
-	return kDebye;
+	lambdaBDenom = 4 * M_PI * H2O_PERMETTIVITY
+			* BOLTZMANN_CONSTANT * T;
+	lambdaB = CHARGE_ELECTRON * CHARGE_ELECTRON / lambdaBDenom;
+	return sqrt(8 * M_PI * lambdaB * AVOGADRO * saltCon);
 }
-static double calcVCoulomb(double distanceLength)
+static double calcVCoulomb(double r)
 {
-	double couplingConstant = CHARGE_ELECTRON*CHARGE_ELECTRON/
-				(4*M_PI*COUPLING_EPS_H2O);
-	double debyeLength = calcDebyeLength();
+	double couplingConstant = CHARGE_ELECTRON * CHARGE_ELECTRON
+				/ (4 * M_PI * H2O_PERMETTIVITY);
+	double exponentialPart = exp(-r * calcInvDebyeLength());
 	
-	double expArgument = - distanceLength/debyeLength;
-	double exponentialPart = exp(expArgument);
-	
-	double potentialQQ = couplingConstant * exponentialPart / distanceLength;
-	
-	return potentialQQ*exponentialPart;	
+	return couplingConstant * exponentialPart / r;
 }
 static double VCoulomb(Particle *p1, Particle *p2)
 {
 	if (!ENABLE_COULOMB)
 		return 0;
+
+	if (p1->type != PHOSPHATE  ||  p2->type != PHOSPHATE)
+		return 0; /* Only phosphates carry a charge */
+
+	double truncLength = config.truncationLen;
 	double rij = nearestImageDistance(&p1->pos, &p2->pos);
-	if (rij > config.truncationLen)
+
+	if (rij > truncLength)
 		return 0; /* Too far away */
 	
-	double truncLength = config.truncationLen;	
-	double phPotential;
-	double truncCorrection = 0;
-	
-	if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
-		/* calculate the correction by which the force should be lifted */
-		truncCorrection = calcVCoulomb(truncLength);
-		phPotential = calcVCoulomb(rij) - truncCorrection;
-	
-	/* Else, no Coulomb potential and return potential = 0 */
-	} else {
-		return 0; 
-	}
-	
-	return phPotential;
+	return calcVCoulomb(rij) - calcVCoulomb(truncLength);
 }
 
-
-static double calcFCoulomb(double distanceLength)
+static double calcFCoulomb(double r)
 {
-	double couplingConstant = CHARGE_ELECTRON*CHARGE_ELECTRON/
-					(4*M_PI*COUPLING_EPS_H2O);
-	double debyeLength = calcDebyeLength();
-		
-	double expArgument = - distanceLength/debyeLength;
-	double exponentialPart = exp(expArgument);
+	double couplingConstant = CHARGE_ELECTRON * CHARGE_ELECTRON
+				/ (4 * M_PI * H2O_PERMETTIVITY);
+	double k0 = calcInvDebyeLength();
+	double exponentialPart = exp(-r * k0);
 	
-	double forceQQ = couplingConstant* exponentialPart*
-				( 1/(distanceLength*distanceLength) 
-				+ 1/(debyeLength*distanceLength) );
-	
-	return forceQQ;
-	
+	return couplingConstant * exponentialPart * (k0 + 1/r) / r;
 }
 static void FCoulomb(Particle *p1, Particle *p2)
 {	
 	if (!ENABLE_COULOMB)
 		return;
+
+	if (p1->type != PHOSPHATE || p2->type != PHOSPHATE)
+		return; /* Only phosphates carry a charge */
+
 	double truncLen = config.truncationLen;
 	double rij = nearestImageDistance(&p2->pos, &p1->pos);
 	if (rij > truncLen)
 		return; /* Too far away */
 	
-	/* If phosphates, apply Coulomb interaction between them */
-
-	double force;
-
-	if (p1->type==PHOSPHATE && p2->type==PHOSPHATE) {
-		force = calcFCoulomb(rij);
-	} else {
-		return;
-	}
-	
 	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
 	Vec3 forceVec;
 	
-	/* Scale the direction with the calculated force */
-	scale(&direction, force, &forceVec);
-
-	/* Add force to particle objects */
-	add(&p1->F, &forceVec, &p1->F);
-	sub(&p2->F, &forceVec, &p2->F);
+	scale(&direction, calcFCoulomb(rij), &forceVec);
+	sub(&p1->F, &forceVec, &p1->F);
+	add(&p2->F, &forceVec, &p2->F);
 }
 
 #if 0
