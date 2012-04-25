@@ -372,12 +372,13 @@ static void FbasePair(Particle *p1, Particle *p2)
 	} else {
 		return; 
 	}
+
 	/* Scale the direction with the calculated force */
 	scale(&direction, force, &forceVec);
 
 	/* Add force to particle objects */
-	add(&p1->F, &forceVec, &p1->F);
-	sub(&p2->F, &forceVec, &p2->F);
+	sub(&p1->F, &forceVec, &p1->F);
+	add(&p2->F, &forceVec, &p2->F);
 }
 
 static void Fexclusion(Particle *p1, Particle *p2)
