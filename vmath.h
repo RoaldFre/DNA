@@ -16,19 +16,27 @@ typedef struct Vec3
 #define M_PI	3.14159265358979323846
 #endif
 
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define ABS(x) ((a) > 0 ? (a) : -(a))
+#define SQUARE(x) ((x) * (x))
+#define CUBE(x) ((x) * (x) * (x))
+
+
 /* In header for inlining */
 
-static __inline__ void printVector(const Vec3 *v);
-static __inline__ void fprintVector(FILE *stream, const Vec3 *v);
-static __inline__ void add(const Vec3 *a, const Vec3 *b, Vec3 *dest);
-static __inline__ void sub(const Vec3 *a, const Vec3 *b, Vec3 *dest);
-static __inline__ void scale(const Vec3 *v, double lambda, Vec3 *dest);
-static __inline__ void normalize(const Vec3 *v, Vec3 *w);
-static __inline__ double dot(const Vec3 *v, const Vec3 *w);
-static __inline__ double length2(const Vec3 *v);
-static __inline__ double length(const Vec3 *v);
-static __inline__ double distance2(const Vec3 *a, const Vec3 *b);
-static __inline__ double distance(const Vec3 *a, const Vec3 *b);
+static __inline__ bool isSaneNumber(double x)
+{
+	return !isnan(x) && !isinf(x);
+}
+
+static __inline__ bool isSaneVector(const Vec3 *v)
+{
+	return v != NULL
+			&& isSaneNumber(v->x)
+			&& isSaneNumber(v->y)
+			&& isSaneNumber(v->z);
+}
 
 static __inline__ void fprintVector(FILE *stream, const Vec3 *v)
 {
@@ -61,29 +69,10 @@ static __inline__ void sub(const Vec3 *a, const Vec3 *b, Vec3 *dest)
 
 static __inline__ void scale(const Vec3 *v, double lambda, Vec3 *dest)
 {
+	assert(isSaneNumber(lambda));
 	dest->x = lambda * v->x;
 	dest->y = lambda * v->y;
 	dest->z = lambda * v->z;
-}
-
-static __inline__ void normalize(const Vec3 *v, Vec3 *w)
-{
-	double l = length(v);
-	assert(l != 0);
-	scale(v, 1/l, w);
-}
-
-static __inline__ Vec3 cross(const Vec3 *v, const Vec3 *w)
-{
-	Vec3 x;
-	x.x = v->y * w->z  -  v->z * w->y;
-	x.y = v->z * w->x  -  v->x * w->z;
-	x.z = v->x * w->y  -  v->y * w->x;
-
-	assert(fabs(dot(v, &x) / length(v) / length(&x)) < 1e-10);
-	assert(fabs(dot(w, &x) / length(w) / length(&x)) < 1e-10);
-
-	return x;
 }
 
 static __inline__ double dot(const Vec3 *v, const Vec3 *w)
@@ -99,6 +88,26 @@ static __inline__ double length2(const Vec3 *v)
 static __inline__ double length(const Vec3 *v)
 {
 	return sqrt(length2(v));
+}
+
+static __inline__ Vec3 cross(const Vec3 *v, const Vec3 *w)
+{
+	Vec3 x;
+	x.x = v->y * w->z  -  v->z * w->y;
+	x.y = v->z * w->x  -  v->x * w->z;
+	x.z = v->x * w->y  -  v->y * w->x;
+
+	assert(fabs(dot(v, &x) / length(v) / length(&x)) < 1e-10);
+	assert(fabs(dot(w, &x) / length(w) / length(&x)) < 1e-10);
+
+	return x;
+}
+
+static __inline__ void normalize(const Vec3 *v, Vec3 *w)
+{
+	double l = length(v);
+	assert(l != 0);
+	scale(v, 1/l, w);
 }
 
 static __inline__ double distance2(const Vec3 *a, const Vec3 *b)
@@ -181,18 +190,5 @@ static __inline__ Vec3 randNormVec(double stdDev)
 
 /* Calculate shortest distance between two lines parametrized by a point
  * and a direction vector */
-
-static __inline__ bool isSaneNumber(double x)
-{
-	return !isnan(x) && !isinf(x);
-}
-
-static __inline__ bool isSaneVector(const Vec3 *v)
-{
-	return v != NULL
-			&& isSaneNumber(v->x)
-			&& isSaneNumber(v->y)
-			&& isSaneNumber(v->z);
-}
 
 #endif

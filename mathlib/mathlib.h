@@ -14,12 +14,6 @@
 #define GRAV_CONST 6.67384e-11
 #endif
 
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define ABS(x) ((a) > 0 ? (a) : -(a))
-#define SQUARE(x) ((x) * (x))
-#define CUBE(x) ((x) * (x) * (x))
-
 #include "quaternion.h"
 #include "vector.h"
 #include "matrix.h"
