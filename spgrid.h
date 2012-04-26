@@ -67,7 +67,14 @@ bool forEveryConnectionPairCheck(void);
  * account the periodic boundary conditions. 
  * Precondition: The given vectors are allowed to break out of the grid, 
  * but they must be within one 'world-size' of the grid (ie in [-L, 2L] if 
- * the grid is [0, L] in each dimension.)*/
+ * the grid is [0, L] in each dimension.)
+ *
+ * NOTE: We can't fully define these here with an __inline__ attribute in 
+ * the header because we need the dimensions of the world, which we hide in 
+ * the .c file.  This shouldn't be a performance hit if your compiler can 
+ * do Link Time Optimization (LTO), though.
+ * If not: you'd probably want to bring those variables into this header 
+ * and move the implementation from the .c file to here. */
 Vec3 nearestImageVector(Vec3 v1, Vec3 v2);
 Vec3 nearestImageUnitVector(Vec3 v1, Vec3 v2);
 double nearestImageDistance(Vec3 v1, Vec3 v2);
