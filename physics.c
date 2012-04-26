@@ -12,7 +12,7 @@
 #define ENABLE_ANGLE		true
 #define ENABLE_DIHEDRAL		true
 #define ENABLE_STACK		true //TODO check whether distances are correct
-#define ENABLE_EXCLUSION	true //TODO SERIOUSLY FUCKED UP
+#define ENABLE_EXCLUSION	false //TODO SERIOUSLY FUCKED UP
 #define ENABLE_BASE_PAIR	true
 #define ENABLE_COULOMB		true
 
@@ -612,10 +612,6 @@ static void calculateForces(void)
 	/* Particle-based forces */
 	forEveryPair(&pairForces);
 
-#if 0
-	/* Connection-based forces */
-	forEveryConnectionPair(&Frope);
-#endif
 }
 
 
@@ -644,7 +640,7 @@ double temperature(void)
 
 
 typedef struct PotentialEnergies {
-	double bond, angle, dihedral, stack, basePair, Coulomb, rope, exclusion;
+	double bond, angle, dihedral, stack, basePair, Coulomb, exclusion;
 } PotentialEnergies;
 static void pairPotentials(Particle *p1, Particle *p2, void *data)
 {
@@ -655,14 +651,7 @@ static void pairPotentials(Particle *p1, Particle *p2, void *data)
 	pe->exclusion += Vexclusion(p1, p2);
 }
 
-#if 0
-static void addRopePotentialEnergy(Particle *p1, Particle *p2,
-		Particle *p3, Particle *p4, void *data)
-{
-	double *V = (double*)data;
-	*V += Vrope(p1, p2, p3, p4);
-}
-#endif
+
 
 /* Add energy stats of given strand, in electronvolts. */
 static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
@@ -709,15 +698,12 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 /* Return energy stats of world, in electronvolts. */
 static PotentialEnergies calcPotentialEnergies(void) {
 	
-	PotentialEnergies pe = {0, 0, 0, 0, 0, 0, 0, 0};
+	PotentialEnergies pe = {0, 0, 0, 0, 0, 0, 0};
 	for (int s = 0; s < world.numStrands; s++)
 		addPotentialEnergies(&world.strands[s], &pe);
 	
 	forEveryPairD(&pairPotentials, &pe);
 
-#if 0
-	forEveryConnectionPairD(&addRopePotentialEnergy, &pe.rope);
-#endif
 	
 	/* Convert to eV */
 	pe.bond      *= ENERGY_FACTOR;
@@ -726,9 +712,6 @@ static PotentialEnergies calcPotentialEnergies(void) {
 	pe.stack     *= ENERGY_FACTOR;
 	pe.basePair  *= ENERGY_FACTOR;
 	pe.Coulomb   *= ENERGY_FACTOR;
-#if 0
-	pe.rope      *= ENERGY_FACTOR;
-#endif
 	pe.exclusion *= ENERGY_FACTOR;
 	
 	return pe;
@@ -970,10 +953,10 @@ void dumpStats()
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double T = temperature();
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.rope + pe.exclusion;
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.exclusion;
 
-	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Vr = %e, Ve = %e, T = %f\n",
-			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.rope, pe.exclusion, T);
+	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Ve = %e, T = %f\n",
+			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.exclusion, T);
 }
 
 
