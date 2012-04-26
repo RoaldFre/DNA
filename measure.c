@@ -7,32 +7,6 @@
 #include <fcntl.h>
 #include <stdio.h>
 
-void *measStart(void *initialData);
-bool measTick(void *state);
-void measStop(void *state);
-
-static void *samplerStart(Sampler *sampler);
-static bool samplerSample(Sampler *sampler, long i, void *state);
-static void samplerStop(Sampler *sampler, long n, void *state);
-
-Task measurementTask(Measurement *measurement)
-{
-	/* We must make a copy because given pointer is not guaranteed to 
-	 * remain valid. */
-	Measurement *measCpy = malloc(sizeof(*measCpy));
-	memcpy(measCpy, measurement, sizeof(*measCpy));
-
-	/* Make task */
-	Task task;
-	task.initialData = measCpy;
-	task.start = &measStart;
-	task.tick  = &measTick;
-	task.stop  = &measStop;
-
-	return task;
-}
-
-
 /* STUFF FOR REDIRECTING STDOUT. POSIX-ONLY. */
 
 typedef struct {
@@ -78,6 +52,36 @@ static void stopRedirection(StreamState *s)
 
 
 
+/* SOME WRAPPERS FOR SAMPLERS: */
+
+/* Returns the state pointer that gets returned from sampler.start(), or 
+ * NULL if sampler.start == NULL */
+static void *samplerStart(Sampler *sampler)
+{
+	if (sampler->start == NULL)
+		return NULL;
+	return sampler->start(sampler->samplerConf);
+}
+
+/* Sample and return sampler.sample(), or do nothing if sampler.sample == 
+ * NULL and return true. Note that this would be a pretty useless sampler 
+ * in the latter case... */
+static bool samplerSample(Sampler *sampler, SamplerData *sd, void *state)
+{
+	if (sampler->sample == NULL)
+		return true;
+	return sampler->sample(sd, state);
+}
+
+/* Stop the sampler, or do nothing if sampler.stop == NULL */
+static void samplerStop(Sampler *sampler, SamplerData *sd, void *state)
+{
+	if (sampler->stop == NULL)
+		return;
+	sampler->stop(sd, state);
+}
+
+
 
 /* MEASUREMENT TASK STUFF */
 
@@ -85,14 +89,14 @@ typedef struct measTaskState
 {
 	Sampler sampler;
 	void *samplerState;
-	long sample;
+	SamplerData samplerData;
 	enum {RELAXING, SAMPLING} measStatus;
 	MeasurementConf measConf;
 	double intervalTime; /* Time since last sample (or start). */
 	StreamState streamState; /* For stdout redirection */
 } MeasTaskState;
 
-void *measStart(void *initialData)
+static void *measStart(void *initialData)
 {
 	Measurement *meas = (Measurement*) initialData;
 	assert(meas != NULL);
@@ -107,11 +111,14 @@ void *measStart(void *initialData)
 	}
 
 	state->intervalTime = 0;
-	state->sample = 0;
 	state->sampler = meas->sampler; /* struct copy */
 	state->measConf = meas->measConf; /* struct copy */
 	state->measStatus = (meas->measConf.measureWait > 0 ?
 				RELAXING : SAMPLING);
+	state->samplerData.sample = 0;
+	state->samplerData.strBufSize = meas->measConf.renderStrBufSize;
+	state->samplerData.string = (meas->measConf.renderStrBufSize > 0 ?
+			malloc(meas->measConf.renderStrBufSize) : NULL);
 
 	switchStdout(&state->streamState); /* Switch stdout to file */
 	state->samplerState = samplerStart(sampler);
@@ -121,7 +128,7 @@ void *measStart(void *initialData)
 	return state;
 }
 
-bool measTick(void *state)
+static bool measTick(void *state)
 {
 	MeasTaskState *measState = (MeasTaskState*) state;
 	assert(measState != NULL);
@@ -158,18 +165,19 @@ bool measTick(void *state)
 
 		measState->intervalTime -= measInterval;
 		switchStdout(&measState->streamState); /* Switch stdout to file */
-		ret = samplerSample(sampler, measState->sample, 
+		ret = samplerSample(sampler, &measState->samplerData, 
 				measState->samplerState);
 		switchStdout(&measState->streamState); /* Switch stdout back */
-		measState->sample++;
+		measState->samplerData.sample++;
 		
 		if (measConf->measureSamples < 0)
 			break; /* Go on indefinitely, don't print anything */
 
-		printf("\rMeasured sample %ld/%ld", measState->sample,
-						    measConf->measureSamples);
+		printf("\rMeasured sample %ld/%ld", 
+				measState->samplerData.sample,
+				measConf->measureSamples);
 		fflush(stdout);
-		if (measState->sample >= measConf->measureSamples) {
+		if (measState->samplerData.sample >= measConf->measureSamples) {
 			printf("\nFinished sampling!\n");
 			ret = false; /* Stop running */
 		}
@@ -183,49 +191,37 @@ bool measTick(void *state)
 	return ret;
 }
 
-void measStop(void *state)
+static void measStop(void *state)
 {
 	MeasTaskState *measState = (MeasTaskState*) state;
 	Sampler *sampler = &measState->sampler;
 
 	switchStdout(&measState->streamState); /* Switch stdout to file */
-	samplerStop(sampler, measState->sample, measState->samplerState);
+	samplerStop(sampler, &measState->samplerData, measState->samplerState);
 	switchStdout(&measState->streamState); /* Switch stdout back */
 	stopRedirection(&measState->streamState);
 
+	free(measState->samplerData.string);
 	free(measState);
 }
 
 
 
-
-/* SOME WRAPPERS FOR SAMPLERS: */
-
-/* Returns the state pointer that gets returned from sampler.start(), or 
- * NULL if sampler.start == NULL */
-static void *samplerStart(Sampler *sampler)
+Task measurementTask(Measurement *measurement)
 {
-	if (sampler->start == NULL)
-		return NULL;
-	return sampler->start(sampler->samplerConf);
-}
+	/* We must make a copy because given pointer is not guaranteed to 
+	 * remain valid. */
+	Measurement *measCpy = malloc(sizeof(*measCpy));
+	memcpy(measCpy, measurement, sizeof(*measCpy));
 
-/* Sample and return sampler.sample(), or do nothing if sampler.sample == 
- * NULL and return true. Note that this would be a pretty useless sampler 
- * in the latter case... */
-static bool samplerSample(Sampler *sampler, long i, void *state)
-{
-	if (sampler->sample == NULL)
-		return true;
-	return sampler->sample(i, state);
-}
+	/* Make task */
+	Task task;
+	task.initialData = measCpy;
+	task.start = &measStart;
+	task.tick  = &measTick;
+	task.stop  = &measStop;
 
-/* Stop the sampler, or do nothing if sampler.stop == NULL */
-static void samplerStop(Sampler *sampler, long n, void *state)
-{
-	if (sampler->stop == NULL)
-		return;
-	sampler->stop(n, state);
+	return task;
 }
 
 

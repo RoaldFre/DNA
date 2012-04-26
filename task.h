@@ -26,5 +26,10 @@ bool taskTick(Task *task, void *state);
 /* Stop the task, or do nothing if task->stop == NULL */
 void taskStop(Task *task, void *state);
 
+/* Returns what is given to it */
+void *passPointer(void *ptr);
+/* Frees what is given to it */
+void freePointer(void *ptr);
+
 #endif
 

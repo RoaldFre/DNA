@@ -4,9 +4,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-void *seqStart(void *initialData);
-bool  seqTick(void *state);
-void  seqStop(void *state);
+
+void *passPointer(void *ptr)
+{
+	return ptr;
+}
+void freePointer(void *ptr)
+{
+	free(ptr);
+}
+
 
 
 /* Returns the state pointer that gets returned from task.start(), or NULL 
@@ -44,6 +51,56 @@ typedef struct seqData
 	Task *tasks;
 } SeqData;
 
+typedef struct seqState
+{
+	int num;
+	Task *tasks;
+	void **states; /* This will hold the states for all tasks */
+} SeqState;
+
+static void *seqStart(void *initialData)
+{
+	SeqData *seqData = (SeqData*) initialData;
+
+	SeqState *seqState = calloc(seqData->num, sizeof(*seqState));
+	seqState->tasks    = seqData->tasks;
+	seqState->states   = calloc(seqData->num, sizeof(seqState->states));
+	seqState->num      = seqData->num;
+
+	for (int i = 0; i < seqData->num; i++)
+		seqState->states[i] = taskStart(&seqData->tasks[i]);
+
+	/* We can free the initial data struct now */
+	free(seqData);
+	
+	return (void*) seqState;
+}
+
+static bool seqTick(void *state)
+{
+	SeqState *seqState = (SeqState*) state;
+
+	for (int i = 0; i < seqState->num; i++) {
+		Task *task = &seqState->tasks[i];
+		if (!taskTick(task, seqState->states[i]))
+			return false;
+	}
+	return true;
+}
+
+static void seqStop(void *state)
+{
+	SeqState *seqState = (SeqState*) state;
+
+	for (int i = 0; i < seqState->num; i++) {
+		Task *task = &seqState->tasks[i];
+		taskStop(task, seqState->states[i]);
+	}
+
+	/* We can free the state now */
+	free(seqState);
+}
+
 Task sequence(Task **tasks, int num)
 {
 	/* We must alloc on the heap because the memory must remain 
@@ -68,7 +125,7 @@ Task sequence(Task **tasks, int num)
 		memcpy(&seqData->tasks[j], tasks[i], sizeof(*seqData->tasks));
 		j++;
 	}
-	
+
 	Task seq;
 	seq.initialData = seqData;
 	seq.start = &seqStart;
@@ -76,55 +133,5 @@ Task sequence(Task **tasks, int num)
 	seq.stop  = &seqStop;
 
 	return seq;
-}
-
-typedef struct seqState
-{
-	int num;
-	Task *tasks;
-	void **states; /* This will hold the states for all tasks */
-} SeqState;
-
-void *seqStart(void *initialData)
-{
-	SeqData *seqData = (SeqData*) initialData;
-
-	SeqState *seqState = calloc(seqData->num, sizeof(*seqState));
-	seqState->tasks    = seqData->tasks;
-	seqState->states   = calloc(seqData->num, sizeof(seqState->states));
-	seqState->num      = seqData->num;
-
-	for (int i = 0; i < seqData->num; i++)
-		seqState->states[i] = taskStart(&seqData->tasks[i]);
-
-	/* We can free the initial data struct now */
-	free(seqData);
-	
-	return (void*) seqState;
-}
-
-bool seqTick(void *state)
-{
-	SeqState *seqState = (SeqState*) state;
-
-	for (int i = 0; i < seqState->num; i++) {
-		Task *task = &seqState->tasks[i];
-		if (!taskTick(task, seqState->states[i]))
-			return false;
-	}
-	return true;
-}
-
-void seqStop(void *state)
-{
-	SeqState *seqState = (SeqState*) state;
-
-	for (int i = 0; i < seqState->num; i++) {
-		Task *task = &seqState->tasks[i];
-		taskStop(task, seqState->states[i]);
-	}
-
-	/* We can free the state now */
-	free(seqState);
 }
 

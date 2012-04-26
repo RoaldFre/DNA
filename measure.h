@@ -5,8 +5,7 @@
 #include <stdlib.h>
 
 /* Configuration of a generic measurement */
-typedef struct measurementConf
-{
+typedef struct {
 	/* Total number of samples to accumulate. Negative to go on 
 	 * indefinitely. */
 	long measureSamples;
@@ -20,12 +19,29 @@ typedef struct measurementConf
 	/* Path to a file to dump the measurement in. NULL means dump to 
 	 * stdout. */
 	const char *measureFile;
+
+	/* Size of the string buffer to allocate for rendering the output 
+	 * of the sampler to screen. Set to 0 or less to disable rendering 
+	 * of the sampler output. */
+	int renderStrBufSize;
 } MeasurementConf;
+
+typedef struct {
+	/* The current sample, or the total number of samples performed if 
+	 * the sampling is stopped. */
+	long sample;
+
+	/* String that can be written to, and the result will be rendered 
+	 * if rendering is enabled. */
+	char *string;
+
+	/* Size of the string buffer above. */
+	int strBufSize;
+} SamplerData;
 
 /* A Sampler does the actual measurement by sampling the state of the 
  * world. */
-typedef struct sampler
-{
+typedef struct {
 	/* Data pointer that gets passed to the start() function below. Can 
 	 * be used to pass configuration data. Make sure that this gets 
 	 * allocated on the heap, so it will stay resident when we start 
@@ -40,16 +56,15 @@ typedef struct sampler
 	/* Called after sample step i (starts at 0). Gets passed the 
 	 * data pointer that start() returned. Returns false if the 
 	 * measurement has to be stopped, true if everything can continue. */
-	bool (*sample)(long i, void *state);
+	bool (*sample)(SamplerData *sd, void *state);
 
 	/* Called at the end of the measurement. The total number of 
 	 * samples that were actually measured is given in n.*/
-	void (*stop)  (long n, void *state);
+	void (*stop)  (SamplerData *sd, void *state);
 } Sampler;
 
 /* Everything we need to know about a measurement. */
-typedef struct measurement
-{
+typedef struct {
 	MeasurementConf measConf;
 	Sampler sampler;
 } Measurement;
