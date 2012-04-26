@@ -12,7 +12,7 @@
 #define ENABLE_ANGLE		true
 #define ENABLE_DIHEDRAL		true
 #define ENABLE_STACK		true //TODO check whether distances are correct
-#define ENABLE_EXCLUSION	true //TODO SERIOUSLY FUCKED UP
+#define ENABLE_EXCLUSION	false //TODO SERIOUSLY FUCKED UP
 #define ENABLE_BASE_PAIR	true
 #define ENABLE_COULOMB		true
 
@@ -540,258 +540,6 @@ static void FCoulomb(Particle *p1, Particle *p2)
 	p2->F = add(p2->F, forceVec);
 }
 
-#if 0
-/* Fuzzy rope dynamics */
-static void Frope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
-{
-	/* If the connections are on the same strand and on the same 
-	 * particle: ignore. For instance something like this:
-	 *
-	 *   p1 (P[i])
-	 *   |
-	 *   |
-	 * p2=p3 (S[i])
-	 *   |
-	 *   |
-	 *   p4 (P[i+1])
-	 *
-	 * or:
-	 *
-	 *   p1 (P[i])
-	 *   |
-	 *   |
-	 * p2=p4 (S[i]) --- p3 (B[i])
-	 *
-	 * etc...
-	 *
-	 * This gives a zero-distance because both connections meet at the 
-	 * shared particle!
-	 *
-	 * TODO Currently brute forcing combinations. Smarter would be to 
-	 * only test combinations that are possible (given the way how 
-	 * forEveryConnection loops over particles). [Does that simplify 
-	 * things?]
-	 * */
-	if (p1 == p3 || p1 == p4 || p2 == p3 || p2 == p4)
-		return;
-
-	Vec3 *pos1 = &p1->pos;
-	Vec3 *pos2 = &p3->pos;
-	double truncLen = config.truncationLen;
-	
-	/* break if all points are further apart than 2*truncation length */
-	double posDiff1 = nearestImageDistance(&p1->pos, &p3->pos);
-	double posDiff2 = nearestImageDistance(&p1->pos, &p4->pos);
-	double posDiff3 = nearestImageDistance(&p2->pos, &p3->pos);
-	double posDiff4 = nearestImageDistance(&p2->pos, &p4->pos);
-	
-	if ( (posDiff1> (2*truncLen)) && (posDiff2 > (2*truncLen))
-	&& (posDiff3 > (2*truncLen)) && (posDiff4 > (2*truncLen)) )
-		return;
-	
-	Vec3 dir1 = nearestImageVector(&p1->pos, &p2->pos);
-	Vec3 dir2 = nearestImageVector(&p3->pos, &p4->pos);
-	
-	/* calculate shortest distance between the two lines */
-	double dist = nearestLineDistance(pos1, pos2, &dir1, &dir2);
-	
-	/* break if further apart than truncation length */
-	if (dist > truncLen)
-		return;
-
-	//DEBUG XXX TODO
-	if (dist < 1e-30)
-		return;
-		
-	/* calculate the fuzzy rope force size */
-	double coupling = ROPE_COUPLING;
-	Vec3 forceVec;
-	Vec3 direction;
-	double rInv = ROPE_DIST / dist;
-	double rInv2 = rInv * rInv;
-	//double rInv4 = rInv2 * rInv2;
-	//double rInv6 = rInv4 * rInv2;
-	double force = coupling * rInv2;
-
-
-	/* calculate and normalize the direction in which the force works */
-	direction = cross(&dir1, &dir2);
-	normalize(&direction, &direction);
-	
-	/* scale direction with calculated force */
-	scale(&direction, force, &forceVec);
-
-#if 0
-	if (force > 1e-12)
-		printf("%e\t%e\n",dist, force);
-#endif
-
-	assert(!(isnan(forceVec.x) || isnan(forceVec.y) || isnan(forceVec.z)));
-
-	force = -force; //TODO this is correct sign?
-
-	/* add force to particle objects (add for 1,2; sub for 3,4) */
-	//TODO is this properly distributed?
-	add(&p1->F, &forceVec, &p1->F);
-	add(&p2->F, &forceVec, &p2->F);
-	sub(&p3->F, &forceVec, &p3->F);
-	sub(&p4->F, &forceVec, &p4->F);
-
-	assert(isSaneVector(&p1->F));
-	assert(isSaneVector(&p2->F));
-	assert(isSaneVector(&p3->F));
-	assert(isSaneVector(&p4->F));
-}
-
-static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
-{
-	double posDiff1 = nearestImageDistance(&p1->pos, &p3->pos);
-	double posDiff2 = nearestImageDistance(&p1->pos, &p4->pos);
-	double posDiff3 = nearestImageDistance(&p2->pos, &p3->pos);
-	double posDiff4 = nearestImageDistance(&p2->pos, &p4->pos);
-	double truncLen = config.truncationLen;
-	
-	if ( (posDiff1> (2*truncLen)) && (posDiff2 > (2*truncLen))
-	&& (posDiff3 > (2*truncLen)) && (posDiff4 > (2*truncLen)) )
-		return 0;
-		
-	Vec3 *pos1 = &p1->pos;
-	Vec3 *pos2 = &p3->pos;
-	
-	Vec3 dir1 = nearestImageVector(&p1->pos, &p2->pos);
-	Vec3 dir2 = nearestImageVector(&p3->pos, &p4->pos);
-	
-	/* calculate shortest distance between the two (infinite) lines */
-	double dist = nearestLineDistance(pos1, pos2, &dir1, &dir2);
-	
-	/* break if further apart than truncation length */
-	if (dist > truncLen)
-		return 0;
-		
-	/* calculate the fuzzy rope force size */
-	double coupling = ROPE_COUPLING;
-	double rInv = ROPE_DIST / dist;
-	double rInv2 = rInv * rInv;
-	double rInv3 = rInv2 * rInv;
-	// double rInv4 = rInv2 * rInv2;
-	// double rInv7 = rInv4 * rInv2 * rInv;
-
-	double potential = 2 * coupling * rInv3;
-	
-	/* correct the potential to be zero at truncation length */
-	double rInvTr = 1/truncLen;
-	double rInvTr2 = rInvTr * rInvTr;
-	double rInvTr3 = rInvTr2 * rInvTr;
-	//double rInvTr4 = rInvTr2 * rInvTr2;
-	//double rInvTr7 = rInvTr4 * rInvTr2 * rInvTr;
-	double potentialCorr = 2 * coupling * rInvTr3;
-	potential -= potentialCorr;
-	
-	return potential;
-}
-
-double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2)
-{
-	Vec3 rVec;
-	double a11, a12,a22;
-	double b1,b2;
-	double D0;
-	
-	/* ugly hack */
-	double eps = 0.00001e-40; /* Angstrom^4 */
-	
-	rVec = nearestImageVector(pos1, pos2);
-		
-	a11 = dot(dist1, dist1);
-	a22 = dot(dist2, dist2);
-	a12 = dot(dist1, dist2);
-	b1 = dot(dist1, &rVec);
-	b2 = dot(dist2, &rVec);
-	
-	D0 = a11 * a22 - a12 * a12;
-
-#if 0
-	//DEBUG
-	printVector(dist1);
-	printVector(dist2);
-	printf("%e\n",D0);
-#endif
-
-	double sc, sN, sD = D0;
-	double tc, tN, tD = D0;
-	
-	/* check endpoints */
-	
-	if (D0 < eps) {
-		sN = 0.0;
-		sD = 1.0;
-		tN = b2;
-		tD = a22;
-	} else {
-		sN = (a12 * b2 - a22 * b1);
-		tN = (a11 * b2 - a12 * b1);
-		
-		if (sN < 0.0) {
-			sN = 0.0;
-			tN = b2;
-			tD = a22;
-		} else if (sN > sD) {
-			sN = sD;
-			tN = b2 + a12;
-			tD = a22;
-		}
-	}
-	
-	if (tN < 0.0) {
-		tN = 0.0;
- 
-		if (-b1 < 0.0)
-			sN = 0.0;
-		else if (-b1 > a11)
-			sN = sD;
-		else {
-			sN = -b1;
-			sD = a11;
-		}
-	}
-	
-	else if (tN > tD) {
-		tN = tD;
-		
-		if ((-b1 + a12) < 0.0)
-			sN = 0;
-		else if ((-b1 + a12) > a11)
-			sN = sD;
-		else {
-			sN = (-b1 + a12);
-			sD = a11;
-		}
-	}
-	
-	if (fabs(sN) < eps)
-		sc = 0.0;
-	else
-		sc = sN / sD;
-	
-	if (fabs(tN) < eps)
-		tc = 0.0;
-	else
-		tc = tN / tD;
-		
-	Vec3 distVec1, distVec2, distVec3, distVecFinal;
-	
-	/* calculate distVecFinal = rVec + sc*dist1 - tc*dist2 */
-	
-	scale(dist1, sc, &distVec1);
-	scale(dist2, tc, &distVec2);
-	sub(&distVec1, &distVec2, &distVec3);
-	add(&distVec3, &rVec, &distVecFinal);
-	
-	 
-	return length(&distVecFinal);
-	
-}
-#endif
 
 
 /* ===== FORCE FUNCTIONS ===== */
@@ -864,10 +612,6 @@ static void calculateForces(void)
 	/* Particle-based forces */
 	forEveryPair(&pairForces);
 
-#if 0
-	/* Connection-based forces */
-	forEveryConnectionPair(&Frope);
-#endif
 }
 
 
@@ -896,7 +640,7 @@ double temperature(void)
 
 
 typedef struct PotentialEnergies {
-	double bond, angle, dihedral, stack, basePair, Coulomb, rope, exclusion;
+	double bond, angle, dihedral, stack, basePair, Coulomb, exclusion;
 } PotentialEnergies;
 static void pairPotentials(Particle *p1, Particle *p2, void *data)
 {
@@ -907,14 +651,7 @@ static void pairPotentials(Particle *p1, Particle *p2, void *data)
 	pe->exclusion += Vexclusion(p1, p2);
 }
 
-#if 0
-static void addRopePotentialEnergy(Particle *p1, Particle *p2,
-		Particle *p3, Particle *p4, void *data)
-{
-	double *V = (double*)data;
-	*V += Vrope(p1, p2, p3, p4);
-}
-#endif
+
 
 /* Add energy stats of given strand, in electronvolts. */
 static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
@@ -961,15 +698,12 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 /* Return energy stats of world, in electronvolts. */
 static PotentialEnergies calcPotentialEnergies(void) {
 	
-	PotentialEnergies pe = {0, 0, 0, 0, 0, 0, 0, 0};
+	PotentialEnergies pe = {0, 0, 0, 0, 0, 0, 0};
 	for (int s = 0; s < world.numStrands; s++)
 		addPotentialEnergies(&world.strands[s], &pe);
 	
 	forEveryPairD(&pairPotentials, &pe);
 
-#if 0
-	forEveryConnectionPairD(&addRopePotentialEnergy, &pe.rope);
-#endif
 	
 	/* Convert to eV */
 	pe.bond      *= ENERGY_FACTOR;
@@ -978,9 +712,6 @@ static PotentialEnergies calcPotentialEnergies(void) {
 	pe.stack     *= ENERGY_FACTOR;
 	pe.basePair  *= ENERGY_FACTOR;
 	pe.Coulomb   *= ENERGY_FACTOR;
-#if 0
-	pe.rope      *= ENERGY_FACTOR;
-#endif
 	pe.exclusion *= ENERGY_FACTOR;
 	
 	return pe;
@@ -1222,10 +953,10 @@ void dumpStats()
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
 	double T = temperature();
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.rope + pe.exclusion;
+	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.exclusion;
 
-	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Vr = %e, Ve = %e, T = %f\n",
-			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.rope, pe.exclusion, T);
+	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Ve = %e, T = %f\n",
+			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.exclusion, T);
 }
 
 
