@@ -291,6 +291,11 @@ static BasePairInfo getBasePairInfo(ParticleType t1, ParticleType t2)
 	}
 	return bpi;
 }
+static bool isBondedBasePair(ParticleType t1, ParticleType t2)
+{
+	BasePairInfo bpi = getBasePairInfo(t1, t2);
+	return bpi.coupling > 0;
+}
 static double calcVbasePair(BasePairInfo bpi, double rsquared)
 {
 	double rfrac2 = bpi.distance2 / rsquared;
@@ -504,13 +509,17 @@ static double calcVCoulomb(double r)
 	
 	return couplingConstant * exponentialPart / r;
 }
+static bool isChargedPair(ParticleType t1, ParticleType t2)
+{
+	return t1 == PHOSPHATE  &&  t2 == PHOSPHATE;
+}
 static double VCoulomb(Particle *p1, Particle *p2)
 {
 	if (!ENABLE_COULOMB)
 		return 0;
 
-	if (p1->type != PHOSPHATE  ||  p2->type != PHOSPHATE)
-		return 0; /* Only phosphates carry a charge */
+	if (!isChargedPair(p1->type, p2->type))
+		return 0;
 
 	double truncLength = config.truncationLen;
 	double rij = nearestImageDistance(p1->pos, p2->pos);
@@ -535,8 +544,8 @@ static void FCoulomb(Particle *p1, Particle *p2)
 	if (!ENABLE_COULOMB)
 		return;
 
-	if (p1->type != PHOSPHATE || p2->type != PHOSPHATE)
-		return; /* Only phosphates carry a charge */
+	if (!isChargedPair(p1->type, p2->type))
+		return;
 
 	double truncLen = config.truncationLen;
 	double rij = nearestImageDistance(p2->pos, p1->pos);
@@ -854,9 +863,13 @@ static void strandForces(Strand *s) {
 
 static void pairForces(Particle *p1, Particle *p2)
 {
-	FbasePair(p1, p2);
-	FCoulomb(p1, p2);
-	Fexclusion(p1, p2);
+	/* Nonbonded pair interactions are mutually exclusive. See Knotts. */
+	if (isBondedBasePair(p1->type, p2->type))
+		FbasePair(p1, p2);
+	else if (isChargedPair(p1->type, p2->type))
+		FCoulomb(p1, p2);
+	else
+		Fexclusion(p1, p2);
 }
 
 static void calculateForces(void)
