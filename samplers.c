@@ -117,8 +117,8 @@ static bool particlesCOMSample(long i, void *data)
 	UNUSED(i);
 	ParticlesCOMSamplerConf *pcsc = (ParticlesCOMSamplerConf*) data;
 	Vec3 COM = getCOM(pcsc->ps, pcsc->num);
-	scale(&COM, 1 / LENGTH_FACTOR, &COM);
-	printVector(&COM);
+	COM = scale(COM, 1 / LENGTH_FACTOR);
+	printVector(COM);
 	printf("\n");
 	return true;
 }
@@ -173,10 +173,9 @@ static bool particlesSquaredDisplacementSample(long i, void *state)
 	SquaredDisplacementConf *sdc = (SquaredDisplacementConf*) state;
 
 	Vec3 COM = getCOM(sdc->ps, sdc->num);
-	Vec3 displacement;
-	sub(&COM, &sdc->initial, &displacement);
-	double squaredDisplacement = length2(&displacement)
-					/ (LENGTH_FACTOR * LENGTH_FACTOR);
+	Vec3 displacement = sub(COM, sdc->initial);
+	double squaredDisplacement = length2(displacement)
+					/ (SQUARE(LENGTH_FACTOR));
 	printf("%f\n", squaredDisplacement);
 	return true;
 }

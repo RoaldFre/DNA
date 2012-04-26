@@ -73,7 +73,7 @@ void freeGrid()
 }
 
 void addToGrid(Particle *p) {
-	periodic(nb * boxSize, &p->pos, &p->pos);
+	p->pos = periodic(nb * boxSize, p->pos);
 	Box *box = boxFromParticle(p);
 	addToBox(p, box);
 	gridNumParticles++;
@@ -99,7 +99,7 @@ void reboxParticles(void)
 					  swap out particles! */
 		for (int j = 0; j < n; j++) {
 			/* Force periodic boundary condition. */
-			periodic(gridSize, &p->pos, &p->pos);
+			p->pos = periodic(gridSize, p->pos);
 
 			/* Since p might be removed from the current box, 
 			 * we keep a pointer to its successor. */
@@ -391,20 +391,15 @@ Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2)
 
 double nearestImageDistance(Vec3 *v1, Vec3 *v2)
 {
-	Vec3 rijVec = nearestImageVector(v1, v2);
-	return length(&rijVec);
+	return length(nearestImageVector(v1, v2));
 }
 double nearestImageDistance2(Vec3 *v1, Vec3 *v2)
 {
-	Vec3 rijVec = nearestImageVector(v1, v2);
-	return length2(&rijVec);
+	return length2(nearestImageVector(v1, v2));
 }
-
 Vec3 nearestImageUnitVector(Vec3 *v1, Vec3 *v2)
 {
-	Vec3 rijVec = nearestImageVector(v1, v2);
-	normalize(&rijVec, &rijVec);
-	return rijVec;
+	return normalize(nearestImageVector(v1, v2));
 }
 
 
@@ -576,7 +571,7 @@ bool spgridSanityCheck(bool checkCorrectBox, bool checkConnections)
 					grid)/sizeof(*correctBox));
 				fprintf(stderr, "numBox per dim: %d\n", nb);
 				fprintf(stderr, "Pos:\t");
-				fprintVector(stderr, &p->pos);
+				fprintVector(stderr, p->pos);
 				fprintf(stderr, "\n");
 				fprintf(stderr, "Actual box coords:  %d %d %d\n",
 						i/nb/nb, (i/nb)%nb, i%nb);

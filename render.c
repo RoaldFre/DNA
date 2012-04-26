@@ -50,29 +50,190 @@ static char fps_string[FPS_STRING_CHARS];
 static Quaternion cam_orientation;
 static Vec3 cam_position;
 
+
+
+static void drawPoint(Vec3 p)
+{
+	glVertex3f(p.x, p.y, p.z);
+}
+
+static void drawLine(Vec3 p1, Vec3 p2)
+{
+	drawPoint(p1);
+	drawPoint(p2);
+}
+
+static void drawCilinder(Vec3 p1, Vec3 p2, int faces, double radius)
+{
+	Vec3 d = normalize(sub(p2, p1));
+	Vec3 e1 = {1, 0, 0};
+	Vec3 e2 = {0, 1, 0};
+	/* Make orthogonal basis for cilinders */
+	Vec3 b1, b2;
+	if (dot(e1, d) < 0.8)
+		b1 = cross(e1, d);
+	else
+		b1 = cross(e2, d);
+	b1 = normalize(b1);
+	b2 = cross(b1, d);
+
+	assert(fabs(length(b1) - 1) < 1e-13);
+	assert(fabs(length(b2) - 1) < 1e-13);
+
+	b1 = scale(b1, radius);
+	b2 = scale(b2, radius);
+
+	glBegin(GL_QUAD_STRIP);
+		drawLine(add(p1, b1), add(p2, b1));
+		for (int i = 1; i <= faces; i++) {
+			double theta = 2*M_PI * i / faces;
+			Vec3 u = scale(b1, cos(theta));
+			Vec3 v = scale(b2, sin(theta));
+			Vec3 dir = add(u, v);
+			drawLine(add(p1, dir), add(p2, dir));
+		}
+	glEnd();
+}
+
+static void renderParticle(Particle *p, RenderConf *rc)
+{
+	glPushMatrix();
+		glTranslatef(p->pos.x, p->pos.y, p->pos.z);
+		glScalef(rc->radius, rc->radius, rc->radius);
+		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, sphereIndex);
+	glPopMatrix();
+}
+static void renderParticles(int num, Particle *ps, RenderConf *rc)
+{
+	for (int i = 0; i < num; i++)
+		renderParticle(&ps[i], rc);
+}
+static void renderBase(Particle *p, RenderConf *rc)
+{
+	const GLfloat *col;
+	switch(p->type) {
+		case BASE_A: col = A_col; break;
+		case BASE_T: col = T_col; break;
+		case BASE_C: col = C_col; break;
+		case BASE_G: col = G_col; break;
+		default: /* not a base */
+		     assert(false);
+		     col = gray;
+	}
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, col);
+	renderParticle(p, rc);
+}
+static void renderConnection(Particle *p1, Particle *p2, RenderConf *rc)
+{
+	if (distance(p1->pos, p2->pos) > world.worldSize / 2)
+		return; /* To avoid periodic boundary clutter */
+	drawCilinder(p1->pos, p2->pos, CILINDER_FACES,
+			rc->radius / CILINDER_RADIUS_DIVISOR);
+}
+
 static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numInd,
-		GLushort **indices);
-static void drawLine(Vec3 *p1, Vec3 *p2);
-static void drawCilinder(Vec3 *p1, Vec3 *p2, int faces, double radius);
-static void renderParticles(int num, Particle *ps, RenderConf *rc);
-static void renderBase(Particle *p, RenderConf *rc);
-static void renderStrand(Strand *s, RenderConf *rc);
-static void renderConnection(Particle *p1, Particle *p2, RenderConf *rc);
-static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear, 
-		GLfloat zFar);
+		GLushort **indices)
+{
+	int i, j, k;
+	double x, y, z;
+	double r;
+	int stacks;
+	Vertex3 *vert;
+	GLushort *ind;
 
-static void renderSet3D(void);
-static void renderSet2D(void);
-static void initRender(void);
-static void calcFps(void);
-void renderIfWeMust(RenderConf *rc);
-static void render(RenderConf *rc);
+	stacks = slices;
+	slices *= 2;
 
-void *renderTaskStart(void *initialData);
-bool renderTaskTick(void *state);
-void renderTaskStop(void *state);
+	/* Plus two for the poles */
+	*numVert = (stacks - 1) * slices + 2;
+	*vertices = calloc(*numVert, sizeof(Vertex3));
+	vert = *vertices;
 
-static void calcFps()
+	/* All but the top and bottom stack */
+	for (i = 1; i < stacks; i++)
+	{
+		double phi = M_PI * i / (double) stacks - 2*M_PI;
+		
+		z = cos(phi);
+		r = sqrt(1 - z*z);
+
+		for (j = 0; j < slices; j++)
+		{
+			double theta = 2*M_PI*j/(double) slices;
+			x = r * sin(theta);
+			y = r * cos(theta);
+
+			vert[(i-1) * slices + j + 1].x = x;
+			vert[(i-1) * slices + j + 1].y = y;
+			vert[(i-1) * slices + j + 1].z = z;
+		}
+	}
+
+	/* Top and bottom */
+	vert[0].x = 0;
+	vert[0].y = 0;
+	vert[0].z = 1;
+
+	vert[*numVert-1].x = 0;
+	vert[*numVert-1].y = 0;
+	vert[*numVert-1].z = -1;
+
+	*numInd = (stacks - 1) * slices * 6;
+	*indices = calloc(*numInd, sizeof(GLushort));
+	ind = *indices;
+
+	k = 0;
+
+	for (i = 1; i < slices; i++)
+	{
+		ind[k++] = 0;
+		ind[k++] = i;
+		ind[k++] = i+1;
+	}
+	ind[k++] = 0;
+	ind[k++] = 1;
+	ind[k++] = slices;
+	
+	for (i = 0; i < slices - 1; i++)
+	{
+		ind[k++] = *numVert - 1;
+		ind[k++] = (*numVert - 1 - slices) + i;
+		ind[k++] = (*numVert - 1 - slices) + i + 1;
+	}
+	ind[k++] = *numVert - 1;
+	ind[k++] = *numVert - 1 - 1;
+	ind[k++] = *numVert - 1 - slices + 0;
+
+	for (i = 1; i < stacks - 1; i++)
+	{
+		int base = 1 + (i - 1) * slices;
+
+		for (j = 0; j < slices - 1; j++)
+		{
+			ind[k++] = base + j;
+			ind[k++] = base + slices + j;
+			ind[k++] = base + slices + j + 1;
+
+			ind[k++] = base + j;
+			ind[k++] = base + j + 1;
+			ind[k++] = base + slices + j + 1;
+		}
+
+		ind[k++] = base;
+		ind[k++] = base + slices - 1;
+		ind[k++] = base + slices;
+
+		ind[k++] = base + slices - 1;
+		ind[k++] = base + slices;
+		ind[k++] = base + slices + slices - 1;
+	}
+
+	return;
+}
+
+
+
+static void calcFps(void)
 {
 	static long tock = 0;
 	static int frames = 0;
@@ -190,25 +351,6 @@ static bool handleEvents(void)
 	return true;
 }
 
-
-/* Render the image if we must, based on the requested framerate and the 
- * last invocation of this function. */
-void renderIfWeMust(RenderConf *rc)
-{
-	static long tock = -1000; /* always draw first frame immediately */
-
-	if (rc->framerate <= 0) {
-		render(rc);
-		return;
-	}
-
-	long tick = SDL_GetTicks(); /* mili seconds */
-
-	if (tick - tock > 1000 / rc->framerate) {
-		tock = tick;
-		render(rc);
-	}
-}
 
 static void gluPerspective(GLfloat fovy, GLfloat aspect, GLfloat zNear, 
 		GLfloat zFar)
@@ -340,9 +482,8 @@ static void renderStrand(Strand *s, RenderConf *rc) {
 		glColor3f(0.8, 0.0, 0.0);
 		glBegin(GL_LINES);
 			for(int i = 0; i < 3 * s->numMonomers; i++) {
-				Vec3 tmp;
-				add(&s->all[i].pos, &s->all[i].F, &tmp);
-				drawLine(&s->all[i].pos, &tmp);
+				Particle *p = &s->all[i];
+				drawLine(p->pos, add(p->pos, p->F));
 			}
 		glEnd();
 	}
@@ -428,201 +569,35 @@ static void render(RenderConf *rc)
 	calcFps();
 }
 
-static void drawPoint(Vec3 *p)
+/* Render the image if we must, based on the requested framerate and the 
+ * last invocation of this function. */
+static void renderIfWeMust(RenderConf *rc)
 {
-	glVertex3f(p->x, p->y, p->z);
-}
+	static long tock = -1000; /* always draw first frame immediately */
 
-static void drawLine(Vec3 *p1, Vec3 *p2)
-{
-	drawPoint(p1);
-	drawPoint(p2);
-}
-
-static void drawCilinder(Vec3 *p1, Vec3 *p2, int faces, double radius)
-{
-	Vec3 d, dnorm;
-	sub(p2, p1, &d);
-	normalize(&d, &dnorm);
-	Vec3 e1 = {1, 0, 0};
-	Vec3 e2 = {0, 1, 0};
-	/* Make orthogonal basis for cilinders */
-	Vec3 b1, b2;
-	if (dot(&e1, &dnorm) < 0.8)
-		b1 = cross(&e1, &dnorm);
-	else
-		b1 = cross(&e2, &dnorm);
-	normalize(&b1, &b1);
-	b2 = cross(&b1, &dnorm);
-
-	assert(fabs(length(&b1) - 1) < 1e-13);
-	assert(fabs(length(&b2) - 1) < 1e-13);
-
-	scale(&b1, radius, &b1);
-	scale(&b2, radius, &b2);
-
-	glBegin(GL_QUAD_STRIP);
-		Vec3 l, r, u, v, dir;
-		add(p1, &b1, &l);
-		add(p2, &b1, &r);
-		drawLine(&l, &r);
-		for (int i = 1; i <= faces; i++) {
-			double theta = 2*M_PI * i / faces;
-			scale(&b1, cos(theta), &u);
-			scale(&b2, sin(theta), &v);
-			add(&u, &v, &dir);
-			add(p1, &dir, &l);
-			add(p2, &dir, &r);
-			drawLine(&l, &r);
-		}
-	glEnd();
-}
-
-static void renderParticle(Particle *p, RenderConf *rc)
-{
-	glPushMatrix();
-		glTranslatef(p->pos.x, p->pos.y, p->pos.z);
-		glScalef(rc->radius, rc->radius, rc->radius);
-		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, sphereIndex);
-	glPopMatrix();
-}
-static void renderParticles(int num, Particle *ps, RenderConf *rc)
-{
-	for (int i = 0; i < num; i++)
-		renderParticle(&ps[i], rc);
-}
-static void renderBase(Particle *p, RenderConf *rc)
-{
-	const GLfloat *col;
-	switch(p->type) {
-		case BASE_A: col = A_col; break;
-		case BASE_T: col = T_col; break;
-		case BASE_C: col = C_col; break;
-		case BASE_G: col = G_col; break;
-		default: /* not a base */
-		     assert(false);
-		     col = gray;
-	}
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, col);
-	renderParticle(p, rc);
-}
-static void renderConnection(Particle *p1, Particle *p2, RenderConf *rc)
-{
-	if (distance(&p1->pos, &p2->pos) > world.worldSize / 2)
-		return; /* To avoid periodic boundary clutter */
-	drawCilinder(&p1->pos, &p2->pos, CILINDER_FACES,
-			rc->radius / CILINDER_RADIUS_DIVISOR);
-}
-
-static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numInd,
-		GLushort **indices)
-{
-	int i, j, k;
-	double x, y, z;
-	double r;
-	int stacks;
-	Vertex3 *vert;
-	GLushort *ind;
-
-	stacks = slices;
-	slices *= 2;
-
-	/* Plus two for the poles */
-	*numVert = (stacks - 1) * slices + 2;
-	*vertices = calloc(*numVert, sizeof(Vertex3));
-	vert = *vertices;
-
-	/* All but the top and bottom stack */
-	for (i = 1; i < stacks; i++)
-	{
-		double phi = M_PI * i / (double) stacks - 2*M_PI;
-		
-		z = cos(phi);
-		r = sqrt(1 - z*z);
-
-		for (j = 0; j < slices; j++)
-		{
-			double theta = 2*M_PI*j/(double) slices;
-			x = r * sin(theta);
-			y = r * cos(theta);
-
-			vert[(i-1) * slices + j + 1].x = x;
-			vert[(i-1) * slices + j + 1].y = y;
-			vert[(i-1) * slices + j + 1].z = z;
-		}
+	if (rc->framerate <= 0) {
+		render(rc);
+		return;
 	}
 
-	/* Top and bottom */
-	vert[0].x = 0;
-	vert[0].y = 0;
-	vert[0].z = 1;
+	long tick = SDL_GetTicks(); /* mili seconds */
 
-	vert[*numVert-1].x = 0;
-	vert[*numVert-1].y = 0;
-	vert[*numVert-1].z = -1;
-
-	*numInd = (stacks - 1) * slices * 6;
-	*indices = calloc(*numInd, sizeof(GLushort));
-	ind = *indices;
-
-	k = 0;
-
-	for (i = 1; i < slices; i++)
-	{
-		ind[k++] = 0;
-		ind[k++] = i;
-		ind[k++] = i+1;
+	if (tick - tock > 1000 / rc->framerate) {
+		tock = tick;
+		render(rc);
 	}
-	ind[k++] = 0;
-	ind[k++] = 1;
-	ind[k++] = slices;
-	
-	for (i = 0; i < slices - 1; i++)
-	{
-		ind[k++] = *numVert - 1;
-		ind[k++] = (*numVert - 1 - slices) + i;
-		ind[k++] = (*numVert - 1 - slices) + i + 1;
-	}
-	ind[k++] = *numVert - 1;
-	ind[k++] = *numVert - 1 - 1;
-	ind[k++] = *numVert - 1 - slices + 0;
-
-	for (i = 1; i < stacks - 1; i++)
-	{
-		int base = 1 + (i - 1) * slices;
-
-		for (j = 0; j < slices - 1; j++)
-		{
-			ind[k++] = base + j;
-			ind[k++] = base + slices + j;
-			ind[k++] = base + slices + j + 1;
-
-			ind[k++] = base + j;
-			ind[k++] = base + j + 1;
-			ind[k++] = base + slices + j + 1;
-		}
-
-		ind[k++] = base;
-		ind[k++] = base + slices - 1;
-		ind[k++] = base + slices;
-
-		ind[k++] = base + slices - 1;
-		ind[k++] = base + slices;
-		ind[k++] = base + slices + slices - 1;
-	}
-
-	return;
 }
 
 
-void *renderTaskStart(void *initialData)
+
+static void *renderTaskStart(void *initialData)
 {
 	assert(initialData != NULL);
 	initRender();
 	return initialData;
 }
 
-bool renderTaskTick(void *state)
+static bool renderTaskTick(void *state)
 {
 	RenderConf *rc = (RenderConf*) state;
 
@@ -631,7 +606,7 @@ bool renderTaskTick(void *state)
 	return ret;
 }
 
-void renderTaskStop(void *state)
+static void renderTaskStop(void *state)
 {
 	SDL_Quit();
 	free(state);

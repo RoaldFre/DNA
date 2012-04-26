@@ -40,17 +40,16 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
 		return;
 	double k1 = BOND_K1;
 	double k2 = BOND_K2;
-	Vec3 drVec, drVecNormalized, F;
-	drVec = nearestImageVector(&p1->pos, &p2->pos);
-	double dr = length(&drVec);
+	Vec3 drVec = nearestImageVector(&p1->pos, &p2->pos);
+	double dr = length(drVec);
 	double d  = dr - d0;
 	double d3 = d * d * d;
 
-	scale(&drVec, 1/dr, &drVecNormalized);
-	scale(&drVecNormalized, 2*k1*d + 4*k2*d3, &F);
+	Vec3 drVecNormalized = scale(drVec, 1/dr);
+	Vec3 F = scale(drVecNormalized, 2*k1*d + 4*k2*d3);
 
-	add(&p1->F, &F, &p1->F);
-	sub(&p2->F, &F, &p2->F);
+	p1->F = add(p1->F, F);
+	p2->F = sub(p2->F, F);
 }
 
 /* ANGLE */
@@ -72,7 +71,7 @@ static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	a = nearestImageVector(&p2->pos, &p1->pos);
 	b = nearestImageVector(&p2->pos, &p3->pos);
 
-	double dtheta = angle(&a, &b) - theta0;
+	double dtheta = angle(a, b) - theta0;
 	return ktheta/2 * dtheta*dtheta;
 }
 static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
@@ -85,9 +84,9 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	a = nearestImageVector(&p2->pos, &p1->pos);
 	b = nearestImageVector(&p2->pos, &p3->pos);
 	
-	double lal = length(&a);
-	double lbl = length(&b);
-	double adotb = dot(&a, &b);
+	double lal = length(a);
+	double lbl = length(b);
+	double adotb = dot(a, b);
 	double costheta = adotb / (lal * lbl);
 	double theta = acos(costheta);
 	double sintheta = sqrt(1 - costheta*costheta);
@@ -100,25 +99,23 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 
 	Vec3 tmp1, tmp2, F1, F2, F3;
 
-	scale(&b, 1/(lal * lbl), &tmp1);
-	scale(&a, adotb / (lal*lal*lal * lbl), &tmp2);
-	sub(&tmp1, &tmp2, &F1);
-	scale(&F1, ktheta * (theta - theta0) / sintheta, &F1);
-	add(&p1->F, &F1, &p1->F);	
+	tmp1 = scale(b, 1/(lal * lbl));
+	tmp2 = scale(a, adotb / (lal*lal*lal * lbl));
+	F1 = scale(sub(tmp1, tmp2), ktheta * (theta - theta0) / sintheta);
+	p1->F = add(p1->F, F1);	
 
-	scale(&a, 1/(lal * lbl), &tmp1);
-	scale(&b, adotb / (lbl*lbl*lbl * lal), &tmp2);
-	sub(&tmp1, &tmp2, &F3);
-	scale(&F3, ktheta * (theta - theta0) / sintheta, &F3);
-	add(&p3->F, &F3, &p3->F);	
+	tmp1 = scale(a, 1/(lal * lbl));
+	tmp2 = scale(b, adotb / (lbl*lbl*lbl * lal));
+	F3 = scale(sub(tmp1, tmp2), ktheta * (theta - theta0) / sintheta);
+	p3->F = add(p3->F, F3);	
 
-	add(&F1, &F3, &F2);
-	sub(&p2->F, &F2, &p2->F);	
+	F2 = add(F1, F3); /* actually -F2 */
+	p2->F = sub(p2->F, F2);	
 
 	assert(ktheta == 0 
-		|| fabs(dot(&a, &F1) / length(&a) / length(&F1)) < 1e-5);
+		|| fabs(dot(a, F1) / length(a) / length(F1)) < 1e-5);
 	assert(ktheta == 0
-		|| fabs(dot(&b, &F3) / length(&b) / length(&F3)) < 1e-5);
+		|| fabs(dot(b, F3) / length(b) / length(F3)) < 1e-5);
 }
 
 /* DIHEDRAL */
@@ -127,15 +124,13 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 {
 	if (!ENABLE_DIHEDRAL)
 		return 0;
-	double kphi = BOND_Kphi;
-	Vec3 r1, r2, r3;
-	sub(&p2->pos, &p1->pos, &r1);
-	sub(&p3->pos, &p2->pos, &r2);
-	sub(&p4->pos, &p3->pos, &r3);
+
+	Vec3 r1 = nearestImageVector(&p1->pos, &p2->pos);
+	Vec3 r2 = nearestImageVector(&p2->pos, &p3->pos);
+	Vec3 r3 = nearestImageVector(&p3->pos, &p4->pos);
 	
-	double phi = dihedral(&r1, &r2, &r3);
-	//printf("phi = %f\n",phi / TO_RADIANS);
-	return kphi * (1 - cos(phi - phi0));
+	double phi = dihedral(r1, r2, r3);
+	return BOND_Kphi * (1 - cos(phi - phi0));
 }
 static void FdihedralParticle(Particle *target, 
 		Particle *p1, Particle *p2, Particle *p3, Particle *p4, 
@@ -160,13 +155,14 @@ static void FdihedralParticle(Particle *target,
 	F.z = (Vorig - Vdihedral(p1, p2, p3, p4, phi0)) / h;
 	target->pos.z -= h;
 
-	add(&target->F, &F, &target->F);
+	target->F = add(target->F, F);
 }
 static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 								double phi0)
 {
 	if (!ENABLE_DIHEDRAL)
 		return;
+
 	/* This is a *mess* to do analytically, so we do a numerical 
 	 * differentiation instead. */
 	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
@@ -202,7 +198,7 @@ static double helixDistance2(HelixInfo bot, HelixInfo top,
 	double dphi = top.phi - bot.phi + delta_phi;
 	Vec3 low  = (Vec3) {bot.r, 0, 0};
 	Vec3 high = (Vec3) {top.r * cos(dphi), top.r * sin(dphi), dz};
-	return distance2(&low, &high);
+	return distance2(low, high);
 }
 
 /* Distance between next neighbouring particles in the beta helix, ie 
@@ -237,7 +233,7 @@ static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 			p1->type, p2->type, monomerDistance);
 	double sigma6 = sigma2 * sigma2 * sigma2;
 	double sigma12 = sigma6 * sigma6;
-	double r2 = distance2(&p1->pos, &p2->pos);
+	double r2 = distance2(p1->pos, p2->pos);
 	double r6 = r2 * r2 * r2;
 	double r12 = r6 * r6;
 
@@ -257,19 +253,17 @@ static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 	double sigma6 = sigma2 * sigma2 * sigma2;
 	double sigma12 = sigma6 * sigma6;
 
-	Vec3 drVec;
-	sub(&p2->pos, &p1->pos, &drVec);
-	double dr2 = length2(&drVec);
+	Vec3 drVec = nearestImageVector(&p1->pos, &p2->pos);
+	double dr2 = length2(drVec);
 
 	assert(dr2 != 0);
 	double dr4 = dr2 * dr2;
 	double dr8 = dr4 * dr4;
 	double dr14 = dr8 * dr4 * dr2;
 
-	Vec3 F;
-	scale(&drVec, -12 * kStack * (sigma12/dr14 - sigma6/dr8), &F);
-	add(&p1->F, &F, &p1->F);
-	sub(&p2->F, &F, &p2->F);
+	Vec3 F = scale(drVec, -12 * kStack * (sigma12/dr14 - sigma6/dr8));
+	p1->F = add(p1->F, F);
+	p2->F = sub(p2->F, F);
 }
 
 
@@ -344,20 +338,18 @@ static void FbasePair(Particle *p1, Particle *p2)
 		return; /* Wrong pair */
 	
 	Vec3 rVec = nearestImageVector(&p1->pos, &p2->pos);
-	double r = length(&rVec);
+	double r = length(rVec);
 	if (r > config.truncationLen)
 		return; /* Too far away */
 
-	Vec3 direction;
-	scale(&rVec, 1/r, &direction);
+	Vec3 direction = scale(rVec, 1/r);
 
 	double force = calcFbasePair(bpi, r);
-	Vec3 forceVec;
-	scale(&direction, force, &forceVec);
+	Vec3 forceVec = scale(direction, force);
 
 	/* Add force to particle objects */
-	sub(&p1->F, &forceVec, &p1->F);
-	add(&p2->F, &forceVec, &p2->F);
+	p1->F = sub(p1->F, forceVec);
+	p2->F = add(p2->F, forceVec);
 }
 
 static void Fexclusion(Particle *p1, Particle *p2)
@@ -418,11 +410,11 @@ static void Fexclusion(Particle *p1, Particle *p2)
 	force = 4*EPSILON*(-12*sig12*rInv13 + 6*sig6*rInv7); 
 		
 	/* Scale the direction with the calculated force */
-	scale(&direction, force, &forceVec);
+	forceVec = scale(direction, force);
 
 	/* Add force to particle objects */
-	add(&p1->F, &forceVec, &p1->F);
-	sub(&p2->F, &forceVec, &p2->F);
+	p1->F = add(p1->F, forceVec);
+	p2->F = sub(p2->F, forceVec);
 }
 
 static double Vexclusion(Particle *p1, Particle *p2)
@@ -554,9 +546,9 @@ static void FCoulomb(Particle *p1, Particle *p2)
 	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
 	Vec3 forceVec;
 	
-	scale(&direction, calcFCoulomb(rij), &forceVec);
-	sub(&p1->F, &forceVec, &p1->F);
-	add(&p2->F, &forceVec, &p2->F);
+	forceVec = scale(direction, calcFCoulomb(rij));
+	p1->F = sub(p1->F, forceVec);
+	p2->F = add(p2->F, forceVec);
 }
 
 #if 0
@@ -708,7 +700,6 @@ static double Vrope(Particle *p1, Particle *p2, Particle *p3, Particle *p4)
 	
 	return potential;
 }
-#endif
 
 double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2)
 {
@@ -811,6 +802,7 @@ double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2)
 	return length(&distVecFinal);
 	
 }
+#endif
 
 
 /* ===== FORCE FUNCTIONS ===== */
@@ -891,10 +883,10 @@ static void calculateForces(void)
 
 static void kineticHelper(Particle *p, void *data)
 {
-	assert(isSaneVector(&p->vel));
+	assert(isSaneVector(p->vel));
 
 	double *twiceK = (double*) data;
-	*twiceK += p->m * length2(&p->vel);
+	*twiceK += p->m * length2(p->vel);
 }
 static double kineticEnergy(void)
 {
@@ -1009,9 +1001,7 @@ static PotentialEnergies calcPotentialEnergies(void) {
 static void momentumHelper(Particle *p, void *data)
 {
 	Vec3 *Ptot = (Vec3*) data;
-	Vec3 P;
-	scale(&p->vel, p->m, &P);
-	add(&P, Ptot, Ptot);
+	*Ptot = add(*Ptot, scale(p->vel, p->m));
 }
 static Vec3 momentum(void)
 {
@@ -1023,7 +1013,7 @@ static Vec3 momentum(void)
 bool physicsCheck(void)
 {
 	Vec3 P = momentum();
-	double PPM = length(&P) / numParticles();
+	double PPM = length(P) / numParticles();
 	if (PPM > 1e-20) {
 		fprintf(stderr, "\nMOMENTUM CONSERVATION VIOLATED! "
 				"Momentum per monomer: |P| = %e\n", PPM);
@@ -1040,7 +1030,7 @@ bool physicsCheck(void)
 static void thermostatHelper(Particle *p, void *data)
 {
 	double lambda = *(double*) data;
-	scale(&p->vel, lambda, &p->vel);
+	p->vel = scale(p->vel, lambda);
 }
 static void thermostat(void)
 {
@@ -1066,37 +1056,32 @@ static void thermostat(void)
 static void verletHelper1(Particle *p)
 {
 	double dt = config.timeStep;
-	Vec3 tmp;
 
-	assert(isSaneVector(&p->pos));
-	assert(isSaneVector(&p->vel));
-	assert(isSaneVector(&p->F));
+	assert(isSaneVector(p->pos));
+	assert(isSaneVector(p->vel));
+	assert(isSaneVector(p->F));
 
 	/* vel(t + dt/2) = vel(t) + acc(t)*dt/2 */
-	scale(&p->F, dt / (2 * p->m), &tmp);
-	add(&p->vel, &tmp, &p->vel);
+	p->vel = add(p->vel, scale(p->F, dt / (2 * p->m)));
 
 	/* pos(t + dt) = pos(t) + vel(t + dt/2)*dt */
-	scale(&p->vel, dt, &tmp);
-	add(&p->pos, &tmp, &p->pos);
+	p->pos = add(p->pos, scale(p->vel, dt));
 
-	assert(isSaneVector(&p->pos));
-	assert(isSaneVector(&p->vel));
+	assert(isSaneVector(p->pos));
+	assert(isSaneVector(p->vel));
 }
 static void verletHelper2(Particle *p)
 {
 	double dt = config.timeStep;
-	Vec3 tmp;
 
-	assert(isSaneVector(&p->pos));
-	assert(isSaneVector(&p->vel));
-	assert(isSaneVector(&p->F));
+	assert(isSaneVector(p->pos));
+	assert(isSaneVector(p->vel));
+	assert(isSaneVector(p->F));
 
 	/* vel(t + dt) = vel(t + dt/2) + acc(t + dt)*dt/2 */
-	scale(&p->F, dt / (2 * p->m), &tmp);
-	add(&p->vel, &tmp, &p->vel);
+	p->vel = add(p->vel, scale(p->F, dt / (2*p->m)));
 
-	assert(isSaneVector(&p->vel));
+	assert(isSaneVector(p->vel));
 }
 static void verlet(void)
 {
@@ -1114,24 +1099,20 @@ static void langevinBBKhelper1(Particle *p)
 
 	Vec3 tmp1, tmp2;
 
-	assert(isSaneVector(&p->pos));
-	assert(isSaneVector(&p->vel));
-	assert(isSaneVector(&p->F));
+	assert(isSaneVector(p->pos));
+	assert(isSaneVector(p->vel));
+	assert(isSaneVector(p->F));
 
 	/* from v(t) to v(t + dt/2) */
-	scale(&p->vel, 1 - gamma*dt/2, &tmp1);
-
-	/* p->F is regular force + random collision force */
-	scale(&p->F, dt / (2 * p->m), &tmp2);
-
-	add(&tmp1, &tmp2, &p->vel);
+	tmp1 = scale(p->vel, 1 - gamma*dt/2);
+	tmp2 = scale(p->F, dt / (2*p->m)); /* p->F = regular + random force */
+	p->vel = add(tmp1, tmp2);
 
 	/* from r(t) to r(t + dt) */
-	scale(&p->vel, dt, &tmp1);
-	add(&p->pos, &tmp1, &p->pos);
+	p->pos = add(p->pos, scale(p->vel, dt));
 
-	assert(isSaneVector(&p->pos));
-	assert(isSaneVector(&p->vel));
+	assert(isSaneVector(p->pos));
+	assert(isSaneVector(p->vel));
 }
 static void langevinBBKhelper2(Particle *p)
 {
@@ -1139,9 +1120,9 @@ static void langevinBBKhelper2(Particle *p)
 	double gamma = config.langevinGamma;
 	double T     = config.thermostatTemp;
 
-	assert(isSaneVector(&p->pos));
-	assert(isSaneVector(&p->vel));
-	assert(isSaneVector(&p->F));
+	assert(isSaneVector(p->pos));
+	assert(isSaneVector(p->vel));
+	assert(isSaneVector(p->F));
 
 	/* Regular forces have been calculated. Add the random force due 
 	 * to collisions to the total force. The result is:
@@ -1150,16 +1131,14 @@ static void langevinBBKhelper2(Particle *p)
 	 * prefactor before p->m when looping over all particles. */
 	double Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * gamma * p->m / dt);
 	Vec3 R = randNormVec(Rstddev);
-	add(&p->F, &R, &p->F);
+	p->F = add(p->F, R);
 
 	/* from v(t + dt/2) to v(t + dt) */
-	Vec3 tmp;
-	scale(&p->F, dt / (2 * p->m), &tmp);
-	add(&p->vel, &tmp, &tmp);
-	scale(&tmp, 1 / (1 + gamma*dt/2), &p->vel);
+	Vec3 tmp = add(p->vel, scale(p->F, dt / (2*p->m)));
+	p->vel = scale(tmp, 1 / (1 + gamma*dt/2));
 
-	assert(isSaneVector(&p->pos));
-	assert(isSaneVector(&p->F));
+	assert(isSaneVector(p->pos));
+	assert(isSaneVector(p->F));
 }
 
 /* BBK integrator for Langevin dynamics. Uses the one based on 
@@ -1265,13 +1244,10 @@ Vec3 getCOM(Particle *ps, int num)
 	Vec3 COM = {0, 0, 0};
 	double M = 0; /* total mass */
 	for (int i = 0; i < num; i++) {
-		Vec3 tmp;
-		scale(&ps[i].pos, ps[i].m, &tmp);
-		add(&tmp, &COM, &COM);
+		COM = add(COM, scale(ps[i].pos, ps[i].m));
 		M += ps[i].m;
 	}
-	scale(&COM, 1/M, &COM);
-	return COM;
+	return scale(COM, 1/M);
 }
 
 

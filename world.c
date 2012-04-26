@@ -52,7 +52,7 @@ bool allocStrand(Strand *s, int numMonomers) {
  *
  * Flags:
  * complementarySequence: Use the complement of the given base sequence.
- * complementaryHelix:    Build the helix turning the other way around.
+ * complementaryHelix:    Build the helix 'upside down' and turning the other way around.
  *
  * Indices work like this:
  *
@@ -166,9 +166,9 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		s->Bs[i].pos = fromCilindrical(b_r, phi + b_phi, z + b_z);
 		s->Ss[i].pos = fromCilindrical(S_R, phi + S_PHI, z + S_Z);
 		s->Ps[i].pos = fromCilindrical(P_R, phi + P_PHI, z + P_Z);
-		add(&s->Bs[i].pos, &offset, &s->Bs[i].pos);
-		add(&s->Ss[i].pos, &offset, &s->Ss[i].pos);
-		add(&s->Ps[i].pos, &offset, &s->Ps[i].pos);
+		s->Bs[i].pos = add(s->Bs[i].pos, offset);
+		s->Ss[i].pos = add(s->Ss[i].pos, offset);
+		s->Ps[i].pos = add(s->Ps[i].pos, offset);
 
 		/* Velocity */
 		s->Bs[i].vel = randNormVec(sqrt(velVarPerInvMass / s->Bs[i].m));

@@ -30,131 +30,133 @@ static __inline__ bool isSaneNumber(double x)
 	return !isnan(x) && !isinf(x);
 }
 
-static __inline__ bool isSaneVector(const Vec3 *v)
+static __inline__ bool isSaneVector(Vec3 v)
 {
-	return v != NULL
-			&& isSaneNumber(v->x)
-			&& isSaneNumber(v->y)
-			&& isSaneNumber(v->z);
+	return isSaneNumber(v.x) && isSaneNumber(v.y) && isSaneNumber(v.z);
 }
 
-static __inline__ void fprintVector(FILE *stream, const Vec3 *v)
+static __inline__ void fprintVector(FILE *stream, Vec3 v)
 {
-	fprintf(stream, "%10f\t%10f\t%10f\t", v->x, v->y, v->z);
+	fprintf(stream, "%10f\t%10f\t%10f\t", v.x, v.y, v.z);
 }
 
-static __inline__ void printVector(const Vec3 *v)
+static __inline__ void printVector(Vec3 v)
 {
-	printf("%10f\t%10f\t%10f\t", v->x, v->y, v->z);
+	fprintVector(stdout, v);
 }
 
-static __inline__ void printVectorExp(const Vec3 *v)
+static __inline__ void printVectorExp(Vec3 v)
 {
-	printf("%15e %15e %15e", v->x, v->y, v->z);
+	printf("%15e %15e %15e", v.x, v.y, v.z);
 }
 
-static __inline__ void add(const Vec3 *a, const Vec3 *b, Vec3 *dest)
+static __inline__ Vec3 add(Vec3 a, Vec3 b)
 {
-	dest->x = a->x + b->x;
-	dest->y = a->y + b->y;
-	dest->z = a->z + b->z;
+	Vec3 res;
+	res.x = a.x + b.x;
+	res.y = a.y + b.y;
+	res.z = a.z + b.z;
+	return res;
 }
 
-static __inline__ void sub(const Vec3 *a, const Vec3 *b, Vec3 *dest)
+static __inline__ Vec3 sub(Vec3 a, Vec3 b)
 {
-	dest->x = a->x - b->x;
-	dest->y = a->y - b->y;
-	dest->z = a->z - b->z;
+	Vec3 res;
+	res.x = a.x - b.x;
+	res.y = a.y - b.y;
+	res.z = a.z - b.z;
+	return res;
 }
 
-static __inline__ void scale(const Vec3 *v, double lambda, Vec3 *dest)
+static __inline__ Vec3 scale(Vec3 v, double lambda)
 {
-	assert(isSaneNumber(lambda));
-	dest->x = lambda * v->x;
-	dest->y = lambda * v->y;
-	dest->z = lambda * v->z;
+	Vec3 res;
+	res.x = lambda * v.x;
+	res.y = lambda * v.y;
+	res.z = lambda * v.z;
+	return res;
 }
 
-static __inline__ double dot(const Vec3 *v, const Vec3 *w)
+static __inline__ double dot(Vec3 v, Vec3 w)
 {
-	return v->x * w->x + v->y * w->y + v->z * w->z;
+	return v.x * w.x + v.y * w.y + v.z * w.z;
 }
 
-static __inline__ double length2(const Vec3 *v)
+static __inline__ double length2(Vec3 v)
 {
 	return dot(v, v);
 }
 
-static __inline__ double length(const Vec3 *v)
+static __inline__ double length(Vec3 v)
 {
 	return sqrt(length2(v));
 }
 
-static __inline__ Vec3 cross(const Vec3 *v, const Vec3 *w)
+static __inline__ Vec3 cross(Vec3 v, Vec3 w)
 {
 	Vec3 x;
-	x.x = v->y * w->z  -  v->z * w->y;
-	x.y = v->z * w->x  -  v->x * w->z;
-	x.z = v->x * w->y  -  v->y * w->x;
+	x.x = v.y * w.z  -  v.z * w.y;
+	x.y = v.z * w.x  -  v.x * w.z;
+	x.z = v.x * w.y  -  v.y * w.x;
 
-	assert(fabs(dot(v, &x) / length(v) / length(&x)) < 1e-10);
-	assert(fabs(dot(w, &x) / length(w) / length(&x)) < 1e-10);
+	assert(fabs(dot(v, x) / length(v) / length(x)) < 1e-10);
+	assert(fabs(dot(w, x) / length(w) / length(x)) < 1e-10);
 
 	return x;
 }
 
-static __inline__ void normalize(const Vec3 *v, Vec3 *w)
+static __inline__ Vec3 normalize(Vec3 v)
 {
 	double l = length(v);
 	assert(l != 0);
-	scale(v, 1/l, w);
+	return scale(v, 1/l);
 }
 
-static __inline__ double distance2(const Vec3 *a, const Vec3 *b)
+static __inline__ double distance2(Vec3 a, Vec3 b)
 {
-	Vec3 c;
-
-	sub(a, b, &c);
-	return length2(&c);
+	return(length2(sub(a, b)));
 }
 
-static __inline__ double distance(const Vec3 *a, const Vec3 *b)
+static __inline__ double distance(Vec3 a, Vec3 b)
 {
 	return sqrt(distance2(a, b));
 }
 
-static __inline__ double cosAngle(const Vec3 *v, const Vec3 *w)
+static __inline__ double cosAngle(Vec3 v, Vec3 w)
 {
 	return dot(v, w) / (length(v) * length (w));
 }
 
-static __inline__ double angle(const Vec3 *v, const Vec3 *w)
+static __inline__ double angle(Vec3 v, Vec3 w)
 {
 	return acos(cosAngle(v, w));
 }
 
-static __inline__ double dihedral(const Vec3 *v1, const Vec3 *v2, const Vec3 *v3)
+static __inline__ double dihedral(Vec3 v1, Vec3 v2, Vec3 v3)
 {
 	Vec3 v1xv2 = cross(v1, v2);
 	Vec3 v2xv3 = cross(v2, v3);
-	return atan2(length(v2) * dot(v1, &v2xv3), dot(&v1xv2, &v2xv3));
+	return atan2(length(v2) * dot(v1, v2xv3), dot(v1xv2, v2xv3));
 }
 
-static __inline__ void periodic(double period, const Vec3 *v, Vec3 *dest)
+static __inline__ Vec3 periodic(double period, Vec3 v)
 {
+	Vec3 res;
 	/* Fmod doesn't handle negative values the way we want it to, so we 
 	 * need an extra check for the sign.
 	 * TODO: see if we can do this without a branch! */
-	dest->x = fmod(v->x, period);
-	if (dest->x < 0) dest->x += period;
-	dest->y = fmod(v->y, period);
-	if (dest->y < 0) dest->y += period;
-	dest->z = fmod(v->z, period);
-	if (dest->z < 0) dest->z += period;
+	res.x = fmod(v.x, period);
+	if (res.x < 0) res.x += period;
+	res.y = fmod(v.y, period);
+	if (res.y < 0) res.y += period;
+	res.z = fmod(v.z, period);
+	if (res.z < 0) res.z += period;
 	
-	assert(0 <= v->x  &&  v->x < period);
-	assert(0 <= v->y  &&  v->y < period);
-	assert(0 <= v->z  &&  v->z < period);
+	assert(0 <= res.x  &&  res.x < period);
+	assert(0 <= res.y  &&  res.y < period);
+	assert(0 <= res.z  &&  res.z < period);
+
+	return res;
 }
 
 /* y axis is the vertical axis */
