@@ -68,9 +68,9 @@ bool forEveryConnectionPairCheck(void);
  * Precondition: The given vectors are allowed to break out of the grid, 
  * but they must be within one 'world-size' of the grid (ie in [-L, 2L] if 
  * the grid is [0, L] in each dimension.)*/
-Vec3 nearestImageVector(Vec3 *v1, Vec3 *v2);
-Vec3 nearestImageUnitVector(Vec3 *v1, Vec3 *v2);
-double nearestImageDistance(Vec3 *v1, Vec3 *v2);
-double nearestImageDistance2(Vec3 *v1, Vec3 *v2);
+Vec3 nearestImageVector(Vec3 v1, Vec3 v2);
+Vec3 nearestImageUnitVector(Vec3 v1, Vec3 v2);
+double nearestImageDistance(Vec3 v1, Vec3 v2);
+double nearestImageDistance2(Vec3 v1, Vec3 v2);
 
 #endif

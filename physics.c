@@ -29,7 +29,7 @@ static double Vbond(Particle *p1, Particle *p2, double d0)
 		return 0;
 	double k1 = BOND_K1;
 	double k2 = BOND_K2;
-	double d = nearestImageDistance(&p1->pos, &p2->pos) - d0;
+	double d = nearestImageDistance(p1->pos, p2->pos) - d0;
 	double d2 = d * d;
 	double d4 = d2 * d2;
 	return k1 * d2  +  k2 * d4;
@@ -40,7 +40,7 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
 		return;
 	double k1 = BOND_K1;
 	double k2 = BOND_K2;
-	Vec3 drVec = nearestImageVector(&p1->pos, &p2->pos);
+	Vec3 drVec = nearestImageVector(p1->pos, p2->pos);
 	double dr = length(drVec);
 	double d  = dr - d0;
 	double d3 = d * d * d;
@@ -68,8 +68,8 @@ static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	Vec3 a, b;
 	double ktheta = BOND_Ktheta;
 	
-	a = nearestImageVector(&p2->pos, &p1->pos);
-	b = nearestImageVector(&p2->pos, &p3->pos);
+	a = nearestImageVector(p2->pos, p1->pos);
+	b = nearestImageVector(p2->pos, p3->pos);
 
 	double dtheta = angle(a, b) - theta0;
 	return ktheta/2 * dtheta*dtheta;
@@ -81,8 +81,8 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	Vec3 a, b;
 	double ktheta = BOND_Ktheta;
 	
-	a = nearestImageVector(&p2->pos, &p1->pos);
-	b = nearestImageVector(&p2->pos, &p3->pos);
+	a = nearestImageVector(p2->pos, p1->pos);
+	b = nearestImageVector(p2->pos, p3->pos);
 	
 	double lal = length(a);
 	double lbl = length(b);
@@ -125,9 +125,9 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	if (!ENABLE_DIHEDRAL)
 		return 0;
 
-	Vec3 r1 = nearestImageVector(&p1->pos, &p2->pos);
-	Vec3 r2 = nearestImageVector(&p2->pos, &p3->pos);
-	Vec3 r3 = nearestImageVector(&p3->pos, &p4->pos);
+	Vec3 r1 = nearestImageVector(p1->pos, p2->pos);
+	Vec3 r2 = nearestImageVector(p2->pos, p3->pos);
+	Vec3 r3 = nearestImageVector(p3->pos, p4->pos);
 	
 	double phi = dihedral(r1, r2, r3);
 	return BOND_Kphi * (1 - cos(phi - phi0));
@@ -253,7 +253,7 @@ static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 	double sigma6 = sigma2 * sigma2 * sigma2;
 	double sigma12 = sigma6 * sigma6;
 
-	Vec3 drVec = nearestImageVector(&p1->pos, &p2->pos);
+	Vec3 drVec = nearestImageVector(p1->pos, p2->pos);
 	double dr2 = length2(drVec);
 
 	assert(dr2 != 0);
@@ -310,7 +310,7 @@ double VbasePair(Particle *p1, Particle *p2)
 	if (bpi.coupling < 0)
 		return 0; /* Wrong pair */
 	
-	double rsq = nearestImageDistance2(&p1->pos, &p2->pos);
+	double rsq = nearestImageDistance2(p1->pos, p2->pos);
 	double truncSq = SQUARE(config.truncationLen);
 	if (rsq > truncSq)
 		return 0; /* Too far away */
@@ -337,7 +337,7 @@ static void FbasePair(Particle *p1, Particle *p2)
 	if (bpi.coupling < 0)
 		return; /* Wrong pair */
 	
-	Vec3 rVec = nearestImageVector(&p1->pos, &p2->pos);
+	Vec3 rVec = nearestImageVector(p1->pos, p2->pos);
 	double r = length(rVec);
 	if (r > config.truncationLen)
 		return; /* Too far away */
@@ -360,11 +360,11 @@ static void Fexclusion(Particle *p1, Particle *p2)
 	Vec3 forceVec;
 	double force;
 	
-	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	double rij = nearestImageDistance(p1->pos, p2->pos);
 	if (rij > D_CUT)
 		return; /* Too far away */
 
-	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
+	Vec3 direction = nearestImageUnitVector(p1->pos, p2->pos);
 	
 	/* Apply right parameters for types of molecules, 
 	 * if bases and mismatched: SIGMA_0_CST*1.0
@@ -424,7 +424,7 @@ static double Vexclusion(Particle *p1, Particle *p2)
 	double sig;
 	double potential;
 	
-	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	double rij = nearestImageDistance(p1->pos, p2->pos);
 	if (rij > D_CUT)
 		return 0; /* Too far away */
 
@@ -513,7 +513,7 @@ static double VCoulomb(Particle *p1, Particle *p2)
 		return 0; /* Only phosphates carry a charge */
 
 	double truncLength = config.truncationLen;
-	double rij = nearestImageDistance(&p1->pos, &p2->pos);
+	double rij = nearestImageDistance(p1->pos, p2->pos);
 
 	if (rij > truncLength)
 		return 0; /* Too far away */
@@ -539,11 +539,11 @@ static void FCoulomb(Particle *p1, Particle *p2)
 		return; /* Only phosphates carry a charge */
 
 	double truncLen = config.truncationLen;
-	double rij = nearestImageDistance(&p2->pos, &p1->pos);
+	double rij = nearestImageDistance(p2->pos, p1->pos);
 	if (rij > truncLen)
 		return; /* Too far away */
 	
-	Vec3 direction = nearestImageUnitVector(&p1->pos, &p2->pos);
+	Vec3 direction = nearestImageUnitVector(p1->pos, p2->pos);
 	Vec3 forceVec;
 	
 	forceVec = scale(direction, calcFCoulomb(rij));
