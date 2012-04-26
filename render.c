@@ -520,6 +520,13 @@ static void mat4_from_mat3(double m[16], Mat3 n)
 #undef N
 }
 
+static void renderString(const char *str, int x, int y)
+{
+	glLoadIdentity();
+	glTranslatef(x, y, 0);
+	text_create_and_render(font, 12, str);
+}
+
 /* Renders the frame and calls calcFps() */
 static void render(RenderConf *rc)
 {
@@ -571,26 +578,19 @@ static void render(RenderConf *rc)
 	const int n = 64;
 	char string[n];
 	snprintf(string, n, "T = %f K", temperature());
-	glLoadIdentity();
-	glTranslatef(10, 40, 0);
-	text_create_and_render(font, 12, string);
+	renderString(string, 10, 40);
 
 	snprintf(string, n, "t = %f µs   (dt = %f fs)",
 			getTime() * 1e6, config.timeStep * 1e15);
-	glLoadIdentity();
-	glTranslatef(10, 25, 0);
-	text_create_and_render(font, 12, string);
+	renderString(string, 10, 25);
 
 	int ips = getIterationsPerSecond();
 	snprintf(string, n, "ips = %d   (dt/min = %f ns)",
 			ips, ips * config.timeStep * 1e9 * 60);
-	glLoadIdentity();
-	glTranslatef(10, 10, 0);
-	text_create_and_render(font, 12, string);
+	renderString(string, 10, 10);
 
 	glLoadIdentity();
-	glTranslatef(30, SCREEN_H - 50, 0);
-	text_create_and_render(font, 12, fps_string);
+	renderString(fps_string, 10, SCREEN_H - 10);
 
 	SDL_GL_SwapBuffers();
 
@@ -651,5 +651,24 @@ Task makeRenderTask(RenderConf *rc)
 		.tick  = &renderTaskTick,
 		.stop  = &renderTaskStop,
 	};
+	return ret;
+}
+
+static bool renderStringTick(void *data)
+{
+	RenderStringConfig *rsc = (RenderStringConfig*) data;
+	renderString(rsc->string, rsc->x, rsc->y);
+	return true;
+}
+Task makeRenderStringTask(RenderStringConfig *rsc)
+{
+	RenderStringConfig *rscCopy = malloc(sizeof(*rscCopy));
+	memcpy(rscCopy, rsc, sizeof(*rscCopy));
+
+	Task ret;
+	ret.initialData = rscCopy;
+	ret.start = &passPointer;
+	ret.tick  = &renderStringTick;
+	ret.stop  = &freePointer;
 	return ret;
 }
