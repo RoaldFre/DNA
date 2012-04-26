@@ -231,8 +231,25 @@ static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numI
 	return;
 }
 
+static int getIterationsPerSecond(void)
+{
+	static int ips = 0;
+	static long tock = 0;
+	static long prevIterations = 0;
+	long tick;
 
+	tick = SDL_GetTicks(); /* milliseconds */
 
+	if (tick - tock > 1000) {
+		int dt = tick - tock;
+		tock = tick;
+		long currIterations = getIteration();
+		long deltaIterations = currIterations - prevIterations;
+		prevIterations = currIterations;
+		ips = deltaIterations * 1000 / dt;
+	}
+	return ips;
+}
 static void calcFps(void)
 {
 	static long tock = 0;
@@ -243,8 +260,10 @@ static void calcFps(void)
 	tick = SDL_GetTicks(); /* milliseconds */
 
 	if (tick - tock > 1000) {
+		int dt = tick - tock;
 		tock = tick;
-		snprintf(fps_string, FPS_STRING_CHARS, "%u FPS", frames);
+		snprintf(fps_string, FPS_STRING_CHARS, "%u FPS",
+				frames * 1000 / dt);
 		SDL_WM_SetCaption(fps_string, fps_string);
 		frames = 0;
 	}
@@ -549,20 +568,29 @@ static void render(RenderConf *rc)
 
 	glMatrixMode(GL_MODELVIEW);
 
-	char string[32];
-	snprintf(string, 32, "dt = %f fs", config.timeStep * 1e15);
+	const int n = 64;
+	char string[n];
+	snprintf(string, n, "T = %f K", temperature());
 	glLoadIdentity();
-	glTranslatef(10, 30, 0);
-	text_create_and_render(font, 13, string);
+	glTranslatef(10, 40, 0);
+	text_create_and_render(font, 12, string);
 
-	snprintf(string, 32, "T = %f K", temperature());
+	snprintf(string, n, "t = %f µs   (dt = %f fs)",
+			getTime() * 1e6, config.timeStep * 1e15);
+	glLoadIdentity();
+	glTranslatef(10, 25, 0);
+	text_create_and_render(font, 12, string);
+
+	int ips = getIterationsPerSecond();
+	snprintf(string, n, "ips = %d   (dt/min = %f ns)",
+			ips, ips * config.timeStep * 1e9 * 60);
 	glLoadIdentity();
 	glTranslatef(10, 10, 0);
-	text_create_and_render(font, 13, string);
+	text_create_and_render(font, 12, string);
 
 	glLoadIdentity();
 	glTranslatef(30, SCREEN_H - 50, 0);
-	text_create_and_render(font, 13, fps_string);
+	text_create_and_render(font, 12, fps_string);
 
 	SDL_GL_SwapBuffers();
 
