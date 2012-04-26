@@ -98,10 +98,6 @@
 #define H2O_PERMETTIVITY	(80 * VACUUM_PERMITTIVITY)
 #define DEBYE_LENGTH 		13.603e-10 /* 13.603 Angstrom for 50mM = [Na+]*/
 
-/* Rope dynamics */
-#define ROPE_COUPLING		(1e7 * EPSILON) /* TODO sane value? */
-#define ROPE_DIST		(0.5e-10) /* characteristic length TODO sane? */
-
 /* Thermodynamics */
 #define ENERGY_FACTOR	      (1/1.602177e-19) /* Energy in electronvolt */
 #define BOLTZMANN_CONSTANT    1.38065e-23
