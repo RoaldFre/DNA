@@ -12,7 +12,7 @@
 #define ENABLE_ANGLE		true
 #define ENABLE_DIHEDRAL		true
 #define ENABLE_STACK		true //TODO check whether distances are correct
-#define ENABLE_EXCLUSION	false //TODO SERIOUSLY FUCKED UP
+#define ENABLE_EXCLUSION	true //TODO SERIOUSLY FUCKED UP
 #define ENABLE_BASE_PAIR	true
 #define ENABLE_COULOMB		true
 
@@ -361,9 +361,10 @@ static void Fexclusion(Particle *p1, Particle *p2)
 {
 	if (!ENABLE_EXCLUSION)
 		return;
-	double sig;
+	double sig, rInv;
 	Vec3 forceVec;
 	double force;
+	double cutOff;
 	
 	double rij = nearestImageDistance(p1->pos, p2->pos);
 	if (rij > D_CUT)
@@ -372,8 +373,7 @@ static void Fexclusion(Particle *p1, Particle *p2)
 	Vec3 direction = nearestImageUnitVector(p1->pos, p2->pos);
 	
 	/* Apply right parameters for types of molecules, 
-	 * if bases and mismatched: SIGMA_0_CST*1.0
-	 * if bases and matched: 0
+	 * if bases (and mismatched): SIGMA_0_CST*1.0
 	 * otherwise: SIGMA_0_CST*D_CUT */
 	
 	/* Lennard-Jones potential:
@@ -382,37 +382,28 @@ static void Fexclusion(Particle *p1, Particle *p2)
 	 * For the force we differentiate with respect to r, so we get
 	 * 4*EPSILON*[ - 12* sigma0^12 / r^13 + 6* sigma0^6/r^7 ] */
 
-	if ((p1->type!=SUGAR) && (p1->type!=PHOSPHATE) && (p2->type!=SUGAR) 
-						&& (p2->type!=PHOSPHATE)){
-		
-		if ( ((p1->type==BASE_A && p2->type==BASE_T) 
-			|| (p1->type==BASE_T && p2->type==BASE_A))
-			|| ((p1->type==BASE_G && p2->type==BASE_C) 
-			|| (p1->type==BASE_C && p2->type==BASE_G)) )
-			/* no force */
-			return; 
-		sig = SIGMA_0_CST*D_CUT_BASE;			
-		
-	} else {
-		
-		sig = SIGMA_0_CST*D_CUT;		
-	}
+	cutOff = getExclusionCutOff(p1->type, p2->type);
 	
-	double sig2, sig4, sig6, sig12;
-	double rInv, rInv2, rInv4, rInv7, rInv13;
 	
-	sig2 = sig*sig;
-	sig4 = sig2*sig2;
-	sig6 = sig2*sig4;
-	sig12 = sig6*sig6;
-	
+	sig = SIGMA_0_CST*cutOff;
 	rInv = 1.0/rij;
-	rInv2 = rInv*rInv;
-	rInv4 = rInv2*rInv2;
-	rInv7 = rInv4*rInv2*rInv;
-	rInv13 = rInv7*rInv4*rInv4;
+	
+	double sig12 = powerCalc(sig, 12);
+	double sig6 = powerCalc(sig, 6);
+	double rInv7 = powerCalc(rInv, 7);
+	double rInv13 = powerCalc(rInv, 13);
+	
 
-	force = 4*EPSILON*(-12*sig12*rInv13 + 6*sig6*rInv7); 
+	force = 4*EPSILON*(12*sig12*rInv13 - 6*sig6*rInv7); 
+	
+#if 0
+	if (force > 1e-8){
+	
+	printf("Powers: distance: %e\t fractions: %e\t%e\n", rij, sig12*rInv13, sig6*rInv7);
+	printf("Cutoff: \t%e\n", cutOff);
+	printf("Force exclusion: %e\n", force);	
+	}
+#endif
 		
 	/* Scale the direction with the calculated force */
 	forceVec = scale(direction, force);
@@ -422,12 +413,24 @@ static void Fexclusion(Particle *p1, Particle *p2)
 	p2->F = sub(p2->F, forceVec);
 }
 
+double getExclusionCutOff(ParticleType t1, ParticleType t2){
+	
+	if (isBase(t1) && isBase(t2)){
+		/* mis-matched basepairs */	
+		return D_CUT_BASE;			
+	} else {
+		/* otherwise */
+		return D_CUT;
+	}
+}
+
 static double Vexclusion(Particle *p1, Particle *p2)
 {
 	if (!ENABLE_EXCLUSION)
 		return 0;
-	double sig;
+	double sig, rInv;
 	double potential;
+	double cutOff;
 	
 	double rij = nearestImageDistance(p1->pos, p2->pos);
 	if (rij > D_CUT)
@@ -441,50 +444,27 @@ static double Vexclusion(Particle *p1, Particle *p2)
 	
 	/* Lennard-Jones potential:
 	 * potential = exCoupling ((sigma0 / r)^12 - (sigma0/r)^6) + epsilon.*/
+	
+	cutOff = getExclusionCutOff(p1->type, p2->type);
 
-	if ((p1->type!=SUGAR) && (p1->type!=PHOSPHATE) && (p2->type!=SUGAR) 
-						&& (p2->type!=PHOSPHATE)){
-		
-		if ( ((p1->type==BASE_A && p2->type==BASE_T) 
-			|| (p1->type==BASE_T && p2->type==BASE_A))
-			|| ((p1->type==BASE_G && p2->type==BASE_C) 
-			|| (p1->type==BASE_C && p2->type==BASE_G)) )
-			/* no potential */
-			return 0; 
-		sig = SIGMA_0_CST*1.0;			
-		
-	} else {
-		
-		sig = SIGMA_0_CST*D_CUT;		
-	}
-	
-	double sig2, sig4, sig6, sig12;
-	double rInv, rInv2, rInv4, rInv6, rInv12;
-	
-	sig2 = sig*sig;
-	sig4 = sig2*sig2;
-	sig6 = sig2*sig4;
-	sig12 = sig6*sig6;
-	
+	sig = SIGMA_0_CST*cutOff;
 	rInv = 1.0/rij;
-	rInv2 = rInv*rInv;
-	rInv4 = rInv2*rInv2;
-	rInv6 = rInv4*rInv2;
-	rInv12 = rInv6*rInv6;
+	
+	double sig12 = powerCalc(sig, 12);
+	double sig6 = powerCalc(sig, 6);
+	double rInv6 = powerCalc(rInv, 6);
+	double rInv12 = powerCalc(rInv, 12);
 
 	potential = 4*EPSILON*(sig12*rInv12 - sig6*rInv6) + EPSILON;
 	
 	/* correct so that at D_CUT, V zero */
-	double dInv, dInv2, dInv4, dInv6, dInv12;
-	dInv = 1.0/D_CUT;
-	dInv2 = dInv*dInv;
-	dInv4 = dInv2*dInv2;
-	dInv6 = dInv4*dInv2;
-	dInv12 = dInv6*dInv6;
-	
+	double dInv = 1.0/D_CUT;
+	double dInv6 = powerCalc(dInv, 6);
+	double dInv12 = powerCalc(dInv, 12);
 	double correction = 4*EPSILON*(sig12*dInv12 - sig6*dInv6) + EPSILON;
+	
 	potential -= correction;
-		
+	
 	return potential;
 }
 

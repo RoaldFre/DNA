@@ -52,9 +52,9 @@
 #define G_M (150.1 * AU)
 
 /* Equilibrium distance of bonds (in m) */
-#define D_S5P   3.899e-10
-#define D_S3P   3.559e-10
-#define D_SA    6.430e-10
+#define D_S5P   3.899*A
+#define D_S3P   3.559*A
+#define D_SA    6.430*A
 
 
 
@@ -88,9 +88,9 @@
 #define DISTANCE_r0_GC	(2.8694*A) /* Knotts et al 2007, table III, 2.8694 A */
 
 /* Exlusion Force */
-#define SIGMA_0_CST	0.8908987 	/* 2^(-1/6) Angstrom */
-#define D_CUT	6.86e-10 	/* 6.86 Angstrom */
-#define D_CUT_BASE  1.0e-10
+#define SIGMA_0_CST	0.8908987 	/* 2^(-1/6) */
+#define D_CUT	6.86*A 	/* 6.86 Angstrom */
+#define D_CUT_BASE  1.0*A
 
 /* Coulomb interaction between phosphates */
 #define CHARGE_ELECTRON		1.602e-19  /* Coulomb */
@@ -133,6 +133,7 @@ Vec3 getCOM(Particle *ps, int num);
 double VbasePair(Particle *p1, Particle *p2);
 
 double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2);
+double getExclusionCutOff(ParticleType t1, ParticleType t2);
 
 Task makeIntegratorTask(IntegratorConf *conf);
 

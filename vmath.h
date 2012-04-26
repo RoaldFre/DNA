@@ -190,7 +190,17 @@ static __inline__ Vec3 randNormVec(double stdDev)
 	return res;
 }
 
-/* Calculate shortest distance between two lines parametrized by a point
- * and a direction vector */
+/* Calculate power of a double */
+
+static __inline__ double powerCalc(double a, int n){
+	double i;
+	double arg = a;
+	
+	for (i=1; i<n; i++){
+		a *= arg;
+	}
+	
+	return a;
+}
 
 #endif
