@@ -238,6 +238,8 @@ static void parseArguments(int argc, char **argv)
 		integratorConf.numBoxes = worldSize / config.truncationLen;
 		if (integratorConf.numBoxes  < 1)
 			integratorConf.numBoxes = 1;
+		printf("Number of boxes per dimension: %d\n",
+				integratorConf.numBoxes);
 	}
 
 	if (worldSize / integratorConf.numBoxes < config.truncationLen)
