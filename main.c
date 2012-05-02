@@ -261,6 +261,9 @@ void die(const char *fmt, ...)
 }
 
 #if 0
+/* Suitable flags to test:
+ * ./main -r -v10 -c0 -T0
+ */
 static void buildRopeTestWorld(void)
 {
 	allocWorld(2, worldSize);
@@ -271,14 +274,14 @@ static void buildRopeTestWorld(void)
 	Strand *s = &world.strands[1];
 	/* Rotate 90 degrees, small offset, and launch it towards the first 
 	 * strand :-) */
-	Vec3 deltaPos = { 20e-10, 0, 0};
-	Vec3 deltaVel = {-20e+2, 0, 0};
+	Vec3 deltaPos = { 50e-10, 0, 0};
+	Vec3 deltaVel = {-80e+3, 0, 0};
 	for (int i = 0; i < 3 * s->numMonomers; i++) {
 		double tmp = s->all[i].pos.y;
 		s->all[i].pos.y = s->all[i].pos.z;
 		s->all[i].pos.z = tmp;
-		add(&s->all[i].pos, &deltaPos, &s->all[i].pos);
-		add(&s->all[i].vel, &deltaVel, &s->all[i].vel);
+		s->all[i].pos = add(s->all[i].pos, deltaPos);
+		s->all[i].vel = add(s->all[i].vel, deltaVel);
 	}
 }
 #endif
@@ -288,7 +291,7 @@ int main(int argc, char **argv)
 	srand(time(NULL)); //seed random generator
 
 	parseArguments(argc, argv);
-	
+
 	if (buildCompStrand)
 		allocWorld(2, worldSize);
 	else
