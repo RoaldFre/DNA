@@ -14,7 +14,7 @@
 #define ENABLE_STACK		true //TODO check whether distances are correct
 #define ENABLE_EXCLUSION	true
 #define ENABLE_BASE_PAIR	true
-#define ENABLE_COULOMB		false
+#define ENABLE_COULOMB		true
 
 #define MUTUALLY_EXCLUSIVE_PAIR_FORCES true /* true for Knotts' model */
 
@@ -432,7 +432,10 @@ static double calcInvDebyeLength(void)
 	double T = config.thermostatTemp;
 	double saltCon = config.saltConcentration;
 	double lambdaBDenom, lambdaB;
-	
+
+	if (T == 0)
+		return 1e100;
+
 	lambdaBDenom = 4 * M_PI * H2O_PERMETTIVITY
 			* BOLTZMANN_CONSTANT * T;
 	lambdaB = CHARGE_ELECTRON * CHARGE_ELECTRON / lambdaBDenom;
@@ -471,7 +474,7 @@ static double calcFCoulomb(double r)
 {
 	double couplingConstant = CHARGE_ELECTRON * CHARGE_ELECTRON
 				/ (4 * M_PI * H2O_PERMETTIVITY);
-	double k0 = calcInvDebyeLength();
+	double k0 = calcInvDebyeLength(); //TODO cache per iteration (or whenever T changes)
 	double exponentialPart = exp(-r * k0);
 	
 	return couplingConstant * exponentialPart * (k0 + 1/r) / r;
