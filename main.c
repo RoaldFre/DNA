@@ -16,7 +16,7 @@
 #define DATA_FILE_NAME "/tmp/data.txt"
 
 /* Defaults */
-#define DEF_BASE_SEQUENCE		"TCGATTGAGAACCCCTTCTCAATCGATCGAT"
+#define DEF_BASE_SEQUENCE		"CCCAATTTTTTTTTTTTTTGGG" /* T_12 in Bonnet */
 #define DEF_TIMESTEP 			1.0
 #define DEF_TEMPERATURE 		300.0
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
@@ -309,6 +309,9 @@ int main(int argc, char **argv)
 	basePairing.measConf.measureInterval = 100 * TIME_FACTOR;
 	basePairing.measConf.measureWait = 0;
 	basePairing.measConf.measureFile = NULL;
+	basePairing.measConf.renderStrBufSize = 64;
+	basePairing.measConf.x = 10;
+	basePairing.measConf.y = 80;
 	Task basePairingTask = measurementTask(&basePairing);
 
 
@@ -320,8 +323,8 @@ int main(int argc, char **argv)
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
-	//tasks[3] = &basePairingTask;
-	tasks[3] = NULL;
+	tasks[3] = &basePairingTask;
+	//tasks[3] = NULL;
 	Task task = sequence(tasks, 4);
 	run(&task);
 	return 0;

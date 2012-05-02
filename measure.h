@@ -24,6 +24,9 @@ typedef struct {
 	 * of the sampler to screen. Set to 0 or less to disable rendering 
 	 * of the sampler output. */
 	int renderStrBufSize;
+
+	/* Pixel coordinates to render the above string at */
+	int x, y;
 } MeasurementConf;
 
 typedef struct {
@@ -69,7 +72,9 @@ typedef struct {
 	Sampler sampler;
 } Measurement;
 
-/* Generate a task that performs the given measurement. */
+/* Generate a task that performs the given measurement. If the measurement 
+ * config has a valid renderStrBufSize, this task wil also render the 
+ * string created by the sampler. */
 Task measurementTask(Measurement *measurement);
 
 #endif

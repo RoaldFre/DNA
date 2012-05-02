@@ -181,15 +181,15 @@ static void basePairingCounter(Particle *p1, Particle *p2, void *data)
 	if (V < bpcd->threshold)
 		bpcd->count++;
 }
-static bool basePairingSample(long i, void *state)
+static bool basePairingSample(SamplerData *sd, void *state)
 {
-	UNUSED(i);
 	double *threshold = (double*) state;
 	BasePairingCounterData bpcd;
 	bpcd.count = 0;
 	bpcd.threshold = *threshold;
 	forEveryPairD(&basePairingCounter, &bpcd);
-	printf("%d\n", bpcd.count);
+	if(sd->string != NULL)
+		snprintf(sd->string, sd->strBufSize, "%d", bpcd.count);
 	return true;
 }
 Sampler basePairingSampler(double energyThreshold)

@@ -1,4 +1,5 @@
 #include "measure.h"
+#include "render.h"
 #include "main.h" //for TIME_FACTOR, TODO put somewhere else
 #include <string.h>
 #include <unistd.h>
@@ -85,6 +86,11 @@ static void samplerStop(Sampler *sampler, SamplerData *sd, void *state)
 
 /* MEASUREMENT TASK STUFF */
 
+typedef struct {
+	Measurement meas;
+	char *strBuf; /* The buffer for the rendering string if applicable */
+} MeasInitialData;
+
 typedef struct measTaskState
 {
 	Sampler sampler;
@@ -98,7 +104,8 @@ typedef struct measTaskState
 
 static void *measStart(void *initialData)
 {
-	Measurement *meas = (Measurement*) initialData;
+	MeasInitialData *mid = (MeasInitialData*) initialData;
+	Measurement *meas = &mid->meas;
 	assert(meas != NULL);
 	Sampler *sampler = &meas->sampler;
 	MeasTaskState *state = malloc(sizeof(*state));
@@ -117,8 +124,7 @@ static void *measStart(void *initialData)
 				RELAXING : SAMPLING);
 	state->samplerData.sample = 0;
 	state->samplerData.strBufSize = meas->measConf.renderStrBufSize;
-	state->samplerData.string = (meas->measConf.renderStrBufSize > 0 ?
-			malloc(meas->measConf.renderStrBufSize) : NULL);
+	state->samplerData.string = mid->strBuf;
 
 	switchStdout(&state->streamState); /* Switch stdout to file */
 	state->samplerState = samplerStart(sampler);
@@ -206,22 +212,39 @@ static void measStop(void *state)
 }
 
 
-
 Task measurementTask(Measurement *measurement)
 {
 	/* We must make a copy because given pointer is not guaranteed to 
 	 * remain valid. */
-	Measurement *measCpy = malloc(sizeof(*measCpy));
-	memcpy(measCpy, measurement, sizeof(*measCpy));
-
+	MeasInitialData *mid = malloc(sizeof(*mid));
+	memcpy(&mid->meas, measurement, sizeof(*measurement));
+	mid->strBuf = NULL;
+	
 	/* Make task */
 	Task task;
-	task.initialData = measCpy;
+	task.initialData = mid;
 	task.start = &measStart;
 	task.tick  = &measTick;
 	task.stop  = &measStop;
 
-	return task;
-}
+	int strSize = measurement->measConf.renderStrBufSize;
+	if (strSize <= 0)
+		return task; /* just the sampler task */
 
+	/* Also create a render task to render the string */
+	char *string = malloc(strSize);
+	string[0] = '\0';
+	mid->strBuf = string;
+	RenderStringConfig rsc;
+	rsc.string = string;
+	rsc.x = measurement->measConf.x;
+	rsc.y = measurement->measConf.y;
+
+	Task renderStringTask = makeRenderStringTask(&rsc);
+
+	Task *tasks[2];
+	tasks[0] = &task;
+	tasks[1] = &renderStringTask;
+	return sequence(tasks, 2);
+}
 

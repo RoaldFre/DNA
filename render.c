@@ -522,6 +522,8 @@ static void mat4_from_mat3(double m[16], Mat3 n)
 
 static void renderString(const char *str, int x, int y)
 {
+
+	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glTranslatef(x, y, 0);
 	text_create_and_render(font, 12, str);
@@ -572,9 +574,6 @@ static void render(RenderConf *rc)
 
 	/* Prepare for text rendering */
 	renderSet2D();
-
-	glMatrixMode(GL_MODELVIEW);
-
 	const int n = 64;
 	char string[n];
 	snprintf(string, n, "T = %f K", temperature());
@@ -657,7 +656,16 @@ Task makeRenderTask(RenderConf *rc)
 static bool renderStringTick(void *data)
 {
 	RenderStringConfig *rsc = (RenderStringConfig*) data;
+	renderSet2D();
 	renderString(rsc->string, rsc->x, rsc->y);
+	SDL_GL_SwapBuffers(); /* TODO this is a hack and causes flicker and 
+				 delay ... should just keep a static linked 
+				 list here and render those in the main 
+				 render task instead of spawning all these 
+				 tasks ... OR have some additional task 
+				 that only swaps the buffers and that gets 
+				 put at the end of the task sequence, but 
+				 that's not nice */
 	return true;
 }
 Task makeRenderStringTask(RenderStringConfig *rsc)
