@@ -12,9 +12,10 @@
 #define ENABLE_ANGLE		true
 #define ENABLE_DIHEDRAL		true
 #define ENABLE_STACK		true //TODO check whether distances are correct
-#define ENABLE_EXCLUSION	false //TODO SERIOUSLY FUCKED UP
+#define ENABLE_EXCLUSION	true //TODO SERIOUSLY FUCKED UP
 #define ENABLE_BASE_PAIR	true
 #define ENABLE_COULOMB		true
+#define ENABLE_DEBUG_INFO	true	// for Vexclusion
 
 
 
@@ -333,6 +334,7 @@ static double calcFbasePair(BasePairInfo bpi, double r)
 				
 	return bpi.coupling * 60 * (rfrac12 - rfrac10) / r;
 }
+
 static void FbasePair(Particle *p1, Particle *p2)
 {
 	if (!ENABLE_BASE_PAIR)
@@ -384,26 +386,28 @@ static void Fexclusion(Particle *p1, Particle *p2)
 
 	cutOff = getExclusionCutOff(p1->type, p2->type);
 	
+	/* check again in case we have mismatched bases, cut-off at 1 A */
+	if (rij>cutOff)
+		return; /* too far away */
 	
 	sig = SIGMA_0_CST*cutOff;
 	rInv = 1.0/rij;
+	
 	
 	double sig12 = powerCalc(sig, 12);
 	double sig6 = powerCalc(sig, 6);
 	double rInv7 = powerCalc(rInv, 7);
 	double rInv13 = powerCalc(rInv, 13);
-	
 
 	force = 4*EPSILON*(12*sig12*rInv13 - 6*sig6*rInv7); 
 	
-#if 0
-	if (force > 1e-8){
-	
-	printf("Powers: distance: %e\t fractions: %e\t%e\n", rij, sig12*rInv13, sig6*rInv7);
-	printf("Cutoff: \t%e\n", cutOff);
-	printf("Force exclusion: %e\n", force);	
+	if (ENABLE_DEBUG_INFO){
+		if (rij < 6e-10){
+		printf("Distance: \t%e\n", rij);
+		printf("Cutoff: \t%e\n", cutOff);
+		printf("Force exclusion: %e\n", force);	
+		}
 	}
-#endif
 		
 	/* Scale the direction with the calculated force */
 	forceVec = scale(direction, force);
@@ -439,13 +443,17 @@ static double Vexclusion(Particle *p1, Particle *p2)
 	
 	/* Apply right parameters for types of molecules, 
 	 * if bases and mismatched: SIGMA_0_CST*1.0
-	 * if bases and matched: 0
 	 * otherwise: SIGMA_0_CST*D_CUT */
 	
 	/* Lennard-Jones potential:
 	 * potential = exCoupling ((sigma0 / r)^12 - (sigma0/r)^6) + epsilon.*/
 	
+	/* Get cut-off value for type of particle */
 	cutOff = getExclusionCutOff(p1->type, p2->type);
+
+	/* check if distance is small enough for exclusion force */
+	if (rij>cutOff)
+		return 0; /* too far away */
 
 	sig = SIGMA_0_CST*cutOff;
 	rInv = 1.0/rij;
@@ -464,6 +472,14 @@ static double Vexclusion(Particle *p1, Particle *p2)
 	double correction = 4*EPSILON*(sig12*dInv12 - sig6*dInv6) + EPSILON;
 	
 	potential -= correction;
+	
+	if (ENABLE_DEBUG_INFO){
+		if (rij < 6e-10){
+		printf("Potential exclusion: %e\n\n", potential);	
+		}
+	}
+	
+
 	
 	return potential;
 }
