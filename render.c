@@ -522,7 +522,8 @@ static void mat4_from_mat3(double m[16], Mat3 n)
 
 static void renderString(const char *str, int x, int y)
 {
-
+	/* TODO rework, this segfaults if font = 0 (obviously), see note 
+	 * below to rework string rendering */
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glTranslatef(x, y, 0);

@@ -12,14 +12,46 @@
 #define ENABLE_ANGLE		true
 #define ENABLE_DIHEDRAL		true
 #define ENABLE_STACK		true //TODO check whether distances are correct
-#define ENABLE_EXCLUSION	true //TODO SERIOUSLY FUCKED UP
+#define ENABLE_EXCLUSION	true
 #define ENABLE_BASE_PAIR	true
-#define ENABLE_COULOMB		true
-#define ENABLE_DEBUG_INFO	true	// for Vexclusion
+#define ENABLE_COULOMB		false
 
+#define MUTUALLY_EXCLUSIVE_PAIR_FORCES true /* true for Knotts' model */
 
 
 /* ===== FORCES AND POTENTIALS ===== */
+
+/* Generic Lennard-Jones with potential depth epsilon.
+ * args:
+ *   rEq2 = (equilibrium distance r_eq)^2
+ *   r2   = (actual distance r)^2
+ * result:
+ *   V = epsilon * [ (r_eq / r)^12  -  2*(r_eq / r)^6] */
+static double calcVLJ(double epsilon, double rEq2, double r2)
+{
+	double rfrac2  = rEq2 / r2;
+	double rfrac4  = SQUARE(rfrac2);
+	double rfrac6  = rfrac4 * rfrac2;
+	double rfrac12 = SQUARE(rfrac6);
+	return epsilon * (rfrac12 - 2*rfrac6);
+}
+/* Generic Lennard-Jones with potential depth epsilon. Returns the Force 
+ * *dividid by displacement distance r*!! So use this to scale the 
+ * displacement vector to get the correct force!
+ * args:
+ *   rEq2 = (equilibrium distance r_eq)^2
+ *   r2   = (actual distance r)^2
+ * result:
+ *   F/r = 12 * epsilon * [ r_eq^6 / r^8  -  r_eq^12 / r^14 ] */
+static double calcFLJperDistance(double epsilon, double rEq2, double r2)
+{
+	double rfrac2  = rEq2 / r2;
+	double rfrac4  = SQUARE(rfrac2);
+	double rfrac6  = rfrac4 * rfrac2;
+	double rfrac12 = SQUARE(rfrac6);
+	return 12 * epsilon * (rfrac6 - rfrac12) / r2;
+}
+
 
 /* BOND */
 /* V = k1 * (dr - d0)^2  +  k2 * (d - d0)^4
@@ -119,6 +151,7 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 		|| fabs(dot(b, F3) / length(b) / length(F3)) < 1e-5);
 }
 
+
 /* DIHEDRAL */
 static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 								double phi0)
@@ -172,6 +205,7 @@ static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	FdihedralParticle(p3, p1, p2, p3, p4, Vorig, phi0);
 	FdihedralParticle(p4, p1, p2, p3, p4, Vorig, phi0);
 }
+
 
 /* STACKING */
 #define INV_CUBE_ROOT_OF_TWO 0.793700525984099737375852819636 /* 2^(-1/3) */
@@ -228,18 +262,15 @@ static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 	if (!ENABLE_STACK)
 		return 0;
 
-	double kStack = BOND_STACK;
-	/* sigma = 2^(-1/6) * r_min  =>  sigma^2 = 2^(-1/3) * r_min^2 */
-	double sigma2 = INV_CUBE_ROOT_OF_TWO * neighbourStackDistance2(
-			p1->type, p2->type, monomerDistance);
-	double sigma6 = sigma2 * sigma2 * sigma2;
-	double sigma12 = sigma6 * sigma6;
-	double r2 = distance2(p1->pos, p2->pos);
-	double r6 = r2 * r2 * r2;
-	double r12 = r6 * r6;
+	double rSq = nearestImageDistance2(p1->pos, p2->pos);
+	double truncSq = SQUARE(config.truncationLen); //TODO cache this result!
+	if (rSq > truncSq)
+		return 0;
 
-	return kStack * (sigma12/r12 - 2*sigma6/r6 + 1);
-	//return kStack * (sigma12/r12 - 2*sigma6/r6);
+	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
+						monomerDistance);
+	return calcVLJ(BOND_STACK, rEqSq, rSq)
+			- calcVLJ(BOND_STACK, rEqSq, truncSq); //TODO cache correction!
 }
 static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 {
@@ -248,21 +279,16 @@ static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 	if (!ENABLE_STACK)
 		return;
 
-	double kStack = BOND_STACK;
-	double sigma2 = INV_CUBE_ROOT_OF_TWO * neighbourStackDistance2(
-			p1->type, p2->type, monomerDistance);
-	double sigma6 = sigma2 * sigma2 * sigma2;
-	double sigma12 = sigma6 * sigma6;
+	Vec3 r = nearestImageVector(p1->pos, p2->pos);
+	double rSq = length2(r);
+	double truncSq = SQUARE(config.truncationLen); //TODO cache this result!
+	if (rSq > truncSq)
+		return;
 
-	Vec3 drVec = nearestImageVector(p1->pos, p2->pos);
-	double dr2 = length2(drVec);
-
-	assert(dr2 != 0);
-	double dr4 = dr2 * dr2;
-	double dr8 = dr4 * dr4;
-	double dr14 = dr8 * dr4 * dr2;
-
-	Vec3 F = scale(drVec, -12 * kStack * (sigma12/dr14 - sigma6/dr8));
+	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
+						monomerDistance);
+	double FperDist = calcFLJperDistance(BOND_STACK, rEqSq, rSq);
+	Vec3 F = scale(r, FperDist);
 	p1->F = add(p1->F, F);
 	p2->F = sub(p2->F, F);
 }
@@ -359,129 +385,44 @@ static void FbasePair(Particle *p1, Particle *p2)
 	p2->F = add(p2->F, forceVec);
 }
 
-static void Fexclusion(Particle *p1, Particle *p2)
-{
-	if (!ENABLE_EXCLUSION)
-		return;
-	double sig, rInv;
-	Vec3 forceVec;
-	double force;
-	double cutOff;
-	
-	double rij = nearestImageDistance(p1->pos, p2->pos);
-	if (rij > D_CUT)
-		return; /* Too far away */
 
-	Vec3 direction = nearestImageUnitVector(p1->pos, p2->pos);
-	
-	/* Apply right parameters for types of molecules, 
-	 * if bases (and mismatched): SIGMA_0_CST*1.0
-	 * otherwise: SIGMA_0_CST*D_CUT */
-	
-	/* Lennard-Jones potential:
-	 * potential = exCoupling ((sigma0 / r)^12 - (sigma0/r)^6) + epsilon.
-	 * 
-	 * For the force we differentiate with respect to r, so we get
-	 * 4*EPSILON*[ - 12* sigma0^12 / r^13 + 6* sigma0^6/r^7 ] */
-
-	cutOff = getExclusionCutOff(p1->type, p2->type);
-	
-	/* check again in case we have mismatched bases, cut-off at 1 A */
-	if (rij>cutOff)
-		return; /* too far away */
-	
-	sig = SIGMA_0_CST*cutOff;
-	rInv = 1.0/rij;
-	
-	
-	double sig12 = powerCalc(sig, 12);
-	double sig6 = powerCalc(sig, 6);
-	double rInv7 = powerCalc(rInv, 7);
-	double rInv13 = powerCalc(rInv, 13);
-
-	force = 4*EPSILON*(12*sig12*rInv13 - 6*sig6*rInv7); 
-	
-	if (ENABLE_DEBUG_INFO){
-		if (rij < 6e-10){
-		printf("Distance: \t%e\n", rij);
-		printf("Cutoff: \t%e\n", cutOff);
-		printf("Force exclusion: %e\n", force);	
-		}
-	}
-		
-	/* Scale the direction with the calculated force */
-	forceVec = scale(direction, force);
-
-	/* Add force to particle objects */
-	p1->F = add(p1->F, forceVec);
-	p2->F = sub(p2->F, forceVec);
+/* EXCLUSION */
+/* Return (the exclusion cut off distance)^2. This is the distance where 
+ * the repulsive part of the Lennard Jones potential stops. */
+static double getExclusionCutOff2(ParticleType t1, ParticleType t2){
+	if (isBase(t1) && isBase(t2))
+		return SQUARE(D_CUT_BASE);
+	else
+		return SQUARE(D_CUT);
 }
-
-double getExclusionCutOff(ParticleType t1, ParticleType t2){
-	
-	if (isBase(t1) && isBase(t2)){
-		/* mis-matched basepairs */	
-		return D_CUT_BASE;			
-	} else {
-		/* otherwise */
-		return D_CUT;
-	}
-}
-
+/* Only the repulsive part of a Lennard-Jones potential. (The potential gets lifted so it's zero at infinity.) */
 static double Vexclusion(Particle *p1, Particle *p2)
 {
 	if (!ENABLE_EXCLUSION)
 		return 0;
-	double sig, rInv;
-	double potential;
-	double cutOff;
-	
-	double rij = nearestImageDistance(p1->pos, p2->pos);
-	if (rij > D_CUT)
-		return 0; /* Too far away */
 
-	
-	/* Apply right parameters for types of molecules, 
-	 * if bases and mismatched: SIGMA_0_CST*1.0
-	 * otherwise: SIGMA_0_CST*D_CUT */
-	
-	/* Lennard-Jones potential:
-	 * potential = exCoupling ((sigma0 / r)^12 - (sigma0/r)^6) + epsilon.*/
-	
-	/* Get cut-off value for type of particle */
-	cutOff = getExclusionCutOff(p1->type, p2->type);
+	double cutOffSq = getExclusionCutOff2(p1->type, p2->type);
+	double rSq = nearestImageDistance2(p1->pos, p2->pos);
+	if (rSq > cutOffSq)
+		return 0;
 
-	/* check if distance is small enough for exclusion force */
-	if (rij>cutOff)
-		return 0; /* too far away */
+	return calcVLJ(EXCLUSION_COUPLING, cutOffSq, rSq) + EXCLUSION_COUPLING;
+}
+static void Fexclusion(Particle *p1, Particle *p2)
+{
+	if (!ENABLE_EXCLUSION)
+		return;
 
-	sig = SIGMA_0_CST*cutOff;
-	rInv = 1.0/rij;
-	
-	double sig12 = powerCalc(sig, 12);
-	double sig6 = powerCalc(sig, 6);
-	double rInv6 = powerCalc(rInv, 6);
-	double rInv12 = powerCalc(rInv, 12);
+	double cutOffSq = getExclusionCutOff2(p1->type, p2->type);
+	Vec3 r = nearestImageVector(p1->pos, p2->pos);
+	double rSq = length2(r);
+	if (rSq > cutOffSq)
+		return;
 
-	potential = 4*EPSILON*(sig12*rInv12 - sig6*rInv6) + EPSILON;
-	
-	/* correct so that at D_CUT, V zero */
-	double dInv = 1.0/D_CUT;
-	double dInv6 = powerCalc(dInv, 6);
-	double dInv12 = powerCalc(dInv, 12);
-	double correction = 4*EPSILON*(sig12*dInv12 - sig6*dInv6) + EPSILON;
-	
-	potential -= correction;
-	
-	if (ENABLE_DEBUG_INFO){
-		if (rij < 6e-10){
-		printf("Potential exclusion: %e\n\n", potential);	
-		}
-	}
-	
-
-	
-	return potential;
+	double FperDist = calcFLJperDistance(BOND_STACK, cutOffSq, rSq);
+	Vec3 F = scale(r, FperDist);
+	p1->F = add(p1->F, F);
+	p2->F = sub(p2->F, F);
 }
 
 
@@ -518,12 +459,12 @@ static double VCoulomb(Particle *p1, Particle *p2)
 		return 0;
 
 	double truncLength = config.truncationLen;
-	double rij = nearestImageDistance(p1->pos, p2->pos);
+	double r = nearestImageDistance(p1->pos, p2->pos);
 
-	if (rij > truncLength)
+	if (r > truncLength)
 		return 0; /* Too far away */
 	
-	return calcVCoulomb(rij) - calcVCoulomb(truncLength);
+	return calcVCoulomb(r) - calcVCoulomb(truncLength);
 }
 
 static double calcFCoulomb(double r)
@@ -544,14 +485,14 @@ static void FCoulomb(Particle *p1, Particle *p2)
 		return;
 
 	double truncLen = config.truncationLen;
-	double rij = nearestImageDistance(p2->pos, p1->pos);
-	if (rij > truncLen)
+	double r = nearestImageDistance(p2->pos, p1->pos);
+	if (r > truncLen)
 		return; /* Too far away */
 	
 	Vec3 direction = nearestImageUnitVector(p1->pos, p2->pos);
 	Vec3 forceVec;
 	
-	forceVec = scale(direction, calcFCoulomb(rij));
+	forceVec = scale(direction, calcFCoulomb(r));
 	p1->F = sub(p1->F, forceVec);
 	p2->F = add(p2->F, forceVec);
 }
@@ -605,15 +546,25 @@ static void strandForces(Strand *s) {
 	}
 }
 
-static void pairForces(Particle *p1, Particle *p2)
+static void mutiallyExclusivePairForces(Particle *p1, Particle *p2)
 {
-	/* Nonbonded pair interactions are mutually exclusive. See Knotts. */
+	/* Nonbonded pair interactions are mutually exclusive. See Knotts.
+	 * Note that this screws up energy conservation!! */
 	if (isBondedBasePair(p1->type, p2->type))
 		FbasePair(p1, p2);
 	else if (isChargedPair(p1->type, p2->type))
 		FCoulomb(p1, p2);
 	else
 		Fexclusion(p1, p2);
+}
+
+static void pairForces(Particle *p1, Particle *p2)
+{
+	/* Apply all forces at once, this should conserve energy (for the 
+	 * verlet integrator without thermal bath coupling). */
+	FbasePair(p1, p2);
+	FCoulomb(p1, p2);
+	Fexclusion(p1, p2);
 }
 
 static void calculateForces(void)
@@ -626,7 +577,10 @@ static void calculateForces(void)
 		strandForces(&world.strands[s]);
 
 	/* Particle-based forces */
-	forEveryPair(&pairForces);
+	if (MUTUALLY_EXCLUSIVE_PAIR_FORCES)
+		forEveryPair(&mutiallyExclusivePairForces);
+	else
+		forEveryPair(&pairForces);
 
 }
 
