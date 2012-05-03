@@ -190,7 +190,7 @@ static __inline__ Vec3 randNormVec(double stdDev)
 	return res;
 }
 
-static Vec3 rotate(Vec3 v, Vec3 axis, double theta)
+static __inline__ Vec3 rotate(Vec3 v, Vec3 axis, double theta)
 {
 	Vec3 u = normalize(axis);
 	double ux = u.x;
