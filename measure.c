@@ -17,7 +17,7 @@ typedef struct {
 static StreamState makeStreamState(const char *filename)
 {
 	StreamState s;
-	s.newfd = open(filename, O_WRONLY | O_CREAT, 0644);
+	s.newfd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (s.newfd < 0) {
 		perror("Error opening file");
 		assert(false);
