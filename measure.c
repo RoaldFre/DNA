@@ -219,7 +219,7 @@ Task measurementTask(Measurement *measurement)
 	MeasInitialData *mid = malloc(sizeof(*mid));
 	memcpy(&mid->meas, measurement, sizeof(*measurement));
 	mid->strBuf = NULL;
-	
+
 	/* Make task */
 	Task task;
 	task.initialData = mid;
@@ -229,7 +229,7 @@ Task measurementTask(Measurement *measurement)
 
 	int strSize = measurement->measConf.renderStrBufSize;
 	if (strSize <= 0)
-		return task; /* just the sampler task */
+		return task; /* No string stuff necessary */
 
 	/* Also create a render task to render the string */
 	char *string = malloc(strSize);
@@ -240,11 +240,8 @@ Task measurementTask(Measurement *measurement)
 	rsc.x = measurement->measConf.x;
 	rsc.y = measurement->measConf.y;
 
-	Task renderStringTask = makeRenderStringTask(&rsc);
+	registerString(&rsc);
 
-	Task *tasks[2];
-	tasks[0] = &task;
-	tasks[1] = &renderStringTask;
-	return sequence(tasks, 2);
+	return task;
 }
 

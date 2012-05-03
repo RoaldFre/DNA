@@ -12,13 +12,12 @@ typedef struct
 
 Task makeRenderTask(RenderConf *rc);
 
-
-
 typedef struct {
 	const char *string;
 	int x, y; /* Pixel-coordinates of the string to render */
 } RenderStringConfig;
 
-Task makeRenderStringTask(RenderStringConfig *rsc);
+/* Register the given string to be rendered at the specified position */
+void registerString(RenderStringConfig *rsc);
 
 #endif

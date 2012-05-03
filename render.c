@@ -51,6 +51,15 @@ static Quaternion cam_orientation;
 static Vec3 cam_position;
 
 
+typedef struct stringList {
+	RenderStringConfig rsc;
+	struct stringList *next;
+} StringList;
+
+/* Global that holds a linked list to all the strings that should be 
+ * rendered. */
+static StringList *strings = NULL;
+
 
 static void drawPoint(Vec3 p)
 {
@@ -537,6 +546,8 @@ static void render(RenderConf *rc)
 	Mat3 m3;
 	double m4[16];
 
+	calcFps();
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	/* 3D */
@@ -573,10 +584,12 @@ static void render(RenderConf *rc)
 	for (int s = 0; s < world.numStrands; s++)
 		renderStrand(&world.strands[s], rc);
 
-	/* Prepare for text rendering */
+
+	/* Text */
 	renderSet2D();
 	const int n = 64;
 	char string[n];
+
 	snprintf(string, n, "T = %f K", temperature());
 	renderString(string, 10, 40);
 
@@ -592,9 +605,15 @@ static void render(RenderConf *rc)
 	glLoadIdentity();
 	renderString(fps_string, 10, SCREEN_H - 10);
 
+
+	StringList *node = strings;
+	while (node != NULL) {
+		renderString(node->rsc.string, node->rsc.x, node->rsc.y);
+		node = node->next;
+	}
+
 	SDL_GL_SwapBuffers();
 
-	calcFps();
 }
 
 /* Render the image if we must, based on the requested framerate and the 
@@ -654,30 +673,11 @@ Task makeRenderTask(RenderConf *rc)
 	return ret;
 }
 
-static bool renderStringTick(void *data)
+void registerString(RenderStringConfig *rsc)
 {
-	RenderStringConfig *rsc = (RenderStringConfig*) data;
-	renderSet2D();
-	renderString(rsc->string, rsc->x, rsc->y);
-	SDL_GL_SwapBuffers(); /* TODO this is a hack and causes flicker and 
-				 delay ... should just keep a static linked 
-				 list here and render those in the main 
-				 render task instead of spawning all these 
-				 tasks ... OR have some additional task 
-				 that only swaps the buffers and that gets 
-				 put at the end of the task sequence, but 
-				 that's not nice */
-	return true;
+	StringList *node = malloc(sizeof(*node));
+	node->rsc = *rsc; /* struct copy */
+	node->next = strings;
+	strings = node;
 }
-Task makeRenderStringTask(RenderStringConfig *rsc)
-{
-	RenderStringConfig *rscCopy = malloc(sizeof(*rscCopy));
-	memcpy(rscCopy, rsc, sizeof(*rscCopy));
 
-	Task ret;
-	ret.initialData = rscCopy;
-	ret.start = &passPointer;
-	ret.tick  = &renderStringTick;
-	ret.stop  = &freePointer;
-	return ret;
-}
