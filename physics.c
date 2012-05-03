@@ -208,7 +208,6 @@ static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 
 
 /* STACKING */
-#define INV_CUBE_ROOT_OF_TWO 0.793700525984099737375852819636 /* 2^(-1/3) */
 typedef struct {
 	double r, phi, z;
 } HelixInfo;
