@@ -11,7 +11,7 @@
 #define ENABLE_BOND		true
 #define ENABLE_ANGLE		true
 #define ENABLE_DIHEDRAL		true
-#define ENABLE_STACK		true //TODO check whether distances are correct
+#define ENABLE_STACK		true
 #define ENABLE_EXCLUSION	true
 #define ENABLE_BASE_PAIR	true
 #define ENABLE_COULOMB		true

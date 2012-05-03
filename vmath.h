@@ -190,4 +190,30 @@ static __inline__ Vec3 randNormVec(double stdDev)
 	return res;
 }
 
+static Vec3 rotate(Vec3 v, Vec3 axis, double theta)
+{
+	Vec3 u = normalize(axis);
+	double ux = u.x;
+	double uy = u.y;
+	double uz = u.z;
+	double c = cos(theta);
+	double s = sin(theta);
+	Vec3 res;
+
+	/* Rotation matrix fully written out */
+	res.x = (c   +    ux*ux*(1 - c)) * v.x
+	      + (ux*uy*(1 - c)  -  uz*c) * v.y
+	      + (ux*uz*(1 - c)  +  uy*c) * v.z;
+
+	res.y = (ux*uy*(1 - c)  +  uz*s) * v.x
+	      + (c   +    uy*uy*(1 - c)) * v.y
+	      + (uy*uz*(1 - c)  -  ux*s) * v.z;
+
+	res.z = (ux*uz*(1 - c)  -  uy*s) * v.x
+	      + (uy*uz*(1 - c)  +  ux*s) * v.y
+	      + (c   +    uz*uz*(1 - c)) * v.z;
+
+	return res;
+}
+
 #endif
