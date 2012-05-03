@@ -237,8 +237,13 @@ static double helixDistance2(HelixInfo bot, HelixInfo top,
 
 /* Distance between next neighbouring particles in the beta helix, ie 
  * particle i and i+2.
- * Particle 1 is the 'bottom' particle in the helix, particle 2 is the 
- * 'top' particle of the helix.
+ * Particle 1 is the 'bottom' particle in the helix (lower index in the 
+ * strand), particle 2 is the 'top' particle of the helix (higher index in 
+ * the strand).
+ *
+ * TODO WARNING, complementary strand should be of the correct 3'-5' 
+ * "direction" as the "normal" strand, or this breaks down.
+ *
  * monomerDistance:
  *   1 for immediate neighbours i and i+1
  *   2 for   next    neighbours i and i+2
@@ -247,7 +252,9 @@ static double neighbourStackDistance2(ParticleType t1, ParticleType t2, int mono
 {
 	HelixInfo hi1 = getHelixInfo(t1);
 	HelixInfo hi2 = getHelixInfo(t2);
-	return helixDistance2(hi1, hi2,
+	return helixDistance2(hi2, hi1, /* TODO order of hi1 and hi2 like 
+					   this should be wrong, but 
+					   works... */
 			monomerDistance * HELIX_DELTA_Z,
 			monomerDistance * HELIX_DELTA_PHI);
 }
@@ -268,8 +275,10 @@ static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 
 	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
 						monomerDistance);
-	return calcVLJ(BOND_STACK, rEqSq, rSq)
+	double V = calcVLJ(BOND_STACK, rEqSq, rSq)
 			- calcVLJ(BOND_STACK, rEqSq, truncSq); //TODO cache correction!
+	//printf("rfrac2=%f\tr2=%e, rEq2=%e, V=%f\n", rSq/rEqSq, rSq, rEqSq, V/EPSILON);
+	return V;
 }
 static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 {
@@ -641,6 +650,7 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 		Vb += Vbond(&s->Ss[i], &s->Ps[i],   D_S5P);
 		Vb += Vbond(&s->Ss[i], &s->Ps[i-1], D_S3P);
 
+		//printf("base %2d and %2d-1:\t",i,i);
 		Vs += Vstack(&s->Bs[i], &s->Bs[i-1], 1);
 
 		Va += Vangle(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_5S_A);
@@ -658,6 +668,7 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 		if (i < 2) continue;
 		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
 							DIHEDRAL_S3_P_5S3_P);
+		//printf("base %2d and %2d-2:\t",i,i);
 		Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 2);
 	}
 
