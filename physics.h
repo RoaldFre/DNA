@@ -9,19 +9,19 @@
 
 
 /* Units */
-#define RAD	(M_PI / 180)	/* Radian */
-#define A	(1e-10)		/* Angstrom */
-#define AU	(1.660539e-27)	/* Atomic unit */
+#define RAD		(M_PI / 180)	/* Radian */
+#define A		(1e-10)		/* Angstrom */
+#define AU		(1.660539e-27)	/* Atomic unit */
+#define EPSILON		1.81e-21 	/* 0.26 kcal/mol = 1.81e-21 J/particle */
+#define ELECTRON_CHARGE	1.602177e-19
+#define ENERGY_FACTOR	(1/ELECTRON_CHARGE) /* Energies in electron volt */
 
-/* Energy unit */
-#define EPSILON 1.81e-21 /* 0.26kcal/mol == 1.81 * 10^-21 J (per particle) */
 
-
-/* Structure of the helix. See table I in Knotts */
-
-#define HELIX_DELTA_Z   (3.38 * A) 	/* vertical spacing between layers */
-#define HELIX_DELTA_PHI (36 * RAD)	/* twist at each consecutive layer */
-
+/* STRUCTURE OF THE HELIX. SEE TABLE I IN KNOTTS */
+/* Vertical spacing between layers */
+#define HELIX_DELTA_Z   (3.38 * A)
+/* Twist at each consecutive layer */
+#define HELIX_DELTA_PHI (36 * RAD)
 /* Angles */
 #define P_PHI (94.038 * RAD)
 #define S_PHI (70.197 * RAD)
@@ -51,7 +51,9 @@
 #define C_M (110.1 * AU)
 #define G_M (150.1 * AU)
 
-/* Equilibrium distance of bonds */
+/* BOND INTERACTION */
+#define BOND_K1   ( 10e20 * EPSILON) /* in J/A^2 */
+#define BOND_K2   (100e20 * EPSILON) /* in J/A^4 */
 #define BOND_S5_P (3.899*A)
 #define BOND_S3_P (3.559*A)
 #define BOND_S_A  (6.430*A)
@@ -59,56 +61,43 @@
 #define BOND_S_C  (4.921*A)
 #define BOND_S_G  (6.392*A)
 
-
-
-/* TODO rename coupling constants for consistency! */
-
-/* Bond stretch */
-#define BOND_K1      (10e20 * EPSILON) /* in J*A^-2 */
-#define BOND_K2      (100e20 * EPSILON) /* in J*A^-2 */
-/* Bond bend */
-#define BOND_Ktheta  (400 * EPSILON) /* per radian^2 */
-/* Bond dihedral */
-#define BOND_Kphi    (4 * EPSILON)
-/* Bond stack */
-#define BOND_STACK   EPSILON
-
-/* Bond angle */
+/* ANGLE INTERACTION */
+#define ANGLE_COUPLING	(400 * EPSILON) /* per radian^2 */
 #define ANGLE_S5_P_3S	( 94.49 * RAD)
 #define ANGLE_P_5S3_P	(120.15 * RAD)
 #define ANGLE_P_5S_A	(113.13 * RAD)
 #define ANGLE_P_3S_A	(108.38 * RAD)
 
-/* Dihedral angle */
+/* DIHEDRAL INTERACTION */
+#define DIHEDRAL_COUPLING	(4 * EPSILON)
 #define DIHEDRAL_P_5S3_P_5S	(-154.80 * RAD)
 #define DIHEDRAL_S3_P_5S3_P	(-179.17 * RAD)
 #define DIHEDRAL_A_S3_P_5S	( -22.60 * RAD)
 #define DIHEDRAL_S3_P_5S_A	(  50.69 * RAD)
 
-/* Base-Pair couplings */
-#define COUPLING_BP_AT 	1.928e-20  /* 2.77 kcal/mol (per particle) */
-#define COUPLING_BP_GC	2.896e-20  /* 4.16 kcal/mol (per particle) */
-#define DISTANCE_r0_AT	(2.9002*A) /* Knotts et al 2007, table III, 2.9002 A */
-#define DISTANCE_r0_GC	(2.8694*A) /* Knotts et al 2007, table III, 2.8694 A */
+/* BASE PAIR INTERACTION */
+#define BASE_PAIR_COUPLING_A_T 	1.928e-20
+#define BASE_PAIR_COUPLING_G_C	2.896e-20
+#define BASE_PAIR_DISTANCE_A_T	(2.9002*A)
+#define BASE_PAIR_DISTANCE_G_C	(2.8694*A)
 
-/* Exlusion Force */
+/* STACKING INTERACTION */
+#define STACK_COUPLING	EPSILON
+/* Equilibrium distances get derived from the structure of the equilibrium 
+ * helix above */
+
+/* EXLUSION INTERACTION */
 #define EXCLUSION_COUPLING	(0.1 * EPSILON)
-#define D_CUT			(6.86*A)
-#define D_CUT_BASE		(1.00*A)
+#define EXCLUSION_DISTANCE	(6.86*A)
+#define EXCLUSION_DISTANCE_BASE	(1.00*A)
 
-/* Coulomb interaction between phosphates */
-#define CHARGE_ELECTRON		1.602e-19  /* Coulomb */
+/* COULOMB INTERACTION (between phosphates) */
 #define VACUUM_PERMITTIVITY	8.8541e-12 /* Farad/m */
 #define H2O_PERMETTIVITY	(80 * VACUUM_PERMITTIVITY)
-#define DEBYE_LENGTH 		13.603e-10 /* 13.603 Angstrom for 50mM = [Na+]*/
 
-/* Thermodynamics */
-#define ENERGY_FACTOR	      (1/1.602177e-19) /* Energy in electronvolt */
-#define BOLTZMANN_CONSTANT    1.38065e-23
-
-#define AVOGADRO              6.023e23 /* particles per mol */
-
-
+/* THERMODYNAMICS */
+#define BOLTZMANN_CONSTANT	1.38065e-23
+#define AVOGADRO		6.023e23
 
 
 typedef enum

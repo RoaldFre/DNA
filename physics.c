@@ -131,7 +131,7 @@ static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	if (!ENABLE_ANGLE)
 		return 0;
 	Vec3 a, b;
-	double ktheta = BOND_Ktheta;
+	double ktheta = ANGLE_COUPLING;
 	
 	a = nearestImageVector(p2->pos, p1->pos);
 	b = nearestImageVector(p2->pos, p3->pos);
@@ -144,7 +144,7 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	if (!ENABLE_ANGLE)
 		return;
 	Vec3 a, b;
-	double ktheta = BOND_Ktheta;
+	double ktheta = ANGLE_COUPLING;
 	
 	a = nearestImageVector(p2->pos, p1->pos);
 	b = nearestImageVector(p2->pos, p3->pos);
@@ -196,7 +196,7 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	Vec3 r3 = nearestImageVector(p3->pos, p4->pos);
 	
 	double phi = dihedral(r1, r2, r3);
-	return BOND_Kphi * (1 - cos(phi - phi0));
+	return DIHEDRAL_COUPLING * (1 - cos(phi - phi0));
 }
 static void FdihedralParticle(Particle *target, 
 		Particle *p1, Particle *p2, Particle *p3, Particle *p4, 
@@ -307,8 +307,8 @@ static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 
 	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
 						monomerDistance);
-	double V = calcVLJ(BOND_STACK, rEqSq, rSq)
-			- calcVLJ(BOND_STACK, rEqSq, truncSq); //TODO cache correction!
+	double V = calcVLJ(STACK_COUPLING, rEqSq, rSq)
+			- calcVLJ(STACK_COUPLING, rEqSq, truncSq); //TODO cache correction!
 	//printf("rfrac2=%f\tr2=%e, rEq2=%e, V=%f\n", rSq/rEqSq, rSq, rEqSq, V/EPSILON);
 	return V;
 }
@@ -327,7 +327,7 @@ static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 
 	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
 						monomerDistance);
-	double FperDist = calcFLJperDistance(BOND_STACK, rEqSq, rSq);
+	double FperDist = calcFLJperDistance(STACK_COUPLING, rEqSq, rSq);
 	Vec3 F = scale(r, FperDist);
 	p1->F = add(p1->F, F);
 	p2->F = sub(p2->F, F);
@@ -346,12 +346,12 @@ static BasePairInfo getBasePairInfo(ParticleType t1, ParticleType t2)
 	BasePairInfo bpi;
 	if ((t1 == BASE_A  &&  t2 == BASE_T) 
 			||  (t1 == BASE_T  &&  t2 == BASE_A)) {
-		bpi.coupling = COUPLING_BP_AT;
-		bpi.distance2 = SQUARE(DISTANCE_r0_AT);
+		bpi.coupling = BASE_PAIR_COUPLING_A_T;
+		bpi.distance2 = SQUARE(BASE_PAIR_DISTANCE_A_T);
 	} else if ((t1 == BASE_C  &&  t2 == BASE_G)
 			||  (t1 == BASE_G  &&  t2 == BASE_C)) {
-		bpi.coupling = COUPLING_BP_GC;
-		bpi.distance2 = SQUARE(DISTANCE_r0_GC);
+		bpi.coupling = BASE_PAIR_COUPLING_G_C;
+		bpi.distance2 = SQUARE(BASE_PAIR_DISTANCE_G_C);
 	} else {
 		bpi.coupling = -1;
 		bpi.distance2 = -1;
@@ -431,9 +431,9 @@ static void FbasePair(Particle *p1, Particle *p2)
  * the repulsive part of the Lennard Jones potential stops. */
 static double getExclusionCutOff2(ParticleType t1, ParticleType t2){
 	if (isBase(t1) && isBase(t2))
-		return SQUARE(D_CUT_BASE);
+		return SQUARE(EXCLUSION_DISTANCE_BASE);
 	else
-		return SQUARE(D_CUT);
+		return SQUARE(EXCLUSION_DISTANCE);
 }
 /* Only the repulsive part of a Lennard-Jones potential. (The potential gets lifted so it's zero at infinity.) */
 static double Vexclusion(Particle *p1, Particle *p2)
@@ -459,7 +459,7 @@ static void Fexclusion(Particle *p1, Particle *p2)
 	if (rSq > cutOffSq)
 		return;
 
-	double FperDist = calcFLJperDistance(BOND_STACK, cutOffSq, rSq);
+	double FperDist = calcFLJperDistance(STACK_COUPLING, cutOffSq, rSq);
 	Vec3 F = scale(r, FperDist);
 	p1->F = add(p1->F, F);
 	p2->F = sub(p2->F, F);
@@ -478,12 +478,12 @@ static double calcInvDebyeLength(void)
 
 	lambdaBDenom = 4 * M_PI * H2O_PERMETTIVITY
 			* BOLTZMANN_CONSTANT * T;
-	lambdaB = CHARGE_ELECTRON * CHARGE_ELECTRON / lambdaBDenom;
+	lambdaB = SQUARE(ELECTRON_CHARGE) / lambdaBDenom;
 	return sqrt(8 * M_PI * lambdaB * AVOGADRO * saltCon);
 }
 static double calcVCoulomb(double r)
 {
-	double couplingConstant = CHARGE_ELECTRON * CHARGE_ELECTRON
+	double couplingConstant = SQUARE(ELECTRON_CHARGE)
 				/ (4 * M_PI * H2O_PERMETTIVITY);
 	double exponentialPart = exp(-r * calcInvDebyeLength());
 	
@@ -512,7 +512,7 @@ static double VCoulomb(Particle *p1, Particle *p2)
 
 static double calcFCoulomb(double r)
 {
-	double couplingConstant = CHARGE_ELECTRON * CHARGE_ELECTRON
+	double couplingConstant = SQUARE(ELECTRON_CHARGE)
 				/ (4 * M_PI * H2O_PERMETTIVITY);
 	double k0 = calcInvDebyeLength(); //TODO cache per iteration (or whenever T changes)
 	double exponentialPart = exp(-r * k0);
