@@ -20,9 +20,9 @@
 
 /* If true: only consider base pairing interactions between matching bases 
  * of a dual stranded DNA.
-* The world must only have (at least) two strands (that are complementary), 
-* and the i'th monomer in a strand will be matched with the i'th monomer of 
-* the other strand */
+ * The world must only have (at least) two strands (that are complementary), 
+ * and the i'th monomer in a strand will be matched with the i'th monomer of 
+ * the other strand */
 #define ONLY_MATCHING_BASE_PAIR_INTERACTION true
 
 
