@@ -52,9 +52,12 @@
 #define G_M (150.1 * AU)
 
 /* Equilibrium distance of bonds */
-#define D_S5P   (3.899*A)
-#define D_S3P   (3.559*A)
-#define D_SA    (6.430*A)
+#define BOND_S5_P (3.899*A)
+#define BOND_S3_P (3.559*A)
+#define BOND_S_A  (6.430*A)
+#define BOND_S_T  (4.880*A)
+#define BOND_S_C  (4.921*A)
+#define BOND_S_G  (6.392*A)
 
 
 

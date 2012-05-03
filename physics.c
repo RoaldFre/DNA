@@ -95,6 +95,27 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
 	p1->F = add(p1->F, F);
 	p2->F = sub(p2->F, F);
 }
+static double getSugarBaseBondDistance(ParticleType base)
+{
+	switch (base) {
+		case BASE_A: return BOND_S_A;
+		case BASE_T: return BOND_S_T;
+		case BASE_C: return BOND_S_C;
+		case BASE_G: return BOND_S_G;
+		default: assert(false); return 0;
+	}
+}
+/* Bond between a sugar and a base */
+static double VbondSB(Particle *sugar, Particle *base)
+{
+	assert(sugar->type == SUGAR);
+	return Vbond(sugar, base, getSugarBaseBondDistance(base->type));
+}
+static void FbondSB(Particle *sugar, Particle *base)
+{
+	assert(sugar->type == SUGAR);
+	Fbond(sugar, base, getSugarBaseBondDistance(base->type));
+}
 
 /* ANGLE */
 /* V = ktheta * (theta - theta0) 
@@ -537,15 +558,15 @@ static void strandForces(Strand *s) {
 	assert(s->Ss != NULL && s->Ps != NULL && s->Bs != NULL);
 
 	/* Bottom monomer */
-	Fbond(&s->Ss[0], &s->Bs[0], D_SA);
-	Fbond(&s->Ss[0], &s->Ps[0], D_S5P);
+	FbondSB(&s->Ss[0], &s->Bs[0]);
+	Fbond(&s->Ss[0], &s->Ps[0], BOND_S5_P);
 	Fangle(&s->Ps[0], &s->Ss[0], &s->Bs[0], ANGLE_P_5S_A);
 
 	/* Rest of the monomers */
 	for (int i = 1; i < s->numMonomers; i++) {
-		Fbond(&s->Ss[i], &s->Bs[i],   D_SA);
-		Fbond(&s->Ss[i], &s->Ps[i],   D_S5P);
-		Fbond(&s->Ss[i], &s->Ps[i-1], D_S3P);
+		FbondSB(&s->Ss[i], &s->Bs[i]);
+		Fbond(&s->Ss[i], &s->Ps[i],   BOND_S5_P);
+		Fbond(&s->Ss[i], &s->Ps[i-1], BOND_S3_P);
 
 		Fstack(&s->Bs[i], &s->Bs[i-1], 1);
 
@@ -664,14 +685,14 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 	double Va = 0;
 	double Vd = 0;
 	double Vs = 0;
-	Vb += Vbond(&s->Ss[0], &s->Bs[0],   D_SA);
-	Vb += Vbond(&s->Ss[0], &s->Ps[0],   D_S5P);
+	Vb += VbondSB(&s->Ss[0], &s->Bs[0]);
+	Vb += Vbond(&s->Ss[0], &s->Ps[0], BOND_S5_P);
 
 	Va += Vangle(&s->Bs[0], &s->Ss[0], &s->Ps[0], ANGLE_P_5S_A);
 	for (int i = 1; i < s->numMonomers; i++) {
-		Vb += Vbond(&s->Ss[i], &s->Bs[i],   D_SA);
-		Vb += Vbond(&s->Ss[i], &s->Ps[i],   D_S5P);
-		Vb += Vbond(&s->Ss[i], &s->Ps[i-1], D_S3P);
+		Vb += VbondSB(&s->Ss[i], &s->Bs[i]);
+		Vb += Vbond(&s->Ss[i], &s->Ps[i],   BOND_S5_P);
+		Vb += Vbond(&s->Ss[i], &s->Ps[i-1], BOND_S3_P);
 
 		//printf("base %2d and %2d-1:\t",i,i);
 		Vs += Vstack(&s->Bs[i], &s->Bs[i-1], 1);
