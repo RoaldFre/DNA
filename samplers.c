@@ -184,12 +184,40 @@ static void basePairingCounter(Particle *p1, Particle *p2, void *data)
 static bool basePairingSample(SamplerData *sd, void *state)
 {
 	double *threshold = (double*) state;
+
+	/* All base pairs */
 	BasePairingCounterData bpcd;
 	bpcd.count = 0;
 	bpcd.threshold = *threshold;
 	forEveryPairD(&basePairingCounter, &bpcd);
-	if(sd->string != NULL)
-		snprintf(sd->string, sd->strBufSize, "%d", bpcd.count);
+
+	/* Matching base pairs if two equal-length strands in the world 
+	 * (assumed to be complementary) */
+	int correctlyBound = -1; /* guard */
+	if (world.numStrands == 2  &&  (world.strands[0].numMonomers
+					== world.strands[1].numMonomers)) {
+		correctlyBound = 0;
+		for (int i = 0; i < world.strands[0].numMonomers; i++) {
+			double V = VbasePair(&world.strands[0].Bs[i],
+					     &world.strands[1].Bs[i]);
+			if (V < *threshold)
+				correctlyBound++;
+		}
+	}
+
+	if (correctlyBound >= 0) {
+		printf("%e\t%d\t%d\n", getTime(), bpcd.count, correctlyBound);
+		if(sd->string != NULL)
+			snprintf(sd->string, sd->strBufSize,
+					"All BPs: %d, Correct BPs: %d",
+					bpcd.count, correctlyBound);
+	} else {
+		printf("%e\t%d\n", getTime(), bpcd.count);
+		if(sd->string != NULL)
+			snprintf(sd->string, sd->strBufSize,
+					"All BPs: %d", bpcd.count);
+	}
+
 	return true;
 }
 Sampler basePairingSampler(double energyThreshold)
