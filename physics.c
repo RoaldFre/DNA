@@ -18,11 +18,15 @@
 
 #define MUTUALLY_EXCLUSIVE_PAIR_FORCES true /* true for Knotts' model */
 
-/* If true: only consider base pairing interactions between matching bases 
+/* ONLY_MATCHING_BASE_PAIR_INTERACTION:
+ * If true: only consider base pairing interactions between matching bases 
  * of a dual stranded DNA.
  * The world must only have (at least) two strands (that are complementary), 
  * and the i'th monomer in a strand will be matched with the i'th monomer of 
- * the other strand */
+ * the other strand.
+ * 
+ * If false: every possible base combination is checked to see whether it 
+ * is bonded via the base pairing interaction. */
 #define ONLY_MATCHING_BASE_PAIR_INTERACTION true
 
 
