@@ -13,7 +13,7 @@
 #include "render.h"
 #include "samplers.h"
 
-#define DATA_FILE_NAME "/tmp/data.txt"
+#define DEF_DATA_PATH "data.txt"
 
 /* Defaults */
 #define DEF_BASE_SEQUENCE		"CCCAATTTTTTTTTTTTTTGGG" /* T_12 in Bonnet */
@@ -51,6 +51,7 @@ static IntegratorConf integratorConf =
 	.numBoxes   = -1, /* guard */
 };
 static const char* baseSequence = DEF_BASE_SEQUENCE;
+static const char* filePath = DEF_DATA_PATH;
 static bool buildCompStrand = false;
 static double worldSize = -1; /* guard */
 
@@ -62,6 +63,8 @@ static void printUsage(void)
 	printf("Flags:\n");
 	printf(" -s <str>  base Sequence of the DNA strand to simulate\n");
 	printf("             default: %s\n", DEF_BASE_SEQUENCE);
+	printf(" -D <path> Data file to Dump sampler output\n");
+	printf("             default: %s\n", DEF_DATA_PATH);
 	printf(" -d        build a Double helix with complementary strand as well\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
@@ -107,12 +110,15 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:T:g:c:f:rR:Fl:S:b:v:i:h")) != -1)
+	while ((c = getopt(argc, argv, ":s:D:dt:T:g:c:f:rR:Fl:S:b:v:i:h")) != -1)
 	{
 		switch (c)
 		{
 		case 's':
 			baseSequence = optarg;
+			break;
+		case 'D':
+			filePath = optarg;
 			break;
 		case 'd':
 			buildCompStrand = true;
@@ -313,7 +319,7 @@ int main(int argc, char **argv)
 	basePairing.measConf.measureSamples = -1; /* loop forever */
 	basePairing.measConf.measureInterval = 100 * TIME_FACTOR;
 	basePairing.measConf.measureWait = 0;
-	basePairing.measConf.measureFile = NULL;
+	basePairing.measConf.measureFile = filePath;
 	basePairing.measConf.renderStrBufSize = 64;
 	basePairing.measConf.x = 10;
 	basePairing.measConf.y = 80;
