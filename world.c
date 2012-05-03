@@ -119,31 +119,31 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		switch (baseSequence[i]) {
 		case 'A':
 			b_t = complementarySequence ? BASE_T : BASE_A;
-			b_m = A_M;
-			b_r = A_R;
-			b_z = A_Z;
-			b_phi = A_PHI;
+			b_m = complementarySequence ? T_M : A_M;
+			b_r = complementarySequence ? T_R : A_R;
+			b_z = complementarySequence ? T_Z : A_Z;
+			b_phi = complementarySequence ? T_PHI : A_PHI;
 			break;
 		case 'T':
 			b_t = complementarySequence ? BASE_A : BASE_T;
-			b_m = T_M;
-			b_r = T_R;
-			b_z = T_Z;
-			b_phi = T_PHI;
+			b_m = complementarySequence ? A_M : T_M;
+			b_r = complementarySequence ? A_R : T_R;
+			b_z = complementarySequence ? A_R : T_Z;
+			b_phi = complementarySequence ? A_PHI : T_PHI;
 			break;
 		case 'C':
 			b_t = complementarySequence ? BASE_G : BASE_C;
-			b_m = C_M;
-			b_r = C_R;
-			b_z = C_Z;
-			b_phi = C_PHI;
+			b_m = complementarySequence ? G_M : C_M;
+			b_r = complementarySequence ? G_R : C_R;
+			b_z = complementarySequence ? G_Z : C_Z;
+			b_phi = complementarySequence ? G_PHI : C_PHI;
 			break;
 		case 'G':
 			b_t = complementarySequence ? BASE_C : BASE_G;
-			b_m = G_M;
-			b_r = G_R;
-			b_z = G_Z;
-			b_phi = G_PHI;
+			b_m = complementarySequence ? C_M : G_M;
+			b_r = complementarySequence ? C_R : G_R;
+			b_z = complementarySequence ? C_Z : G_Z;
+			b_phi = complementarySequence ? C_PHI : G_PHI;
 			break;
 		default:
 			fprintf(stderr, "Unknown base type '%c' at "
@@ -163,9 +163,18 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		s->Ps[i].m = P_M;
 
 		/* Positions */
-		s->Bs[i].pos = fromCilindrical(b_r, phi + b_phi, z + b_z);
-		s->Ss[i].pos = fromCilindrical(S_R, phi + S_PHI, z + S_Z);
-		s->Ps[i].pos = fromCilindrical(P_R, phi + P_PHI, z + P_Z);
+		if (!complementaryHelix) {
+			s->Bs[i].pos = fromCilindrical(b_r, phi + b_phi, z + b_z);
+			s->Ss[i].pos = fromCilindrical(S_R, phi + S_PHI, z + S_Z);
+			s->Ps[i].pos = fromCilindrical(P_R, phi + P_PHI, z + P_Z);
+		} else {
+		/* Screw assymetry */	
+			s->Bs[i].pos = fromCilindrical(b_r, (phi + b_phi) + M_PI, z - b_z);
+			s->Ss[i].pos = fromCilindrical(S_R, (phi + S_PHI) + M_PI, z - S_Z);
+			s->Ps[i].pos = fromCilindrical(P_R, (phi + P_PHI) + M_PI, z - P_Z);
+		}
+		
+		
 		s->Bs[i].pos = add(s->Bs[i].pos, offset);
 		s->Ss[i].pos = add(s->Ss[i].pos, offset);
 		s->Ps[i].pos = add(s->Ps[i].pos, offset);
