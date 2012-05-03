@@ -12,11 +12,18 @@
 #define ENABLE_ANGLE		true
 #define ENABLE_DIHEDRAL		true
 #define ENABLE_STACK		true
-#define ENABLE_EXCLUSION	true
+#define ENABLE_EXCLUSION	false
 #define ENABLE_BASE_PAIR	true
 #define ENABLE_COULOMB		true
 
 #define MUTUALLY_EXCLUSIVE_PAIR_FORCES true /* true for Knotts' model */
+
+/* If true: only consider base pairing interactions between matching bases 
+ * of a dual stranded DNA.
+* The world must only have (at least) two strands (that are complementary), 
+* and the i'th monomer in a strand will be matched with the i'th monomer of 
+* the other strand */
+#define ONLY_MATCHING_BASE_PAIR_INTERACTION true
 
 
 /* ===== FORCES AND POTENTIALS ===== */
@@ -561,7 +568,10 @@ static void mutiallyExclusivePairForces(Particle *p1, Particle *p2)
 {
 	/* Nonbonded pair interactions are mutually exclusive. See Knotts.
 	 * Note that this screws up energy conservation!! */
-	if (isBondedBasePair(p1->type, p2->type))
+	if (isBondedBasePair(p1->type, p2->type)
+		&& (!ONLY_MATCHING_BASE_PAIR_INTERACTION
+				|| ((p1->strandIndex == p2->strandIndex)
+					&& (p1->strand != p2->strand))))
 		FbasePair(p1, p2);
 	else if (isChargedPair(p1->type, p2->type))
 		FCoulomb(p1, p2);
@@ -573,7 +583,12 @@ static void pairForces(Particle *p1, Particle *p2)
 {
 	/* Apply all forces at once, this should conserve energy (for the 
 	 * verlet integrator without thermal bath coupling). */
-	FbasePair(p1, p2);
+
+	if (!ONLY_MATCHING_BASE_PAIR_INTERACTION
+			|| ((p1->strandIndex == p2->strandIndex)
+				&& (p1->strand != p2->strand)))
+		FbasePair(p1, p2);
+
 	FCoulomb(p1, p2);
 	Fexclusion(p1, p2);
 }
@@ -627,7 +642,11 @@ static void pairPotentials(Particle *p1, Particle *p2, void *data)
 {
 	PotentialEnergies *pe = (PotentialEnergies*) data;
 	
-	pe->basePair += VbasePair(p1, p2);
+	if (!ONLY_MATCHING_BASE_PAIR_INTERACTION
+			|| ((p1->strandIndex == p2->strandIndex)
+				&& (p1->strand != p2->strand)))
+		pe->basePair += VbasePair(p1, p2);
+
 	pe->Coulomb  += VCoulomb(p1, p2);
 	pe->exclusion += Vexclusion(p1, p2);
 }
