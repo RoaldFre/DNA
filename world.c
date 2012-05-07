@@ -90,7 +90,13 @@ bool allocStrand(Strand *s, int numMonomers) {
 static void fillStrandHelper(Strand *s, const char *baseSequence,
 		bool complementarySequence, bool complementaryHelix)
 {
-	//TODO complementaryHelix;
+	/* right order when we are building the complementary strand */
+	double order;
+	if (complementarySequence)
+		order = -1;
+	else
+		order = 1;
+
 
 	int n = strlen(baseSequence);
 	allocStrand(s, n);
@@ -100,7 +106,7 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	Vec3 offset;
 	offset.x = ws / 2;
 	offset.z = ws / 2;
-	offset.y = (ws - n * HELIX_DELTA_Z) / 2;
+	offset.y = (order * ws - n * HELIX_DELTA_Z) / 2;
 
 	/* <v^2> = 3 T k_B / m
 	 * -> per dimension: gaussian with variance T k_B / m */
@@ -109,6 +115,11 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 
 	double phi = 0;
 	double z = 0;
+	int j;
+	
+	if (complementarySequence)
+		z = (n - 1) * HELIX_DELTA_Z;
+	
 	for (int i = 0; i < n; i++) {
 		/* Default to Adenine */
 		ParticleType b_t = BASE_A;
@@ -116,7 +127,11 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		double b_r = A_R;
 		double b_z = A_Z;
 		double b_phi = A_PHI;
-		switch (baseSequence[i]) {
+		j = i;
+		if (complementarySequence)
+			j = n - 1 - i;
+		
+		switch (baseSequence[j]) {
 		case 'A':
 			b_t = complementarySequence ? BASE_T : BASE_A;
 			b_m = complementarySequence ? T_M : A_M;
@@ -169,9 +184,9 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 			s->Ps[i].pos = fromCilindrical(P_R, phi + P_PHI, z + P_Z);
 		} else {
 		/* Screw assymetry */	
-			s->Bs[i].pos = fromCilindrical(b_r, (phi + b_phi) + M_PI, z - b_z);
-			s->Ss[i].pos = fromCilindrical(S_R, (phi + S_PHI) + M_PI, z - S_Z);
-			s->Ps[i].pos = fromCilindrical(P_R, (phi + P_PHI) + M_PI, z - P_Z);
+			s->Bs[i].pos = fromCilindrical(b_r, (phi - b_phi), z - b_z);
+			s->Ss[i].pos = fromCilindrical(S_R, (phi - S_PHI), z - S_Z);
+			s->Ps[i].pos = fromCilindrical(P_R, (phi - P_PHI), z - P_Z);
 		}
 		
 		
@@ -189,8 +204,8 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		s->Ss[i].strand = s; s->Ss[i].strandIndex = i;
 		s->Ps[i].strand = s; s->Ps[i].strandIndex = i;
 
-		z += HELIX_DELTA_Z;
-		phi += HELIX_DELTA_PHI;
+		z += order * HELIX_DELTA_Z;
+		phi += order * HELIX_DELTA_PHI;
 	}
 }
 void fillStrand(Strand *s, const char *baseSequence)
