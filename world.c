@@ -164,7 +164,7 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 			fprintf(stderr, "Unknown base type '%c' at "
 					"position %d in base sequence '%s'! "
 					"Defaulting to Adenine!\n",
-					baseSequence[i], i, baseSequence);
+					baseSequence[j], j, baseSequence);
 		}
 
 		/* Type */
@@ -200,9 +200,9 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		s->Ps[i].vel = randNormVec(sqrt(velVarPerInvMass / s->Ps[i].m));
 
 		/* Particle's strand */
-		s->Bs[i].strand = s; s->Bs[i].strandIndex = i;
-		s->Ss[i].strand = s; s->Ss[i].strandIndex = i;
-		s->Ps[i].strand = s; s->Ps[i].strandIndex = i;
+		s->Bs[i].strand = s; s->Bs[i].strandIndex = j;
+		s->Ss[i].strand = s; s->Ss[i].strandIndex = j;
+		s->Ps[i].strand = s; s->Ps[i].strandIndex = j;
 
 		z += order * HELIX_DELTA_Z;
 		phi += order * HELIX_DELTA_PHI;
