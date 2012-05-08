@@ -197,9 +197,11 @@ static bool basePairingSample(SamplerData *sd, void *state)
 	if (world.numStrands == 2  &&  (world.strands[0].numMonomers
 					== world.strands[1].numMonomers)) {
 		correctlyBound = 0;
-		for (int i = 0; i < world.strands[0].numMonomers; i++) {
+		int n = world.strands[0].numMonomers;
+		for (int i = 0; i < n; i++) {
+			int j = n - 1 - i; //TODO
 			double V = VbasePair(&world.strands[0].Bs[i],
-					     &world.strands[1].Bs[i]);
+					     &world.strands[1].Bs[j]);
 			if (V < *threshold) {
 				correctlyBound++;
 				printf("1 ");
