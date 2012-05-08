@@ -124,7 +124,9 @@ static void *measStart(void *initialData)
 		state->streamState.newfd = -1;
 	}
 
-	state->intervalTime = 0;
+	state->intervalTime = (meas->measConf.measureWait > 0 ?
+			0 : meas->measConf.measureInterval);
+			/* TODO (So we start sampling immediately) */
 	state->sampler = meas->sampler; /* struct copy */
 	state->measConf = meas->measConf; /* struct copy */
 	state->measStatus = (meas->measConf.measureWait > 0 ?
@@ -172,6 +174,8 @@ static TaskSignal measTick(void *state)
 			measState->intervalTime = time - measWait;
 			printf("\nStarting measurement.\n");
 			measState->measStatus = SAMPLING;
+			/* bit of a hack to start sampling immediately: */
+			measState->intervalTime = measInterval;
 		}
 		break;
 	case SAMPLING:
