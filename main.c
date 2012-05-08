@@ -16,7 +16,7 @@
 #define DEF_DATA_PATH "data.txt"
 
 /* Defaults */
-#define DEF_BASE_SEQUENCE		"CCCAATTTTTTTTTTTTTTGGG" /* T_12 in Bonnet */
+#define DEF_BASE_SEQUENCE		"ACCAATTTTTTTTTTTTTTGGG" /* T_12 in Bonnet */
 #define DEF_TIMESTEP 			1.0
 #define DEF_TEMPERATURE 		300.0
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
@@ -26,7 +26,7 @@
 #define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_MEASUREMENT_WAIT 		4e4
 #define DEF_RENDER_FRAMERATE 		30.0
-#define DEF_RENDER_RADIUS 		1.5
+#define DEF_RENDER_RADIUS 		0.5
 #define DEF_INTEGRATOR			LANGEVIN
 
 
