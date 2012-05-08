@@ -12,8 +12,8 @@ typedef enum particleType
 	BASE_C,
 	BASE_G,
 	/* WARNING, if for some reason you want to change the ordering of 
-	 * this enum, watch out to avoid breaking getConnectedParticle() 
-	 * and isBase() ! */
+	 * this enum, watch out to avoid breaking getConnectedParticle(), 
+	 * isBase() and feelExclusion() ! */
 } ParticleType;
 
 static __inline__ bool isBase(ParticleType t)

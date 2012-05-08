@@ -12,7 +12,7 @@
 #define ENABLE_ANGLE		true
 #define ENABLE_DIHEDRAL		true
 #define ENABLE_STACK		true
-#define ENABLE_EXCLUSION	false
+#define ENABLE_EXCLUSION	true
 #define ENABLE_BASE_PAIR	true
 #define ENABLE_COULOMB		true
 
@@ -427,6 +427,38 @@ static void FbasePair(Particle *p1, Particle *p2)
 
 
 /* EXCLUSION */
+/* Two particles feel exclusion forces if they are not connected by a 
+ * direct bond. */
+static bool feelExclusion(Particle *p1, Particle *p2)
+{
+	if (p1->strand != p2->strand)
+		return true;
+
+	if (ABS(p1->strandIndex - p2->strandIndex) > 1)
+		return true;
+
+	ParticleType t1 = p1->type;
+	ParticleType t2 = p2->type;
+	int i1 = p1->strandIndex;
+	int i2 = p2->strandIndex;
+
+	/* Use the ordering of the type enum:
+	 * PHOSPHATE, SUGAR, BASE_X */
+	if (t1 > t2)
+		return feelExclusion(p2, p1);
+
+	switch (t1) {
+	case PHOSPHATE: /* t2 is PHOSPHATE, SUGAR or BASE */
+		return t2 == PHOSPHATE || t2 != SUGAR || (i1 == i2 + 1);
+	case SUGAR: /* t2 is a SUGAR or BASE */
+		return t2 == SUGAR || i1 != i2;
+	default: /* t1 and t2 are BASEs */
+		if (MUTUALLY_EXCLUSIVE_PAIR_FORCES)
+			assert(i1 != i2);
+		return i1 != i2;
+	}
+}
+
 /* Return (the exclusion cut off distance)^2. This is the distance where 
  * the repulsive part of the Lennard Jones potential stops. */
 static double getExclusionCutOff2(ParticleType t1, ParticleType t2){
@@ -435,10 +467,14 @@ static double getExclusionCutOff2(ParticleType t1, ParticleType t2){
 	else
 		return SQUARE(EXCLUSION_DISTANCE);
 }
-/* Only the repulsive part of a Lennard-Jones potential. (The potential gets lifted so it's zero at infinity.) */
+/* Only the repulsive part of a Lennard-Jones potential. (The potential 
+ * gets lifted so it's zero at infinity.) */
 static double Vexclusion(Particle *p1, Particle *p2)
 {
 	if (!ENABLE_EXCLUSION)
+		return 0;
+
+	if (!feelExclusion(p1, p2))
 		return 0;
 
 	double cutOffSq = getExclusionCutOff2(p1->type, p2->type);
@@ -451,6 +487,9 @@ static double Vexclusion(Particle *p1, Particle *p2)
 static void Fexclusion(Particle *p1, Particle *p2)
 {
 	if (!ENABLE_EXCLUSION)
+		return;
+
+	if (!feelExclusion(p1, p2))
 		return;
 
 	double cutOffSq = getExclusionCutOff2(p1->type, p2->type);

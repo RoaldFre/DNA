@@ -18,7 +18,7 @@ typedef struct Vec3
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define ABS(x) ((a) > 0 ? (a) : -(a))
+#define ABS(x) ((x) > 0 ? (x) : -(x))
 #define SQUARE(x) ((x) * (x))
 #define CUBE(x) ((x) * (x) * (x))
 
