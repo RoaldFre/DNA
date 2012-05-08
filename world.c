@@ -117,8 +117,10 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	double z = 0;
 	int j;
 	
-	if (complementarySequence)
+	if (complementarySequence) {
 		z = (n - 1) * HELIX_DELTA_Z;
+		phi = (n - 1) * HELIX_DELTA_PHI;
+	}
 	
 	for (int i = 0; i < n; i++) {
 		/* Default to Adenine */
