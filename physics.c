@@ -800,13 +800,30 @@ static Vec3 momentum(void)
 	return Ptot;
 }
 
+static void addMomentum(Particle *p, void *data)
+{
+	Vec3 *deltaP = (Vec3*) data;
+	Vec3 P = scale(p->vel, p->m);
+	p->vel = scale(add(P, *deltaP), 1/p->m);
+}
+
+void killMomentum(void)
+{
+	Vec3 P = momentum();
+	int n = numParticles();
+	Vec3 Pcorr = scale(P, -1/n);
+	forEveryParticleD(&addMomentum, (void*)&Pcorr);
+}
+
+
 bool physicsCheck(void)
 {
 	Vec3 P = momentum();
-	double PPM = length(P) / numParticles();
-	if (PPM > 1e-20) {
+	double PPP = length(P) / numParticles();
+	printf("%e\n",PPP);
+	if (PPP > 1e-20) {
 		fprintf(stderr, "\nMOMENTUM CONSERVATION VIOLATED! "
-				"Momentum per monomer: |P| = %e\n", PPM);
+				"Momentum per particle: |P| = %e\n", PPP);
 		return false;
 	}
 	return true;

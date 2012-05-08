@@ -346,6 +346,8 @@ int main(int argc, char **argv)
 	if (buildCompStrand)
 		fillComplementaryStrand(&world.strands[1], baseSequence);
 
+	killMomentum();
+
 	assert(worldSanityCheck());
 
 	Measurement verbose;

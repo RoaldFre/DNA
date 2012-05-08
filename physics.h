@@ -123,6 +123,8 @@ bool physicsCheck(void);
 double temperature(void);
 /* Returns the position vector of the Center Of Mass. */
 Vec3 getCOM(Particle *ps, int num);
+/* Sets the total momentum of the world to zero by shifting the velocities. */
+void killMomentum(void);
 
 double VbasePair(Particle *p1, Particle *p2);
 
