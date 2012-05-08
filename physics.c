@@ -498,7 +498,7 @@ static void Fexclusion(Particle *p1, Particle *p2)
 	if (rSq > cutOffSq)
 		return;
 
-	double FperDist = calcFLJperDistance(STACK_COUPLING, cutOffSq, rSq);
+	double FperDist = calcFLJperDistance(EXCLUSION_COUPLING, cutOffSq, rSq);
 	Vec3 F = scale(r, FperDist);
 	p1->F = add(p1->F, F);
 	p2->F = sub(p2->F, F);
