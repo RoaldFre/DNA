@@ -755,10 +755,10 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 		Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 2);
 	}
 
-	pe->bond     = Vb;
-	pe->angle    = Va;
-	pe->dihedral = Vd;
-	pe->stack    = Vs;
+	pe->bond     += Vb;
+	pe->angle    += Va;
+	pe->dihedral += Vd;
+	pe->stack    += Vs;
 }
 
 /* Return energy stats of world, in electronvolts. */
