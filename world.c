@@ -123,15 +123,17 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	}
 	
 	for (int i = 0; i < n; i++) {
+		if (complementarySequence)
+			j = n - 1 - i;
+		else
+			j = i;
+
 		/* Default to Adenine */
 		ParticleType b_t = BASE_A;
 		double b_m = A_M;
 		double b_r = A_R;
 		double b_z = A_Z;
 		double b_phi = A_PHI;
-		j = i;
-		if (complementarySequence)
-			j = n - 1 - i;
 		
 		switch (baseSequence[j]) {
 		case 'A':
@@ -170,41 +172,41 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		}
 
 		/* Type */
-		s->Bs[i].type = b_t;
-		s->Ss[i].type = SUGAR;
-		s->Ps[i].type = PHOSPHATE;
+		s->Bs[j].type = b_t;
+		s->Ss[j].type = SUGAR;
+		s->Ps[j].type = PHOSPHATE;
 
 		/* Mass */
-		s->Bs[i].m = b_m;
-		s->Ss[i].m = S_M;
-		s->Ps[i].m = P_M;
+		s->Bs[j].m = b_m;
+		s->Ss[j].m = S_M;
+		s->Ps[j].m = P_M;
 
 		/* Positions */
 		if (!complementaryHelix) {
-			s->Bs[i].pos = fromCilindrical(b_r, phi + b_phi, z + b_z);
-			s->Ss[i].pos = fromCilindrical(S_R, phi + S_PHI, z + S_Z);
-			s->Ps[i].pos = fromCilindrical(P_R, phi + P_PHI, z + P_Z);
+			s->Bs[j].pos = fromCilindrical(b_r, phi + b_phi, z + b_z);
+			s->Ss[j].pos = fromCilindrical(S_R, phi + S_PHI, z + S_Z);
+			s->Ps[j].pos = fromCilindrical(P_R, phi + P_PHI, z + P_Z);
 		} else {
 		/* Screw assymetry */	
-			s->Bs[i].pos = fromCilindrical(b_r, (phi - b_phi), z - b_z);
-			s->Ss[i].pos = fromCilindrical(S_R, (phi - S_PHI), z - S_Z);
-			s->Ps[i].pos = fromCilindrical(P_R, (phi - P_PHI), z - P_Z);
+			s->Bs[j].pos = fromCilindrical(b_r, (phi - b_phi), z - b_z);
+			s->Ss[j].pos = fromCilindrical(S_R, (phi - S_PHI), z - S_Z);
+			s->Ps[j].pos = fromCilindrical(P_R, (phi - P_PHI), z - P_Z);
 		}
 		
 		
-		s->Bs[i].pos = add(s->Bs[i].pos, offset);
-		s->Ss[i].pos = add(s->Ss[i].pos, offset);
-		s->Ps[i].pos = add(s->Ps[i].pos, offset);
+		s->Bs[j].pos = add(s->Bs[j].pos, offset);
+		s->Ss[j].pos = add(s->Ss[j].pos, offset);
+		s->Ps[j].pos = add(s->Ps[j].pos, offset);
 
 		/* Velocity */
-		s->Bs[i].vel = randNormVec(sqrt(velVarPerInvMass / s->Bs[i].m));
-		s->Ss[i].vel = randNormVec(sqrt(velVarPerInvMass / s->Ss[i].m));
-		s->Ps[i].vel = randNormVec(sqrt(velVarPerInvMass / s->Ps[i].m));
+		s->Bs[j].vel = randNormVec(sqrt(velVarPerInvMass / s->Bs[j].m));
+		s->Ss[j].vel = randNormVec(sqrt(velVarPerInvMass / s->Ss[j].m));
+		s->Ps[j].vel = randNormVec(sqrt(velVarPerInvMass / s->Ps[j].m));
 
 		/* Particle's strand */
-		s->Bs[i].strand = s; s->Bs[i].strandIndex = j;
-		s->Ss[i].strand = s; s->Ss[i].strandIndex = j;
-		s->Ps[i].strand = s; s->Ps[i].strandIndex = j;
+		s->Bs[j].strand = s; s->Bs[j].strandIndex = j;
+		s->Ss[j].strand = s; s->Ss[j].strandIndex = j;
+		s->Ps[j].strand = s; s->Ps[j].strandIndex = j;
 
 		z += order * HELIX_DELTA_Z;
 		phi += order * HELIX_DELTA_PHI;
