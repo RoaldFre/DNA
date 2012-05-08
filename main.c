@@ -213,7 +213,7 @@ static void parseArguments(int argc, char **argv)
 			break;
 		case 'W':
 			measurementConf.measureWait = atof(optarg) * NANOSECONDS;
-			if (measurementConf.measureWait <= 0)
+			if (measurementConf.measureWait < 0)
 				die("Invalid relaxation time %s\n", optarg);
 			break;
 		case 'I':
