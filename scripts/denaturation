@@ -1,0 +1,15 @@
+#!/bin/sh
+
+main=../main
+timestep=20
+interval=100
+time=80
+wait=0
+
+render=-r
+fps=10
+
+for T in 300 320 340 360
+do
+	$main -d $render -f $fps -t $timestep -T $T -I $interval -P $time -W $wait -D data_T$T
+done
