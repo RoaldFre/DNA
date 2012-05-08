@@ -79,6 +79,7 @@ extern World world;
 
 bool allocWorld(int numStrands, double worldSize);
 bool allocStrand(Strand *s, int numMonomers);
+/* Allocates the strand and fills it up with the given base sequence. */
 void fillStrand(Strand *s, const char *sequence);
 void fillComplementaryStrand(Strand *s, const char *baseSequence);
 void freeWorld(void);
@@ -105,6 +106,7 @@ void forEveryParticleOfD(Strand *s,
  */
 Particle *getConnectedParticle(Particle *p);
 
+void translateStrand(Strand *s, Vec3 delta);
 
 /* Checks whether particles of strands are properly associated with their 
  * type, monomer and strand. */

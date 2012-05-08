@@ -296,6 +296,21 @@ Particle *getConnectedParticle(Particle *p)
 
 
 
+/* ===== MISC FUNCTIONS ===== */
+
+static void translateParticle(Particle *p, void *data)
+{
+	Vec3 *delta = (Vec3*) data;
+	p->pos = add(p->pos, *delta);
+}
+void translateStrand(Strand *s, Vec3 delta)
+{
+	forEveryParticleOfD(s, translateParticle, (void*) &delta);
+}
+
+
+
+
 /* ===== CHECK FUNCTIONS ===== */
 bool strandSanityCheck(Strand *s)
 {
