@@ -165,9 +165,9 @@ static TaskSignal measTick(void *state)
 	switch (measState->measStatus) {
 	case RELAXING:
 		if (fmod(time, measWait / 100) < config.timeStep) {
-			printf("\rRelax time %13f of %f",
-					(time + measWait/100) / TIME_FACTOR, 
-					measWait / TIME_FACTOR);
+			printf("\rRelax time %13f of %f nanoseconds",
+					(time + measWait/100) / NANOSECONDS, 
+					measWait / NANOSECONDS);
 			fflush(stdout);
 		}
 		if (time >= measWait) {
