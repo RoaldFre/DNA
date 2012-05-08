@@ -106,6 +106,13 @@ static void *measStart(void *initialData)
 {
 	MeasInitialData *mid = (MeasInitialData*) initialData;
 	Measurement *meas = &mid->meas;
+
+	if (meas->measConf.measureInterval <= 0) {
+		/* Nothing to do */
+		free(initialData);
+		return NULL;
+	}
+
 	assert(meas != NULL);
 	Sampler *sampler = &meas->sampler;
 	MeasTaskState *state = malloc(sizeof(*state));
@@ -136,8 +143,10 @@ static void *measStart(void *initialData)
 
 static bool measTick(void *state)
 {
+	if (state == NULL)
+		return true;
+
 	MeasTaskState *measState = (MeasTaskState*) state;
-	assert(measState != NULL);
 	MeasurementConf *measConf = &measState->measConf;
 	Sampler *sampler = &measState->sampler;
 	double measWait = measConf->measureWait;
@@ -176,14 +185,11 @@ static bool measTick(void *state)
 		switchStdout(&measState->streamState); /* Switch stdout back */
 		measState->samplerData.sample++;
 		
-		if (measConf->measureSamples < 0)
+		if (measConf->measureTime < 0)
 			break; /* Go on indefinitely, don't print anything */
 
-		printf("\rMeasured sample %ld/%ld", 
-				measState->samplerData.sample,
-				measConf->measureSamples);
 		fflush(stdout);
-		if (measState->samplerData.sample >= measConf->measureSamples) {
+		if (getTime() >= measConf->measureTime) {
 			printf("\nFinished sampling!\n");
 			ret = false; /* Stop running */
 		}
@@ -199,6 +205,9 @@ static bool measTick(void *state)
 
 static void measStop(void *state)
 {
+	if (state == NULL)
+		return;
+
 	MeasTaskState *measState = (MeasTaskState*) state;
 	Sampler *sampler = &measState->sampler;
 
@@ -237,8 +246,8 @@ Task measurementTask(Measurement *measurement)
 	mid->strBuf = string;
 	RenderStringConfig rsc;
 	rsc.string = string;
-	rsc.x = measurement->measConf.x;
-	rsc.y = measurement->measConf.y;
+	rsc.x = measurement->measConf.renderStrX;
+	rsc.y = measurement->measConf.renderStrY;
 
 	registerString(&rsc);
 

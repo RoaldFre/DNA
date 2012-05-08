@@ -31,12 +31,24 @@
 
 
 /* Static global configuration variables */
+
 static MeasurementConf verboseConf =
 {
-	.measureSamples = -1, /* loop forever */
+	.measureTime = -1, /* loop forever */
 	.measureInterval = -1, /* default: disable */
 	.measureWait = 0,
 	.measureFile = NULL,
+};
+/* generic measurement config for whatever measurement we will do */
+static MeasurementConf measurementConf =
+{
+	.measureTime = -1,
+	.measureInterval = -1,
+	.measureWait = 0,
+	.measureFile = DEF_DATA_PATH,
+	.renderStrBufSize = 64,
+	.renderStrX = 10,
+	.renderStrY = 80,
 };
 static RenderConf renderConf =
 {
@@ -51,7 +63,6 @@ static IntegratorConf integratorConf =
 	.numBoxes   = -1, /* guard */
 };
 static const char* baseSequence = DEF_BASE_SEQUENCE;
-static const char* filePath = DEF_DATA_PATH;
 static bool buildCompStrand = false;
 static double worldSize = -1; /* guard */
 
@@ -63,8 +74,6 @@ static void printUsage(void)
 	printf("Flags:\n");
 	printf(" -s <str>  base Sequence of the DNA strand to simulate\n");
 	printf("             default: %s\n", DEF_BASE_SEQUENCE);
-	printf(" -D <path> Data file to Dump sampler output\n");
-	printf("             default: %s\n", DEF_DATA_PATH);
 	printf(" -d        build a Double helix with complementary strand as well\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
@@ -88,13 +97,28 @@ static void printUsage(void)
 	printf("             l: Langevin (velocity BBK) [default]\n");
 	printf("             v: velocity Verlet with Berendsen thermostat\n");
 	printf("\n");
-	printf("Parameters for velocity Verlet + Berendsen termostat:\n");
+	printf("Parameters for measurements:\n");
+	printf(" -W <flt>  Waiting time before starting the measurement (in nanosectonds)\n");
+	printf("             default: 0 (ie, no relaxation phase)\n");
+	printf(" -I <flt>  sample Interval (in picosectonds)\n");
+	printf("             default: don't measure\n");
+	printf(" -P <flt>  measurement Period: total time to sample the system (in nanosectonds)\n");
+	printf("             default: sample indefinitely\n");
+	printf(" -D <path> Data file to Dump measurement output\n");
+	printf("             default: %s\n", DEF_DATA_PATH);
+	printf("\n");
+	printf("Parameters for Langevin integrator:\n");
 	printf(" -g <flt>  Gamma: friction coefficient for Langevin dynamics\n");
 	printf("             default: %e\n", DEF_LANGEVIN_GAMMA);
 	printf("\n");
-	printf("Parameters for velocity Verlet + Berendsen termostat:\n");
+	printf("Parameters for velocity Verlet integrator + Berendsen termostat:\n");
 	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
 	printf("             default: %d * timestep\n", DEF_COUPLING_TIMESTEP_FACTOR);
+
+
+
+	printf(" -P <flt>  total simulation time Period (in nanoseconds)\n");
+	printf("             default: loop indefinitely\n");
 }
 
 static void parseArguments(int argc, char **argv)
@@ -110,15 +134,12 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:D:dt:T:g:c:f:rR:Fl:S:b:v:i:h")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:T:g:c:f:rR:Fl:S:b:v:i:W:I:P:D:h")) != -1)
 	{
 		switch (c)
 		{
 		case 's':
 			baseSequence = optarg;
-			break;
-		case 'D':
-			filePath = optarg;
 			break;
 		case 'd':
 			buildCompStrand = true;
@@ -189,6 +210,24 @@ static void parseArguments(int argc, char **argv)
 			default: die("Unknown integrator type '%s'\n", optarg);
 				 break;
 			}
+			break;
+		case 'W':
+			measurementConf.measureWait = atof(optarg) * NANOSECONDS;
+			if (measurementConf.measureWait <= 0)
+				die("Invalid relaxation time %s\n", optarg);
+			break;
+		case 'I':
+			measurementConf.measureInterval = atof(optarg) * PICOSECONDS;
+			if (measurementConf.measureInterval<= 0)
+				die("Invalid measurement interval %s\n", optarg);
+			break;
+		case 'P':
+			measurementConf.measureTime = atof(optarg) * NANOSECONDS;
+			if (measurementConf.measureTime <= 0)
+				die("Invalid measurement time %s\n", optarg);
+			break;
+		case 'D':
+			measurementConf.measureFile = optarg;
 			break;
 		case 'h':
 			printUsage();
@@ -315,16 +354,9 @@ int main(int argc, char **argv)
 	Task verboseTask = measurementTask(&verbose);
 
 	Measurement basePairing;
-	basePairing.sampler = basePairingSampler(-0.1 * 1.81e-21); /* -0.1*EPSILON */
-	basePairing.measConf.measureSamples = -1; /* loop forever */
-	basePairing.measConf.measureInterval = 100 * TIME_FACTOR;
-	basePairing.measConf.measureWait = 0;
-	basePairing.measConf.measureFile = filePath;
-	basePairing.measConf.renderStrBufSize = 64;
-	basePairing.measConf.x = 10;
-	basePairing.measConf.y = 80;
+	basePairing.sampler = basePairingSampler(-0.1 * EPSILON);
+	basePairing.measConf = measurementConf;
 	Task basePairingTask = measurementTask(&basePairing);
-
 
 	Task renderTask = makeRenderTask(&renderConf);
 

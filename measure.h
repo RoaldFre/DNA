@@ -6,9 +6,8 @@
 
 /* Configuration of a generic measurement */
 typedef struct {
-	/* Total number of samples to accumulate. Negative to go on 
-	 * indefinitely. */
-	long measureSamples;
+	/* Total time to sample the system. Negative to go on indefinitely. */
+	double measureTime;
 
 	/* Time between samples. Negative to disable measurement. */
 	double measureInterval; 
@@ -26,7 +25,7 @@ typedef struct {
 	int renderStrBufSize;
 
 	/* Pixel coordinates to render the above string at */
-	int x, y;
+	int renderStrX, renderStrY;
 } MeasurementConf;
 
 typedef struct {

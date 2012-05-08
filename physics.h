@@ -12,6 +12,11 @@
 #define RAD		(M_PI / 180)	/* Radian */
 #define A		(1e-10)		/* Angstrom */
 #define AU		(1.660539e-27)	/* Atomic unit */
+#define MILLISECONDS	1e-3
+#define MICROSECONDS	1e-6
+#define NANOSECONDS	1e-9
+#define PICOSECONDS	1e-12
+#define FEMTOSECONDS	1e-15
 #define EPSILON		1.81e-21 	/* 0.26 kcal/mol = 1.81e-21 J/particle */
 #define ELECTRON_CHARGE	1.602177e-19
 #define ENERGY_FACTOR	(1/ELECTRON_CHARGE) /* Energies in electron volt */
