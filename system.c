@@ -16,16 +16,20 @@ long getIteration(void)
 	return iteration;
 }
 
-void run(Task *task)
+/* Returns true if everything went according to plan. False if something 
+ * unexpected happened. */
+bool run(Task *task)
 {
 	void *state = taskStart(task);
-	bool keepGoing = true;
-	while (keepGoing) {
-		keepGoing = taskTick(task, state);
+	TaskSignal taskSig = TASK_OK;
+	while (taskSig == TASK_OK) {
+		taskSig = taskTick(task, state);
 		sim_time += config.timeStep;
 		iteration++;
 	}
 	taskStop(task, state);
+
+	return taskSig != TASK_ERROR;
 }
 
 

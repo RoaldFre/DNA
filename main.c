@@ -369,7 +369,10 @@ int main(int argc, char **argv)
 	tasks[3] = &basePairingTask;
 	//tasks[3] = NULL;
 	Task task = sequence(tasks, 4);
-	run(&task);
+	bool everythingOK = run(&task);
+
+	if (!everythingOK)
+		return 1;
 	return 0;
 }
 

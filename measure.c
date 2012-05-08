@@ -141,10 +141,10 @@ static void *measStart(void *initialData)
 	return state;
 }
 
-static bool measTick(void *state)
+static TaskSignal measTick(void *state)
 {
 	if (state == NULL)
-		return true;
+		return TASK_OK;
 
 	MeasTaskState *measState = (MeasTaskState*) state;
 	MeasurementConf *measConf = &measState->measConf;
@@ -152,10 +152,12 @@ static bool measTick(void *state)
 	double measWait = measConf->measureWait;
 	double measInterval = measConf->measureInterval;
 	double time = getTime();
-	bool ret = true;
+
+	bool everythingOK = true;
+	bool finishedSampling = false;
 
 	if (measInterval < 0)
-		return ret;
+		return TASK_OK;
 
 
 	switch (measState->measStatus) {
@@ -180,7 +182,7 @@ static bool measTick(void *state)
 
 		measState->intervalTime -= measInterval;
 		switchStdout(&measState->streamState); /* Switch stdout to file */
-		ret = samplerSample(sampler, &measState->samplerData, 
+		everythingOK = samplerSample(sampler, &measState->samplerData, 
 				measState->samplerState);
 		switchStdout(&measState->streamState); /* Switch stdout back */
 		measState->samplerData.sample++;
@@ -191,7 +193,7 @@ static bool measTick(void *state)
 		fflush(stdout);
 		if (getTime() >= measConf->measureTime) {
 			printf("\nFinished sampling!\n");
-			ret = false; /* Stop running */
+			finishedSampling = true; /* Stop running */
 		}
 		break;
 	default:
@@ -199,8 +201,11 @@ static bool measTick(void *state)
 		assert(false);
 	}
 
-
-	return ret;
+	if (!everythingOK)
+		return TASK_ERROR;
+	if (finishedSampling)
+		return TASK_STOP;
+	return TASK_OK;
 }
 
 static void measStop(void *state)

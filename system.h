@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "vmath.h"
 
-typedef struct config
+typedef struct
 {
 	double timeStep;        /* The timestep (dt) in the simulation */
 	double thermostatTemp;  /* Thermostat temperature */
@@ -20,7 +20,16 @@ extern Config config;
 
 /* Tasks are used to do stuff during the simulation, such as (accumulating) 
  * measurements. */
-typedef struct task
+typedef enum
+{
+	TASK_OK,	/* Task ticked correctly and does not want to stop. */
+	TASK_STOP,	/* Regular stop request. Everything went according to plan. */
+	TASK_ERROR,	/* Error stop request. Something went wrong! */
+	/* Note: the ordering of these enums is such that lower enums (ie 
+	 * higher numbers) get precedence over previous ones in the list 
+	 * (ie lower numbers). */
+} TaskSignal;
+typedef struct
 {
 	/* Data pointer that gets passed to the start() function below. Can 
 	 * be used to pass configuration data. Make sure that this gets 
@@ -33,19 +42,20 @@ typedef struct task
 	void *(*start)(void *initialData);
 
 	/* Called at every iteration step. Gets passed the data pointer 
-	 * that start() returned. Returns false if the simulation has to be 
-	 * stopped, true if everything can continue.
+	 * that start() returned.
 	 * Time gets updated after the call to tick(), ie the simulation 
 	 * time when tick() gets called first is always 0. */
-	bool (*tick)(void *state);
+	TaskSignal (*tick)(void *state);
 
 	/* Called at the end of the simulation run.  Gets passed the data 
 	 * pointer that start() returned. */
 	void (*stop)(void *state);
 } Task;
 
-/* Run the given task in the simulation */
-void run(Task *task);
+/* Run the given task in the simulation. Returns true if everything went 
+ * according to plan. False if the task requested to stop because of an 
+ * error. */
+bool run(Task *task);
 
 /* Get the time in the simulation after the last completed iteration. */
 double getTime(void);

@@ -21,8 +21,8 @@ Task sequence(Task **tasks, int num);
  * if task->start == NULL */
 void *taskStart(Task *task);
 /* Tick the task and return task->tick(), or do nothing if task->tick == NULL
- * and return true in that case */
-bool taskTick(Task *task, void *state);
+ * and return TASK_OK in that case */
+TaskSignal taskTick(Task *task, void *state);
 /* Stop the task, or do nothing if task->stop == NULL */
 void taskStop(Task *task, void *state);
 

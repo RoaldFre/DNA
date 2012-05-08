@@ -27,10 +27,10 @@ void *taskStart(Task *task)
 
 /* Tick the task and return task.tick(), or do nothing if task.tick == NULL 
  * and return true in that case */
-bool taskTick(Task *task, void *state)
+TaskSignal taskTick(Task *task, void *state)
 {
 	if (task->tick == NULL)
-		return true;
+		return TASK_OK;
 	return task->tick(state);
 }
 
@@ -76,16 +76,17 @@ static void *seqStart(void *initialData)
 	return (void*) seqState;
 }
 
-static bool seqTick(void *state)
+static TaskSignal seqTick(void *state)
 {
 	SeqState *seqState = (SeqState*) state;
+	TaskSignal taskSig = TASK_OK;
 
 	for (int i = 0; i < seqState->num; i++) {
 		Task *task = &seqState->tasks[i];
-		if (!taskTick(task, seqState->states[i]))
-			return false;
+		TaskSignal thisSig = taskTick(task, seqState->states[i]);
+		taskSig = MAX(taskSig, thisSig);
 	}
-	return true;
+	return taskSig;
 }
 
 static void seqStop(void *state)

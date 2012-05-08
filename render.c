@@ -644,13 +644,15 @@ static void *renderTaskStart(void *initialData)
 	return initialData;
 }
 
-static bool renderTaskTick(void *state)
+static TaskSignal renderTaskTick(void *state)
 {
 	RenderConf *rc = (RenderConf*) state;
 
-	bool ret = handleEvents();
+	if (!handleEvents())
+		return TASK_ERROR;
+	
 	renderIfWeMust(rc);
-	return ret;
+	return TASK_OK;
 }
 
 static void renderTaskStop(void *state)

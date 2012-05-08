@@ -985,11 +985,11 @@ static void *integratorTaskStart(void *initialData)
 	free(initialData);
 	return state;
 }
-static bool integratorTaskTick(void *state)
+static TaskSignal integratorTaskTick(void *state)
 {
 	IntegratorState *is = (IntegratorState*) state;
 	stepPhysics(is->integrator);
-	return true;
+	return TASK_OK;
 }
 static void integratorTaskStop(void *state)
 {

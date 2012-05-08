@@ -16,6 +16,10 @@ typedef struct Vec3
 #define M_PI	3.14159265358979323846
 #endif
 
+/* Warning, you can't 'call' the macros below with functions that have side 
+ * effects as arguments!
+ * Ie, don't do "ABS(functionWithSideEffectsThatReturnsADouble())"
+ * In fact, just never use these with any function calls! */
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define ABS(x) ((x) > 0 ? (x) : -(x))
