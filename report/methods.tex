@@ -1,1 +1,18 @@
 \section{Methods}
+
+The potential energy of the complete system can be written as
+\begin{equation}
+V_\text{total} = V_\text{bond} + V_\text{angle} + V_\text{dihedral} + V_\text{stack} + V_\text{bp} + V_\text{ex} + V_\text{qq}
+\end{equation}
+where we can write the different potentials as
+\begin{eqnarray}
+V_{\text{bond}} = &\sum_i^{N_{\text{bond}}}& \left[ k_1 \left(d_i - d_{0_i}\right)^2 + k_2 \left(d_i - d_{0_i}\right)^4\right] \\
+V_\text{angle} =  &\sum_i^{N_\text{angle}}& \frac{k_\theta}{2} \left[ \theta_i - \theta_{0_i} \right]^2\\
+V_\text{dihedral} =  &\sum_i^{N_\text{dihedral}}& k_\phi \left[ 1 - \cos (\phi_i - \phi_{0_i}) \right]\\
+V_\text{stack} =  &\sum_{i<j}^{N_\text{stack}}& 4\varepsilon \left[ \left(\frac{\sigma_{ij}}{r_{ij}} \right)^{12} - \left(\frac{\sigma_{ij}}{r_{ij}} \right)^{6} \right]\\
+V_\text{bp} =  &\sum_{\text{base pairs}}^{N_\text{bp}}& 4\varepsilon_{\text{bp}_i} \left[ 5\left(\frac{\sigma_{\text{bp}_i}}{r_{ij}} \right)^{12} - 6\left(\frac{\sigma_{\text{bp}_i}}{r_{ij}} \right)^{10} \right]\\
+V_\text{excl} =  &\sum_{i<j}^{N_\text{ex}}&\begin{cases} 4\varepsilon \left[ \left(\frac{\sigma_{0}}{r_{ij}} \right)^{12} - \left(\frac{\sigma_{0}}{r_{ij}} \right)^{6} \right] + \varepsilon \qquad &\text{if }r_{ij} < d_\text{cut}, \\ 0 \qquad &\text{if }r_{ij} \geq d_\text{cut} \end{cases}\\
+V_\text{qq} =&\sum_{i<j}^N & \frac{q_i q_j}{4\pi \varepsilon_0 \varepsilon_k r_{ij}} \exp \left(- \frac{r_{ij}}{k_D}  \right)
+\end{eqnarray}
+
+
