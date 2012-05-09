@@ -1,0 +1,74 @@
+\documentclass[a4paper, 11pt]{article}
+
+%packages
+%\usepackage[dutch]{babel}
+\usepackage{graphicx,subfigure}
+\usepackage{amsmath,amsfonts,amsthm,amssymb}
+\usepackage[margin=2cm]{geometry}
+\usepackage{color}
+\usepackage{shadethm}
+%hyperlinks in document
+\usepackage{hyperref}
+\usepackage{fancybox}
+
+
+%\usepackage[T1]{fontenc}
+%\usepackage{fontspec,xltxtra,xunicode}
+%\defaultfontfeatures{Mapping=tex-text}
+%\setromanfont[Mapping=tex-text]{Adobe Caslon Pro}
+%\setsansfont[Scale=MatchLowercase,Mapping=tex-text]{Gill Sans}
+%\setmonofont[Scale=MatchLowercase]{Andale Mono}
+
+\newcommand{\boxtekst}[1]{%
+  \fbox{%
+      \addtolength{\linewidth}{-2\fboxsep}%
+      \addtolength{\linewidth}{-2\fboxrule}%
+      \begin{minipage}{\linewidth}%
+     	#1 %
+      \end{minipage}%
+    }%
+}
+
+\renewcommand{\qedsymbol}{\hspace{\stretch{1}}\rule{1ex}{1ex} }
+\newcommand{\ggd}{\ensuremath{\ \textrm{ggd}}}
+\newcommand{\qdiv}{\ensuremath{\ \textrm{div} \ }}
+\newcommand{\qmod}{\ensuremath{\ \textrm{mod} \ }}
+\newcommand{\puntje}[1]{\ensuremath{ \Ovalbox{#1} }}
+\newcommand{\etal}{\emph{et al.}}
+
+\setlength{\parskip}{1.2em}
+\setlength{\parindent}{0em}
+
+% line spacing:
+\usepackage{setspace} 
+\setstretch{1.15}
+
+\title{Proposal \\
+A Molecular Dynamics Model for DNA Hairpin Formation}
+\author{Roald Frederickx \and Thomas in't Veld}
+\date{March 2012}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We propose using a coarse-grained (three beads per nucleotide) molecular dynamics model of DNA to simulate the behaviour of DNA hairpin zipping and unzipping. In particular, we will examine the scaling of the zipping/unzipping time of a DNA hairpin with varying stem length $S$ and loop length $L$. Previous models that are based on a simple thermodynamic `zipper' predict a scaling of the unzipping time $\tau \sim S$ and an anomalous scaling of the zipping time of $\tau \sim S^{1.4}$. However, the model we will use also takes into account the inherent twisting of the stem that has to occur due to the helical nature of double stranded DNA (dsDNA). It has been shown via a simplified model that such twisting gives rise to a nontrivial scaling law for denaturation of dsDNA ($\tau \sim N^{2.6}$). We thus expect that, at least for the hairpin unzipping, we will find a deviation from the $\tau \sim S$ scaling law found with the simpler model. This finding would be a valuable prediction for experimentalists as, to the best of our knowledge, there are no experimental results available to date concerning the stem length scaling law of DNA hairpin formation.
+\end{abstract}
+
+\tableofcontents
+
+\include{introduction}
+\include{methods}
+\include{results}
+\include{conclusions}
+
+
+\footnotesize
+\bibliographystyle{ieeetr}
+	\bibliography{references}
+
+\end{document}
+
+
+
