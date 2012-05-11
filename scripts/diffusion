@@ -1,0 +1,60 @@
+#!/bin/sh
+
+
+set -e
+
+main=../diffusion
+timestep=50
+interval=100
+time=50
+wait=0
+
+T=300
+
+integrator=l
+
+#render="-r"
+boxes="-b1" # Waaaaay to big a worldsize for boxes to be of use!
+fps=10
+
+runs=20
+
+function tabulate {
+	fileBaseName=$1
+	num=$2
+
+	#remove time from all but first
+	cp ${fileBaseName}_1  ${fileBaseName}_1_tmp 
+	for i in `seq 2 $num`
+	do
+		cut -d " " -f 2 ${fileBaseName}_${i}  >  ${fileBaseName}_${i}_tmp 
+	done
+
+	allTmpFiles=`seq 1 $runs | xargs printf "${fileBaseName}_%s_tmp "`
+	pr -tmJ -w10000 $allTmpFiles > ${fileBaseName}
+	rm $allTmpFiles
+	allFiles=`seq 1 $runs | xargs printf "${fileBaseName}_%s "`
+	rm $allFiles
+}
+
+
+for N in 5 20 50 100
+do
+	echo "*** N = $N"
+	outputBaseName="data/diff_dt${timestep}_time${time}_N${N}"
+	particleFilenameBase="data/diff_particle_dt${timestep}_time${time}_N${N}"
+	strandFilenameBase="data/diff_strand_dt${timestep}_time${time}_N${N}"
+
+	for i in `seq 1 $runs`
+	do
+		echo "    run $i"
+		seq=`perl -e "print 'A'x$N"`
+		$main -i $integrator $render -f $fps -t $timestep -T $T -I $interval -P $time -W $wait -s $seq -D $outputBaseName $boxes
+		mv ${outputBaseName}_particle ${particleFilenameBase}_${i}
+		mv ${outputBaseName}_strand ${strandFilenameBase}_${i}
+	done
+
+	tabulate $particleFilenameBase $runs
+	tabulate $strandFilenameBase $runs
+done
+
