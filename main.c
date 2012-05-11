@@ -71,8 +71,8 @@ static IntegratorConf integratorConf =
 			.enableExclusion= true,
 			.enableBasePair	= true,
 			.enableCoulomb	= true,
-			.mutuallyExclusivePairForces = true,
-			.onlyMatchingBasePairInteraction = true,
+			.mutuallyExclusivePairForces = false,
+			.basePairInteraction = BASE_PAIR_DOUBLE_STRAND,
 	},
 };
 static const char* baseSequence = DEF_BASE_SEQUENCE;

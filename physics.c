@@ -324,9 +324,40 @@ typedef struct {
 } BasePairInfo;
 /* Returns the BasePairInfo for the given types. If the given types do not 
  * constitute a valid base pair, then coupling and distance are set to -1. */
-static BasePairInfo getBasePairInfo(ParticleType t1, ParticleType t2)
+static BasePairInfo getBasePairInfo(Particle *p1, Particle *p2)
 {
+	ParticleType t1 = p1->type;
+	ParticleType t2 = p2->type;
+
 	BasePairInfo bpi;
+	bpi.coupling = -1;
+	bpi.distance2 = -1;
+
+	switch (interactions.basePairInteraction) {
+	case BASE_PAIR_ALL:
+		break;
+	case BASE_PAIR_HAIRPIN:
+		if (p1->strand != p2->strand)
+			return bpi;
+
+		int n  = p1->strand->numMonomers;
+		int i1 = p1->strandIndex;
+		int i2 = p2->strandIndex;
+
+		if (i1 != n - i2)
+			return bpi;
+		break;
+	case BASE_PAIR_DOUBLE_STRAND:
+		if (p1->strand == p2->strand)
+			return bpi;
+		if (p1->strandIndex != p2->strandIndex)
+			return bpi;
+		break;
+	default:
+		assert(false);
+		return bpi;
+	}
+
 	if ((t1 == BASE_A  &&  t2 == BASE_T) 
 			||  (t1 == BASE_T  &&  t2 == BASE_A)) {
 		bpi.coupling = BASE_PAIR_COUPLING_A_T;
@@ -335,15 +366,13 @@ static BasePairInfo getBasePairInfo(ParticleType t1, ParticleType t2)
 			||  (t1 == BASE_G  &&  t2 == BASE_C)) {
 		bpi.coupling = BASE_PAIR_COUPLING_G_C;
 		bpi.distance2 = SQUARE(BASE_PAIR_DISTANCE_G_C);
-	} else {
-		bpi.coupling = -1;
-		bpi.distance2 = -1;
 	}
 	return bpi;
 }
-static bool isBondedBasePair(ParticleType t1, ParticleType t2)
+/* Returns true for pairs of particles that can form a base pair binding. */
+static bool isBondedBasePair(Particle *p1, Particle *p2)
 {
-	BasePairInfo bpi = getBasePairInfo(t1, t2);
+	BasePairInfo bpi = getBasePairInfo(p1, p2);
 	return bpi.coupling > 0;
 }
 static double calcVbasePair(BasePairInfo bpi, double rsquared)
@@ -361,7 +390,7 @@ double VbasePair(Particle *p1, Particle *p2)
 	if (!interactions.enableBasePair)
 		return 0;
 
-	BasePairInfo bpi = getBasePairInfo(p1->type, p2->type);
+	BasePairInfo bpi = getBasePairInfo(p1, p2);
 	if (bpi.coupling < 0)
 		return 0; /* Wrong pair */
 	
@@ -389,7 +418,7 @@ static void FbasePair(Particle *p1, Particle *p2)
 	if (!interactions.enableBasePair)
 		return;
 
-	BasePairInfo bpi = getBasePairInfo(p1->type, p2->type);
+	BasePairInfo bpi = getBasePairInfo(p1, p2);
 	if (bpi.coupling < 0)
 		return; /* Wrong pair */
 	
@@ -616,10 +645,7 @@ static void mutiallyExclusivePairForces(Particle *p1, Particle *p2)
 {
 	/* Nonbonded pair interactions are mutually exclusive. See Knotts.
 	 * Note that this screws up energy conservation!! */
-	if (isBondedBasePair(p1->type, p2->type)
-		&& (!interactions.onlyMatchingBasePairInteraction
-				|| ((p1->strandIndex == p2->strandIndex)
-					&& (p1->strand != p2->strand))))
+	if (isBondedBasePair(p1, p2))
 		FbasePair(p1, p2);
 	else if (isChargedPair(p1->type, p2->type))
 		FCoulomb(p1, p2);
@@ -631,12 +657,7 @@ static void pairForces(Particle *p1, Particle *p2)
 {
 	/* Apply all forces at once, this should conserve energy (for the 
 	 * verlet integrator without thermal bath coupling). */
-
-	if (!interactions.onlyMatchingBasePairInteraction
-			|| ((p1->strandIndex == p2->strandIndex)
-				&& (p1->strand != p2->strand)))
-		FbasePair(p1, p2);
-
+	FbasePair(p1, p2);
 	FCoulomb(p1, p2);
 	Fexclusion(p1, p2);
 }
@@ -690,11 +711,7 @@ static void pairPotentials(Particle *p1, Particle *p2, void *data)
 {
 	PotentialEnergies *pe = (PotentialEnergies*) data;
 	
-	if (!interactions.onlyMatchingBasePairInteraction
-			|| ((p1->strandIndex == p2->strandIndex)
-				&& (p1->strand != p2->strand)))
-		pe->basePair += VbasePair(p1, p2);
-
+	pe->basePair += VbasePair(p1, p2);
 	pe->Coulomb  += VCoulomb(p1, p2);
 	pe->exclusion += Vexclusion(p1, p2);
 }

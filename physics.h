@@ -120,18 +120,24 @@ typedef struct {
 	bool enableBasePair;
 	bool enableCoulomb;
 
-	bool mutuallyExclusivePairForces;
 	/* True for Knotts' model */
+	bool mutuallyExclusivePairForces;
 
-	bool onlyMatchingBasePairInteraction;
-	/* If true: only consider base pairing interactions between 
-	 * matching bases of a dual stranded DNA.
-	 * The world must only have (at least) two strands (that are 
-	 * complementary), and the i'th monomer in a strand will be matched 
-	 * with the i'th monomer of the other strand.
-	 * 
-	 * If false: every possible base combination is checked to see 
-	 * whether it is bonded via the base pairing interaction. */
+	enum {
+		/* Every pair of bases in the world participates in base 
+		 * pairing. */
+		BASE_PAIR_ALL,
+
+		/* Bases at position i and n-i of the same strand 
+		 * participate in base pairing, where n is the length of 
+		 * the strand. */
+		BASE_PAIR_HAIRPIN,
+
+		/* Bases at position i of one strand pair with bases of 
+		 * position i in another strand participate in base 
+		 * pairing. */
+		BASE_PAIR_DOUBLE_STRAND,
+	} basePairInteraction;
 } InteractionSettings;
 
 typedef struct {
