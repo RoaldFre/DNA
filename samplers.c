@@ -1,4 +1,3 @@
-#include "main.h" //TODO for LENGTH_FACTOR
 #include "samplers.h"
 #include "physics.h"
 #include "spgrid.h"
@@ -84,8 +83,7 @@ static bool particlesCOMSample(SamplerData *sd, void *data)
 	UNUSED(sd);
 	ParticlesCOMSamplerConf *pcsc = (ParticlesCOMSamplerConf*) data;
 	Vec3 COM = getCOM(pcsc->ps, pcsc->num);
-	COM = scale(COM, 1 / LENGTH_FACTOR);
-	printVector(COM);
+	printVectorExp(COM);
 	printf("\n");
 	return true;
 }
@@ -136,9 +134,17 @@ static bool particlesSquaredDisplacementSample(SamplerData *sd, void *state)
 
 	Vec3 COM = getCOM(sdc->ps, sdc->num);
 	Vec3 displacement = sub(COM, sdc->initial);
-	double squaredDisplacement = length2(displacement)
-					/ (SQUARE(LENGTH_FACTOR));
-	printf("%f\n", squaredDisplacement);
+	double squaredDisplacement = length2(displacement);
+	printf("%e %e\n", getTime(), squaredDisplacement);
+
+	if (squaredDisplacement > 0.16 * SQUARE(world.worldSize)) {
+		fprintf(stderr, "WARNING! displacement > 0.4*worldsize. "
+				"Possibly errors due to periodic boundary "
+				"conditions! Bailing out!\n");
+		return false;
+	}
+
+
 	return true;
 }
 static Sampler particlesSquaredDisplacementSampler(Particle *ps, int num)

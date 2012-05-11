@@ -19,6 +19,9 @@ typedef struct {
 	 * stdout. */
 	const char *measureFile;
 
+	/* Print status and progress of the measurement to stdout. */
+	bool verbose;
+
 	/* Size of the string buffer to allocate for rendering the output 
 	 * of the sampler to screen. Set to 0 or less to disable rendering 
 	 * of the sampler output. */

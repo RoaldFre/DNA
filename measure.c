@@ -149,10 +149,13 @@ static TaskSignal measTick(void *state)
 		return TASK_OK;
 
 	MeasTaskState *measState = (MeasTaskState*) state;
-	MeasurementConf *measConf = &measState->measConf;
 	Sampler *sampler = &measState->sampler;
-	double measWait = measConf->measureWait;
+	MeasurementConf *measConf = &measState->measConf;
+	double measWait     = measConf->measureWait;
 	double measInterval = measConf->measureInterval;
+	double measTime     = measConf->measureTime;
+	double endTime      = measTime + measWait;
+	bool verbose        = measConf->verbose;
 	double time = getTime();
 
 	bool everythingOK = true;
@@ -164,15 +167,16 @@ static TaskSignal measTick(void *state)
 
 	switch (measState->measStatus) {
 	case RELAXING:
-		if (fmod(time, measWait / 100) < config.timeStep) {
-			printf("\rRelax time %13f of %f nanoseconds",
+		if (verbose && fmod(time, measWait / 100) < config.timeStep) {
+			printf("\rRelax time %.3f of %.3f nanoseconds",
 					(time + measWait/100) / NANOSECONDS, 
 					measWait / NANOSECONDS);
 			fflush(stdout);
 		}
 		if (time >= measWait) {
 			measState->intervalTime = time - measWait;
-			printf("\nStarting measurement.\n");
+			if (verbose)
+				printf("\nStarting measurement.\n");
 			measState->measStatus = SAMPLING;
 			/* bit of a hack to start sampling immediately: */
 			measState->intervalTime = measInterval;
@@ -184,6 +188,17 @@ static TaskSignal measTick(void *state)
 		if (measState->intervalTime < measInterval)
 			break;
 
+		if (verbose) {
+			if (measTime > 0)
+				printf("\rSampling at %.3f of %.3f nanoseconds",
+						time / NANOSECONDS,
+						endTime / NANOSECONDS);
+			else
+				printf("\rSampling at %.3f nanoseconds",
+						time / NANOSECONDS);
+			fflush(stdout);
+		}
+
 		measState->intervalTime -= measInterval;
 		switchStdout(&measState->streamState); /* Switch stdout to file */
 		everythingOK = samplerSample(sampler, &measState->samplerData, 
@@ -191,12 +206,13 @@ static TaskSignal measTick(void *state)
 		switchStdout(&measState->streamState); /* Switch stdout back */
 		measState->samplerData.sample++;
 		
-		if (measConf->measureTime < 0)
+		if (measTime < 0)
 			break; /* Go on indefinitely, don't print anything */
 
 		fflush(stdout);
-		if (getTime() >= measConf->measureTime) {
-			printf("\nFinished sampling!\n");
+		if (time >= endTime) {
+			if (verbose)
+				printf("\nFinished sampling!\n");
 			finishedSampling = true; /* Stop running */
 		}
 		break;

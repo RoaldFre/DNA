@@ -38,6 +38,7 @@ static MeasurementConf verboseConf =
 	.measureInterval = -1, /* default: disable */
 	.measureWait = 0,
 	.measureFile = NULL,
+	.verbose = false,
 };
 /* generic measurement config for whatever measurement we will do */
 static MeasurementConf measurementConf =
@@ -46,6 +47,7 @@ static MeasurementConf measurementConf =
 	.measureInterval = -1,
 	.measureWait = 0,
 	.measureFile = DEF_DATA_PATH,
+	.verbose = true,
 	.renderStrBufSize = 64,
 	.renderStrX = 10,
 	.renderStrY = 80,
