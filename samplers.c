@@ -118,13 +118,15 @@ typedef struct
 {
 	Particle *ps;
 	int num;
-	Vec3 initial;
+	Vec3 initialPos;
+	double initialTime;
 } SquaredDisplacementConf;
 
 static void *particlesSquaredDisplacementStart(void *conf)
 {
 	SquaredDisplacementConf *sdc = (SquaredDisplacementConf*) conf;
-	sdc->initial = getCOM(sdc->ps, sdc->num);
+	sdc->initialPos = getCOM(sdc->ps, sdc->num);
+	sdc->initialTime = getTime();
 	return sdc;
 }
 static bool particlesSquaredDisplacementSample(SamplerData *sd, void *state)
@@ -133,9 +135,9 @@ static bool particlesSquaredDisplacementSample(SamplerData *sd, void *state)
 	SquaredDisplacementConf *sdc = (SquaredDisplacementConf*) state;
 
 	Vec3 COM = getCOM(sdc->ps, sdc->num);
-	Vec3 displacement = sub(COM, sdc->initial);
+	Vec3 displacement = sub(COM, sdc->initialPos);
 	double squaredDisplacement = length2(displacement);
-	printf("%e %e\n", getTime(), squaredDisplacement);
+	printf("%e %e\n", getTime() - sdc->initialTime, squaredDisplacement);
 
 	if (squaredDisplacement > 0.16 * SQUARE(world.worldSize)) {
 		fprintf(stderr, "WARNING! displacement > 0.4*worldsize. "
@@ -152,7 +154,6 @@ static Sampler particlesSquaredDisplacementSampler(Particle *ps, int num)
 	SquaredDisplacementConf *sdc = malloc(sizeof(*sdc));
 	sdc->ps = ps;
 	sdc->num = num;
-	/* Fill sdc->initial in start() */
 
 	Sampler sampler;
 	sampler.samplerConf = sdc;

@@ -53,43 +53,8 @@ static void stopRedirection(StreamState *s)
 
 
 
+
 /* SOME WRAPPERS FOR SAMPLERS: */
-
-/* Returns the state pointer that gets returned from sampler.start(), or 
- * NULL if sampler.start == NULL */
-static void *samplerStart(Sampler *sampler)
-{
-	if (sampler->start == NULL)
-		return NULL;
-	return sampler->start(sampler->samplerConf);
-}
-
-/* Sample and return sampler.sample(), or do nothing if sampler.sample == 
- * NULL and return true. Note that this would be a pretty useless sampler 
- * in the latter case... */
-static bool samplerSample(Sampler *sampler, SamplerData *sd, void *state)
-{
-	if (sampler->sample == NULL)
-		return true;
-	return sampler->sample(sd, state);
-}
-
-/* Stop the sampler, or do nothing if sampler.stop == NULL */
-static void samplerStop(Sampler *sampler, SamplerData *sd, void *state)
-{
-	if (sampler->stop == NULL)
-		return;
-	sampler->stop(sd, state);
-}
-
-
-
-/* MEASUREMENT TASK STUFF */
-
-typedef struct {
-	Measurement meas;
-	char *strBuf; /* The buffer for the rendering string if applicable */
-} MeasInitialData;
 
 typedef struct measTaskState
 {
@@ -101,6 +66,69 @@ typedef struct measTaskState
 	double intervalTime; /* Time since last sample (or start). */
 	StreamState streamState; /* For stdout redirection */
 } MeasTaskState;
+
+/* Returns the state pointer that gets returned from sampler.start(), or 
+ * NULL if sampler.start == NULL */
+static void *samplerStart(MeasTaskState *measState)
+{
+	Sampler *sampler = &measState->sampler;
+	StreamState *streamState = &measState->streamState;
+
+	if (sampler->start == NULL)
+		return NULL;
+
+	switchStdout(streamState); /* Switch stdout to file */
+	void *ret = sampler->start(sampler->samplerConf);
+	switchStdout(streamState); /* Switch stdout back */
+
+	return ret;
+}
+
+/* Sample and return sampler.sample(), or do nothing if sampler.sample == 
+ * NULL and return true. Note that this would be a pretty useless sampler 
+ * in the latter case... */
+static bool samplerSample(MeasTaskState *measState)
+{
+	Sampler *sampler = &measState->sampler;
+	StreamState *streamState = &measState->streamState;
+
+	if (sampler->sample == NULL)
+		return true;
+
+	switchStdout(streamState); /* Switch stdout to file */
+	bool ret = sampler->sample(&measState->samplerData, 
+				measState->samplerState);
+	switchStdout(streamState); /* Switch stdout back */
+
+	return ret;
+}
+
+/* Stop the sampler if we were currently sampling, do nothing otherwise or 
+ * if sampler.stop == NULL */
+static void samplerStop(MeasTaskState *measState)
+{
+	Sampler *sampler = &measState->sampler;
+	StreamState *streamState = &measState->streamState;
+
+	if (sampler->stop == NULL  ||  measState->measStatus != SAMPLING)
+		return;
+
+	switchStdout(streamState); /* Switch stdout to file */
+	sampler->stop(&measState->samplerData, measState->samplerState);
+	switchStdout(streamState); /* Switch stdout back */
+}
+
+
+
+
+
+
+/* MEASUREMENT TASK STUFF */
+
+typedef struct {
+	Measurement meas;
+	char *strBuf; /* The buffer for the rendering string if applicable */
+} MeasInitialData;
 
 static void *measStart(void *initialData)
 {
@@ -114,7 +142,6 @@ static void *measStart(void *initialData)
 	}
 
 	assert(meas != NULL);
-	Sampler *sampler = &meas->sampler;
 	MeasTaskState *state = malloc(sizeof(*state));
 
 	if (meas->measConf.measureFile != NULL) {
@@ -135,9 +162,9 @@ static void *measStart(void *initialData)
 	state->samplerData.strBufSize = meas->measConf.renderStrBufSize;
 	state->samplerData.string = mid->strBuf;
 
-	switchStdout(&state->streamState); /* Switch stdout to file */
-	state->samplerState = samplerStart(sampler);
-	switchStdout(&state->streamState); /* Switch stdout back */
+	/* If we don't wait to relax: start sampler now */
+	if (state->measStatus == SAMPLING)
+		state->samplerState = samplerStart(state);
 
 	free(initialData);
 	return state;
@@ -149,7 +176,6 @@ static TaskSignal measTick(void *state)
 		return TASK_OK;
 
 	MeasTaskState *measState = (MeasTaskState*) state;
-	Sampler *sampler = &measState->sampler;
 	MeasurementConf *measConf = &measState->measConf;
 	double measWait     = measConf->measureWait;
 	double measInterval = measConf->measureInterval;
@@ -177,6 +203,10 @@ static TaskSignal measTick(void *state)
 			measState->intervalTime = time - measWait;
 			if (verbose)
 				printf("\nStarting measurement.\n");
+
+			/* Start the sampler */
+			measState->samplerState = samplerStart(measState);
+
 			measState->measStatus = SAMPLING;
 			/* bit of a hack to start sampling immediately: */
 			measState->intervalTime = measInterval;
@@ -200,10 +230,7 @@ static TaskSignal measTick(void *state)
 		}
 
 		measState->intervalTime -= measInterval;
-		switchStdout(&measState->streamState); /* Switch stdout to file */
-		everythingOK = samplerSample(sampler, &measState->samplerData, 
-				measState->samplerState);
-		switchStdout(&measState->streamState); /* Switch stdout back */
+		everythingOK = samplerSample(measState);
 		measState->samplerData.sample++;
 		
 		if (measTime < 0)
@@ -234,11 +261,8 @@ static void measStop(void *state)
 		return;
 
 	MeasTaskState *measState = (MeasTaskState*) state;
-	Sampler *sampler = &measState->sampler;
+	samplerStop(measState);
 
-	switchStdout(&measState->streamState); /* Switch stdout to file */
-	samplerStop(sampler, &measState->samplerData, measState->samplerState);
-	switchStdout(&measState->streamState); /* Switch stdout back */
 	stopRedirection(&measState->streamState);
 
 	free(measState->samplerData.string);
