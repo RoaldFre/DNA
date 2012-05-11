@@ -1,8 +1,8 @@
-OBJECTS = font.o system.o task.o measure.o samplers.o physics.o world.o spgrid.o render.o mathlib/vector.o mathlib/quaternion.o mathlib/matrix.o main.o
+OBJECTS = font.o system.o task.o measure.o samplers.o physics.o world.o spgrid.o render.o mathlib/vector.o mathlib/quaternion.o mathlib/matrix.o
 WARNINGS = -pedantic -Wextra -Wall -Wwrite-strings -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wunsafe-loop-optimizations
 PROFILE = 
 DEBUG = -DNDEBUG
-OPTIM = -O4 -flto -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations  ${DEBUG}
+OPTIM = -O4 -flto -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations ${DEBUG}
 CFLAGS = $(WARNINGS) -std=c99 -pipe -march=native -ggdb $(OPTIM) $(PROFILE) -I/usr/include/freetype2
 
 all: main
@@ -18,9 +18,16 @@ debug:
 fastdebug:
 	make -B DEBUG="-DDEBUG"
 
-main: $(OBJECTS)
+main: $(OBJECTS) main.o
 	@echo "LD	main"
-	@gcc -o main $(CFLAGS) $(OBJECTS) -lfreetype -lm -lSDL -lGL -ggdb $(PROFILE)
+	@gcc -o main $(CFLAGS) $(OBJECTS) main.o -lfreetype -lm -lSDL -lGL -ggdb $(PROFILE)
+
+diff: $(OBJECTS) diffusion.o
+	@echo "LD	diffusion"
+	@gcc -o diffusion $(CFLAGS) $(OBJECTS) diffusion.o -lfreetype -lm -lSDL -lGL -ggdb $(PROFILE)
+
+diffdebug:
+	make -B OPTIM="-O0" DEBUG="-DDEBUG" diff
 
 .c.o:
 	@echo "CC	$@"

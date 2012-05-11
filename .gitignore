@@ -2,6 +2,7 @@
 octave-core
 core
 main
+diffusion
 tags
 *.aux
 *.pdf
