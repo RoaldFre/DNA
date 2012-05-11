@@ -12,7 +12,7 @@
 #define ENABLE_ANGLE		true
 #define ENABLE_DIHEDRAL		true
 #define ENABLE_STACK		true
-#define ENABLE_EXCLUSION	true
+#define ENABLE_EXCLUSION        true
 #define ENABLE_BASE_PAIR	true
 #define ENABLE_COULOMB		true
 
@@ -509,7 +509,7 @@ static void Fexclusion(Particle *p1, Particle *p2)
 static double calcInvDebyeLength(void)
 {
 	double T = config.thermostatTemp;
-	double saltCon = config.saltConcentration;
+	double saltCon = DEF_SALTCON;
 	double lambdaBDenom, lambdaB;
 
 	if (T == 0)
@@ -518,7 +518,8 @@ static double calcInvDebyeLength(void)
 	lambdaBDenom = 4 * M_PI * H2O_PERMETTIVITY
 			* BOLTZMANN_CONSTANT * T;
 	lambdaB = SQUARE(ELECTRON_CHARGE) / lambdaBDenom;
-	return sqrt(8 * M_PI * lambdaB * AVOGADRO * saltCon);
+	double invDebLength = sqrt(8 * M_PI * lambdaB * AVOGADRO * saltCon);
+	return invDebLength;
 }
 static double calcVCoulomb(double r)
 {
