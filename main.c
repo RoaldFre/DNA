@@ -63,6 +63,17 @@ static IntegratorConf integratorConf =
 {
 	.integrator = DEF_INTEGRATOR,
 	.numBoxes   = -1, /* guard */
+	.interactionSettings = {
+			.enableBond	= true,
+			.enableAngle	= true,
+			.enableDihedral	= true,
+			.enableStack	= true,
+			.enableExclusion= true,
+			.enableBasePair	= true,
+			.enableCoulomb	= true,
+			.mutuallyExclusivePairForces = true,
+			.onlyMatchingBasePairInteraction = true,
+	},
 };
 static const char* baseSequence = DEF_BASE_SEQUENCE;
 static bool buildCompStrand = false;

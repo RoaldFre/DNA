@@ -22,7 +22,7 @@
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
 #define DEF_TRUNCATION_LENGTH		20.0 //TODO sane?
-#define DEF_MONOMER_WORLDSIZE_FACTOR    100.0
+#define DEF_MONOMER_WORLDSIZE_FACTOR    80.0
 #define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_MEASUREMENT_WAIT 		4e4
 #define DEF_RENDER_FRAMERATE 		30.0
@@ -63,6 +63,17 @@ static IntegratorConf integratorConf =
 {
 	.integrator = DEF_INTEGRATOR,
 	.numBoxes   = -1, /* guard */
+	.interactionSettings = {
+			.enableBond	= true,
+			.enableAngle	= true,
+			.enableDihedral	= true,
+			.enableStack	= true,
+			.enableExclusion= true,
+			.enableBasePair	= true,
+			.enableCoulomb	= true,
+			.mutuallyExclusivePairForces = true,
+			.onlyMatchingBasePairInteraction = true,
+	},
 };
 static const char* baseSequence = DEF_BASE_SEQUENCE;
 static bool buildCompStrand = false;

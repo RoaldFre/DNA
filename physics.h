@@ -106,15 +106,37 @@
 #define AVOGADRO		6.023e23
 
 
-typedef enum
-{
+typedef enum {
 	LANGEVIN,
 	VERLET
 } Integrator;
 
-typedef struct
-{
+typedef struct {
+	bool enableBond;
+	bool enableAngle;
+	bool enableDihedral;
+	bool enableStack;
+	bool enableExclusion;
+	bool enableBasePair;
+	bool enableCoulomb;
+
+	bool mutuallyExclusivePairForces;
+	/* True for Knotts' model */
+
+	bool onlyMatchingBasePairInteraction;
+	/* If true: only consider base pairing interactions between 
+	 * matching bases of a dual stranded DNA.
+	 * The world must only have (at least) two strands (that are 
+	 * complementary), and the i'th monomer in a strand will be matched 
+	 * with the i'th monomer of the other strand.
+	 * 
+	 * If false: every possible base combination is checked to see 
+	 * whether it is bonded via the base pairing interaction. */
+} InteractionSettings;
+
+typedef struct {
 	Integrator integrator;
+	InteractionSettings interactionSettings;
 	int numBoxes; /* For space partition grid */
 } IntegratorConf;
 

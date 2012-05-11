@@ -7,27 +7,10 @@
 #include "world.h"
 #include "spgrid.h"
 
-/* Disable interactions by commenting these defines */
-#define ENABLE_BOND		true
-#define ENABLE_ANGLE		true
-#define ENABLE_DIHEDRAL		true
-#define ENABLE_STACK		true
-#define ENABLE_EXCLUSION        true
-#define ENABLE_BASE_PAIR	true
-#define ENABLE_COULOMB		true
 
-#define MUTUALLY_EXCLUSIVE_PAIR_FORCES true /* true for Knotts' model */
+/* Static global, gets set in integratorTaskStart. */
+static InteractionSettings interactions;
 
-/* ONLY_MATCHING_BASE_PAIR_INTERACTION:
- * If true: only consider base pairing interactions between matching bases 
- * of a dual stranded DNA.
- * The world must only have (at least) two strands (that are complementary), 
- * and the i'th monomer in a strand will be matched with the i'th monomer of 
- * the other strand.
- * 
- * If false: every possible base combination is checked to see whether it 
- * is bonded via the base pairing interaction. */
-#define ONLY_MATCHING_BASE_PAIR_INTERACTION true
 
 
 /* ===== FORCES AND POTENTIALS ===== */
@@ -69,7 +52,7 @@ static double calcFLJperDistance(double epsilon, double rEq2, double r2)
  * where dr is the distance between the particles */
 static double Vbond(Particle *p1, Particle *p2, double d0)
 {
-	if (!ENABLE_BOND)
+	if (!interactions.enableBond)
 		return 0;
 	double k1 = BOND_K1;
 	double k2 = BOND_K2;
@@ -80,7 +63,7 @@ static double Vbond(Particle *p1, Particle *p2, double d0)
 }
 static void Fbond(Particle *p1, Particle *p2, double d0)
 {
-	if (!ENABLE_BOND)
+	if (!interactions.enableBond)
 		return;
 	double k1 = BOND_K1;
 	double k2 = BOND_K2;
@@ -128,7 +111,7 @@ static void FbondSB(Particle *sugar, Particle *base)
  */
 static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 {
-	if (!ENABLE_ANGLE)
+	if (!interactions.enableAngle)
 		return 0;
 	Vec3 a, b;
 	double ktheta = ANGLE_COUPLING;
@@ -141,7 +124,7 @@ static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 }
 static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 {
-	if (!ENABLE_ANGLE)
+	if (!interactions.enableAngle)
 		return;
 	Vec3 a, b;
 	double ktheta = ANGLE_COUPLING;
@@ -188,7 +171,7 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 								double phi0)
 {
-	if (!ENABLE_DIHEDRAL)
+	if (!interactions.enableDihedral)
 		return 0;
 
 	Vec3 r1 = nearestImageVector(p1->pos, p2->pos);
@@ -226,7 +209,7 @@ static void FdihedralParticle(Particle *target,
 static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 								double phi0)
 {
-	if (!ENABLE_DIHEDRAL)
+	if (!interactions.enableDihedral)
 		return;
 
 	/* This is a *mess* to do analytically, so we do a numerical 
@@ -297,7 +280,7 @@ static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 {
 	assert(isBase(p1->type) && isBase(p2->type));
 
-	if (!ENABLE_STACK)
+	if (!interactions.enableStack)
 		return 0;
 
 	double rSq = nearestImageDistance2(p1->pos, p2->pos);
@@ -316,7 +299,7 @@ static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 {
 	assert(isBase(p1->type) && isBase(p2->type));
 
-	if (!ENABLE_STACK)
+	if (!interactions.enableStack)
 		return;
 
 	Vec3 r = nearestImageVector(p1->pos, p2->pos);
@@ -375,7 +358,7 @@ static double calcVbasePair(BasePairInfo bpi, double rsquared)
 }
 double VbasePair(Particle *p1, Particle *p2)
 {
-	if (!ENABLE_BASE_PAIR)
+	if (!interactions.enableBasePair)
 		return 0;
 
 	BasePairInfo bpi = getBasePairInfo(p1->type, p2->type);
@@ -403,7 +386,7 @@ static double calcFbasePair(BasePairInfo bpi, double r)
 
 static void FbasePair(Particle *p1, Particle *p2)
 {
-	if (!ENABLE_BASE_PAIR)
+	if (!interactions.enableBasePair)
 		return;
 
 	BasePairInfo bpi = getBasePairInfo(p1->type, p2->type);
@@ -453,7 +436,7 @@ static bool feelExclusion(Particle *p1, Particle *p2)
 	case SUGAR: /* t2 is a SUGAR or BASE */
 		return t2 == SUGAR || i1 != i2;
 	default: /* t1 and t2 are BASEs */
-		if (MUTUALLY_EXCLUSIVE_PAIR_FORCES)
+		if (interactions.mutuallyExclusivePairForces)
 			assert(i1 != i2);
 		return i1 != i2;
 	}
@@ -471,7 +454,7 @@ static double getExclusionCutOff2(ParticleType t1, ParticleType t2){
  * gets lifted so it's zero at infinity.) */
 static double Vexclusion(Particle *p1, Particle *p2)
 {
-	if (!ENABLE_EXCLUSION)
+	if (!interactions.enableExclusion)
 		return 0;
 
 	if (!feelExclusion(p1, p2))
@@ -486,7 +469,7 @@ static double Vexclusion(Particle *p1, Particle *p2)
 }
 static void Fexclusion(Particle *p1, Particle *p2)
 {
-	if (!ENABLE_EXCLUSION)
+	if (!interactions.enableExclusion)
 		return;
 
 	if (!feelExclusion(p1, p2))
@@ -535,7 +518,7 @@ static bool isChargedPair(ParticleType t1, ParticleType t2)
 }
 static double VCoulomb(Particle *p1, Particle *p2)
 {
-	if (!ENABLE_COULOMB)
+	if (!interactions.enableCoulomb)
 		return 0;
 
 	if (!isChargedPair(p1->type, p2->type))
@@ -561,7 +544,7 @@ static double calcFCoulomb(double r)
 }
 static void FCoulomb(Particle *p1, Particle *p2)
 {	
-	if (!ENABLE_COULOMB)
+	if (!interactions.enableCoulomb)
 		return;
 
 	if (!isChargedPair(p1->type, p2->type))
@@ -634,7 +617,7 @@ static void mutiallyExclusivePairForces(Particle *p1, Particle *p2)
 	/* Nonbonded pair interactions are mutually exclusive. See Knotts.
 	 * Note that this screws up energy conservation!! */
 	if (isBondedBasePair(p1->type, p2->type)
-		&& (!ONLY_MATCHING_BASE_PAIR_INTERACTION
+		&& (!interactions.onlyMatchingBasePairInteraction
 				|| ((p1->strandIndex == p2->strandIndex)
 					&& (p1->strand != p2->strand))))
 		FbasePair(p1, p2);
@@ -649,7 +632,7 @@ static void pairForces(Particle *p1, Particle *p2)
 	/* Apply all forces at once, this should conserve energy (for the 
 	 * verlet integrator without thermal bath coupling). */
 
-	if (!ONLY_MATCHING_BASE_PAIR_INTERACTION
+	if (!interactions.onlyMatchingBasePairInteraction
 			|| ((p1->strandIndex == p2->strandIndex)
 				&& (p1->strand != p2->strand)))
 		FbasePair(p1, p2);
@@ -668,7 +651,7 @@ static void calculateForces(void)
 		strandForces(&world.strands[s]);
 
 	/* Particle-based forces */
-	if (MUTUALLY_EXCLUSIVE_PAIR_FORCES)
+	if (interactions.mutuallyExclusivePairForces)
 		forEveryPair(&mutiallyExclusivePairForces);
 	else
 		forEveryPair(&pairForces);
@@ -707,7 +690,7 @@ static void pairPotentials(Particle *p1, Particle *p2, void *data)
 {
 	PotentialEnergies *pe = (PotentialEnergies*) data;
 	
-	if (!ONLY_MATCHING_BASE_PAIR_INTERACTION
+	if (!interactions.onlyMatchingBasePairInteraction
 			|| ((p1->strandIndex == p2->strandIndex)
 				&& (p1->strand != p2->strand)))
 		pe->basePair += VbasePair(p1, p2);
@@ -998,8 +981,11 @@ static void *integratorTaskStart(void *initialData)
 
 	forEveryParticle(&addToGrid);
 
+	interactions = ic->interactionSettings;
+
 	IntegratorState *state = malloc(sizeof(*state));
 	state->integrator = ic->integrator;
+
 	free(initialData);
 	return state;
 }
