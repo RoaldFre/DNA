@@ -137,7 +137,10 @@ static bool particlesSquaredDisplacementSample(SamplerData *sd, void *state)
 	Vec3 COM = getCOM(sdc->ps, sdc->num);
 	Vec3 displacement = sub(COM, sdc->initialPos);
 	double squaredDisplacement = length2(displacement);
-	printf("%e %e\n", getTime() - sdc->initialTime, squaredDisplacement);
+	//printf("%e %e", getTime() - sdc->initialTime, squaredDisplacement);
+	printf("%e ",getTime());
+	printVectorExp(COM);
+	printf("\n");
 
 	if (squaredDisplacement > 0.16 * SQUARE(world.worldSize)) {
 		fprintf(stderr, "WARNING! displacement > 0.4*worldsize. "
