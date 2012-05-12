@@ -3,6 +3,11 @@
 
 #include "task.h"
 
+/* NOTE:
+ * You can disable rendering by building with a NO_RENDER define (eg by 
+ * passing -DNO_RENDER to the compiler), or by uncommenting the line below. */
+// #define NO_RENDER 
+
 typedef struct
 {
 	int framerate; /* The desired framerate */

@@ -1,9 +1,24 @@
-OBJECTS = font.o system.o task.o measure.o samplers.o physics.o world.o spgrid.o render.o mathlib/vector.o mathlib/quaternion.o mathlib/matrix.o
+#Disable building with rendering by passing RENDER=no to make
+RENDER = yes
+
+OBJECTS = system.o task.o measure.o samplers.o physics.o world.o spgrid.o render.o
+EXTRA_RENDER_OBJECTS = font.o mathlib/vector.o mathlib/quaternion.o mathlib/matrix.o
+
+LIBS = -lm
+EXTRA_RENDER_LIBS = -lfreetype -lSDL -lGL
+
+ifeq ($(RENDER), yes)
+	OBJECTS += $(EXTRA_RENDER_OBJECTS)
+	LIBS += $(EXTRA_RENDER_LIBS)
+else
+	DEFINES += -DNO_RENDER
+endif
+
 WARNINGS = -pedantic -Wextra -Wall -Wwrite-strings -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wunsafe-loop-optimizations
 PROFILE = 
 DEBUG = -DNDEBUG
-OPTIM = -O4 -flto -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations ${DEBUG}
-CFLAGS = $(WARNINGS) -std=c99 -pipe -march=native -ggdb $(OPTIM) $(PROFILE) -I/usr/include/freetype2
+OPTIM = -O4 -flto -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations
+CFLAGS = $(WARNINGS) -std=c99 -pipe -march=native -ggdb $(OPTIM) $(DEBUG) $(DEFINES) $(PROFILE) -I/usr/include/freetype2
 
 all: main
 
@@ -20,11 +35,11 @@ fastdebug:
 
 main: $(OBJECTS) main.o
 	@echo "LD	main"
-	@gcc -o main $(CFLAGS) $(OBJECTS) main.o -lfreetype -lm -lSDL -lGL -ggdb $(PROFILE)
+	@gcc -o main $(CFLAGS) $(OBJECTS) main.o $(LIBS) -ggdb $(PROFILE)
 
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"
-	@gcc -o diffusion $(CFLAGS) $(OBJECTS) diffusion.o -lfreetype -lm -lSDL -lGL -ggdb $(PROFILE)
+	@gcc -o diffusion $(CFLAGS) $(OBJECTS) diffusion.o $(LIBS) -ggdb $(PROFILE)
 
 diffdebug:
 	make -B OPTIM="-O0" DEBUG="-DDEBUG" diff

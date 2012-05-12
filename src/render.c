@@ -1,9 +1,33 @@
+#include "render.h"
+
+#ifdef NO_RENDER
+/* =========== BUILD WITHOUT RENDERING =========== */
+
+Task makeRenderTask(RenderConf *rc)
+{
+	UNUSED(rc);
+
+	Task ret;
+	ret.initialData = NULL;
+	ret.start = NULL;
+	ret.tick = NULL;
+	ret.stop = NULL;
+
+	return ret;
+}
+void registerString(RenderStringConfig *rsc)
+{
+	UNUSED(rsc);
+}
+
+#else //NO_RENDER
+/* ============ BUILD WITH RENDERING ============ */
+
 #include <stdio.h>
 #include <SDL/SDL.h>
 #include <GL/gl.h>
 #include <math.h>
 #include "main.h"
-#include "render.h"
 #include "physics.h"
 #include "task.h"
 #include "font.h"
@@ -674,3 +698,4 @@ void registerString(RenderStringConfig *rsc)
 	strings = node;
 }
 
+#endif // NO_RENDER
