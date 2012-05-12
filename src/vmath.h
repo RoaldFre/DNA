@@ -173,14 +173,31 @@ static __inline__ Vec3 fromCilindrical(double r, double phi, double height)
 	return res;
 }
 
+/* These are static *globals* so that inlining randNorm multiple times in a 
+ * single function can optimize out the caching of the results! 
+ * TODO: verify this */
+static double _randNormCache;
+static bool _randNormCached = false;
 /* Returns a number sampled from a standard normal distribution. */
 static __inline__ double randNorm(void)
 {
+	if (_randNormCached) {
+		_randNormCached = false;
+		return _randNormCache;
+	}
+
 	/* Box-Muller transform */
 	double u1 = ((double) (rand() + 1)) / RAND_MAX;
 	double u2 = ((double) (rand() + 1)) / RAND_MAX;
 
-	return sqrt(-2*log(u1)) * cos(2*M_PI*u2);
+	double sqrtLog = sqrt(-2 * log(u1));
+	double c = cos(2*M_PI * u2);
+	/* TODO: This is faster than a sin()? */
+	double s = (u2 < 0.5 ? 1 : -1) * sqrt(1 - c*c);
+
+	_randNormCache = sqrtLog * s;
+	_randNormCached = true;
+	return sqrtLog * c;
 }
 
 /* Returns a vector with components sampled from a standard normal 
