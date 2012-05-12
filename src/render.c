@@ -579,8 +579,6 @@ static void render(RenderConf *rc)
 		glVertex3f(+ws/2, +ws/2, -ws/2);
 	glEnd();
 
-	glTranslatef(-ws/2, -ws/2, -ws/2);
-
 	for (int s = 0; s < world.numStrands; s++)
 		renderStrand(&world.strands[s], rc);
 

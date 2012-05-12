@@ -101,12 +101,10 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	int n = strlen(baseSequence);
 	allocStrand(s, n);
 
-	double ws = world.worldSize;
-
 	Vec3 offset;
-	offset.x = ws / 2;
-	offset.z = ws / 2;
-	offset.y = (order * ws - n * HELIX_DELTA_Z) / 2;
+	offset.x = 0;
+	offset.z = 0;
+	offset.y = (-n * HELIX_DELTA_Z) / 2.0;
 
 	/* <v^2> = 3 T k_B / m
 	 * -> per dimension: gaussian with variance T k_B / m */

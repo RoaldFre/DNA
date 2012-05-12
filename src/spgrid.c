@@ -87,6 +87,9 @@ void reboxParticles(void)
 
 	assert(spgridSanityCheck(false, true));
 
+	if (nb == 1)
+		return;
+
 	for (int i = 0; i < nb*nb*nb; i++) {
 		Box *currentBox = &grid[i];
 		Particle *p = currentBox->p;
@@ -120,17 +123,19 @@ void reboxParticles(void)
 /* Precondition: particle must be within the grid. */
 static Box *boxFromParticle(const Particle *p)
 {
-	int nx, ny, nz;
+	double ws = boxSize * nb; /* "world size" */
+	/* shift coordinates from [-ws/2 to ws/2] to [0 to ws] */
+	Vec3 shifted = add(p->pos, (Vec3) {ws/2.0, ws/2.0, ws/2.0});
 
 	assert(p != NULL);
 	assert(!isnan(p->pos.x) && !isnan(p->pos.y) && !isnan(p->pos.z));
-	assert(0 <= p->pos.x  &&  p->pos.x < boxSize * nb);
-	assert(0 <= p->pos.y  &&  p->pos.y < boxSize * nb);
-	assert(0 <= p->pos.z  &&  p->pos.z < boxSize * nb);
+	assert(0 <= shifted.x  &&  shifted.x < ws);
+	assert(0 <= shifted.y  &&  shifted.y < ws);
+	assert(0 <= shifted.z  &&  shifted.z < ws);
 
-	nx = p->pos.x / boxSize;
-	ny = p->pos.y / boxSize;
-	nz = p->pos.z / boxSize;
+	int nx = shifted.x / boxSize;
+	int ny = shifted.y / boxSize;
+	int nz = shifted.z / boxSize;
 
 	return boxFromIndex(nx, ny, nz);
 }
@@ -138,14 +143,15 @@ static Box *boxFromParticle(const Particle *p)
  * grid. */
 static Box *boxFromNonPeriodicParticle(const Particle *p)
 {
-	int nx, ny, nz;
-
 	assert(p != NULL);
 	assert(!isnan(p->pos.x) && !isnan(p->pos.y) && !isnan(p->pos.z));
 
-	nx = p->pos.x / boxSize;
-	ny = p->pos.y / boxSize;
-	nz = p->pos.z / boxSize;
+	double ws = boxSize * nb;
+	Vec3 shifted = add(p->pos, (Vec3) {ws/2.0, ws/2.0, ws/2.0});
+
+	int nx = shifted.x / boxSize;
+	int ny = shifted.y / boxSize;
+	int nz = shifted.z / boxSize;
 
 	return boxFromNonPeriodicIndex(nx, ny, nz);
 }
