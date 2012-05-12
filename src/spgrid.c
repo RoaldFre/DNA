@@ -133,14 +133,13 @@ static Box *boxFromParticle(const Particle *p)
 	assert(0 <= shifted.y  &&  shifted.y < ws);
 	assert(0 <= shifted.z  &&  shifted.z < ws);
 
-	int nx = shifted.x / boxSize;
-	int ny = shifted.y / boxSize;
-	int nz = shifted.z / boxSize;
+	int ix = shifted.x / boxSize;
+	int iy = shifted.y / boxSize;
+	int iz = shifted.z / boxSize;
 
-	return boxFromIndex(nx, ny, nz);
+	return boxFromIndex(ix, iy, iz);
 }
-/* Precondition: particle must be within one worldlength distance from 
- * grid. */
+/* Particle may be outside the grid */
 static Box *boxFromNonPeriodicParticle(const Particle *p)
 {
 	assert(p != NULL);
@@ -149,11 +148,11 @@ static Box *boxFromNonPeriodicParticle(const Particle *p)
 	double ws = boxSize * nb;
 	Vec3 shifted = add(p->pos, (Vec3) {ws/2.0, ws/2.0, ws/2.0});
 
-	int nx = shifted.x / boxSize;
-	int ny = shifted.y / boxSize;
-	int nz = shifted.z / boxSize;
+	int ix = shifted.x / boxSize;
+	int iy = shifted.y / boxSize;
+	int iz = shifted.z / boxSize;
 
-	return boxFromNonPeriodicIndex(nx, ny, nz);
+	return boxFromNonPeriodicIndex(ix, iy, iz);
 }
 
 static Box *boxFromNonPeriodicIndex(int ix, int iy, int iz)
