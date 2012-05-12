@@ -69,15 +69,16 @@ static IntegratorConf integratorConf =
 			.enableDihedral	= true,
 			.enableStack	= true,
 			.enableExclusion= true,
-			.enableBasePair	= true,
-			.enableCoulomb	= true,
+			.enableBasePair	= false,
+			.enableCoulomb	= false,
 			.mutuallyExclusivePairForces = true,
-			.onlyMatchingBasePairInteraction = true,
+			.basePairInteraction = BASE_PAIR_ALL,
 	},
 };
 static const char* baseSequence = DEF_BASE_SEQUENCE;
 static bool buildCompStrand = false;
-static double worldSize = -1; /* guard */
+static double worldSizeFactor = DEF_MONOMER_WORLDSIZE_FACTOR;
+static double worldSize = -1;
 
 
 static void printUsage(void)
@@ -101,8 +102,8 @@ static void printUsage(void)
 	printf(" -l <flt>  truncation Length of potentials (in Angstrom).\n");
 	printf("             negative value: sets truncation to worldsize/2\n");
 	printf("             default: %f\n", DEF_TRUNCATION_LENGTH);
-	printf(" -S <flt>  Size of world (in Angstrom).\n");
-	printf("             default: (number of monomers) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
+	printf(" -S <flt>  worldSize factor per monomer (in Angstrom).\n");
+	printf("             default: %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
 	printf(" -b <num>  number of Boxes per dimension\n");
 	printf("             default: max so that boxsize >= potential truncation length\n");
 	printf(" -v <int>  Verbose: dump statistics every <flt> femtoseconds\n");
@@ -198,9 +199,9 @@ static void parseArguments(int argc, char **argv)
 			config.truncationLen = atof(optarg) * LENGTH_FACTOR;
 			break;
 		case 'S':
-			worldSize = atof(optarg) * 1e-10;
-			if (worldSize <= 0)
-				die("Invalid world size %s\n", optarg);
+			worldSizeFactor = atof(optarg) * A;
+			if (worldSizeFactor <= 0)
+				die("Invalid world size factor %s\n", optarg);
 			break;
 		case 'b':
 			integratorConf.numBoxes = atoi(optarg);
@@ -268,9 +269,7 @@ static void parseArguments(int argc, char **argv)
 		die("\nFound unrecognised option(s) at the command line!\n");
 	}
 
-	if (worldSize < 0)
-		worldSize = LENGTH_FACTOR * strlen(baseSequence)
-					* DEF_MONOMER_WORLDSIZE_FACTOR;
+	worldSize = strlen(baseSequence) * worldSizeFactor;
 
 	if (config.thermostatTau < 0)
 		config.thermostatTau = DEF_COUPLING_TIMESTEP_FACTOR
