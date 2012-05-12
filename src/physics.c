@@ -12,6 +12,30 @@
 static InteractionSettings interactions;
 
 
+/* Enable for debugging purposes. If an interaction generates an invalid 
+ * vector, we will trigger a segfault. Only usefull if you run the code 
+ * from a debugger or enable core dumps.
+ *
+ * This is useful for rare bugs because it only checks for vector sanity, 
+ * whereas compiling with assertions checks all assertions and is therefore 
+ * slower. */
+#define DEBUG_VECTOR_SANITY true
+
+static void debugVectorSanity(Vec3 v, const char *location)
+{
+	if (!DEBUG_VECTOR_SANITY)
+		return;
+
+	if (isSaneVector(v))
+		return;
+
+	fprintf(stderr, "Found invalid vector at '%s'!\n"
+			"Triggering segfault!\n", location);
+	int *nil = (int*)NULL;
+	*nil = 1; /* segfaults */
+}
+
+
 
 /* ===== FORCES AND POTENTIALS ===== */
 
@@ -74,6 +98,8 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
 
 	Vec3 drVecNormalized = scale(drVec, 1/dr);
 	Vec3 F = scale(drVecNormalized, 2*k1*d + 4*k2*d3);
+
+	debugVectorSanity(F, "Fbond");
 
 	p1->F = add(p1->F, F);
 	p2->F = sub(p2->F, F);
@@ -150,14 +176,17 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	tmp1 = scale(b, 1/(lal * lbl));
 	tmp2 = scale(a, adotb / (lal*lal*lal * lbl));
 	F1 = scale(sub(tmp1, tmp2), ktheta * (theta - theta0) / sintheta);
+	debugVectorSanity(F1, "Fangle");
 	p1->F = add(p1->F, F1);	
 
 	tmp1 = scale(a, 1/(lal * lbl));
 	tmp2 = scale(b, adotb / (lbl*lbl*lbl * lal));
 	F3 = scale(sub(tmp1, tmp2), ktheta * (theta - theta0) / sintheta);
+	debugVectorSanity(F3, "Fangle");
 	p3->F = add(p3->F, F3);	
 
 	F2 = add(F1, F3); /* actually -F2 */
+	debugVectorSanity(F2, "Fangle");
 	p2->F = sub(p2->F, F2);	
 
 	assert(ktheta == 0 
@@ -203,6 +232,8 @@ static void FdihedralParticle(Particle *target,
 	target->pos.z += h;
 	F.z = (Vorig - Vdihedral(p1, p2, p3, p4, phi0)) / h;
 	target->pos.z -= h;
+
+	debugVectorSanity(F, "FdihedralParticle");
 
 	target->F = add(target->F, F);
 }
@@ -312,6 +343,7 @@ static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 						monomerDistance);
 	double FperDist = calcFLJperDistance(STACK_COUPLING, rEqSq, rSq);
 	Vec3 F = scale(r, FperDist);
+	debugVectorSanity(F, "Fstack");
 	p1->F = add(p1->F, F);
 	p2->F = sub(p2->F, F);
 }
@@ -431,6 +463,7 @@ static void FbasePair(Particle *p1, Particle *p2)
 
 	double force = calcFbasePair(bpi, r);
 	Vec3 forceVec = scale(direction, force);
+	debugVectorSanity(forceVec, "FbasePair");
 
 	/* Add force to particle objects */
 	p1->F = sub(p1->F, forceVec);
@@ -512,6 +545,7 @@ static void Fexclusion(Particle *p1, Particle *p2)
 
 	double FperDist = calcFLJperDistance(EXCLUSION_COUPLING, cutOffSq, rSq);
 	Vec3 F = scale(r, FperDist);
+	debugVectorSanity(F, "Fexclusion");
 	p1->F = add(p1->F, F);
 	p2->F = sub(p2->F, F);
 }
@@ -588,6 +622,7 @@ static void FCoulomb(Particle *p1, Particle *p2)
 	Vec3 forceVec;
 	
 	forceVec = scale(direction, calcFCoulomb(r));
+	debugVectorSanity(forceVec, "FCoulomb");
 	p1->F = sub(p1->F, forceVec);
 	p2->F = add(p2->F, forceVec);
 }
@@ -865,9 +900,15 @@ static void verletHelper1(Particle *p)
 {
 	double dt = config.timeStep;
 
-	assert(isSaneVector(p->pos));
-	assert(isSaneVector(p->vel));
-	assert(isSaneVector(p->F));
+	if (DEBUG_VECTOR_SANITY) {
+		debugVectorSanity(p->pos, "verletHelper1");
+		debugVectorSanity(p->vel, "verletHelper1");
+		debugVectorSanity(p->F,   "verletHelper1");
+	} else {
+		assert(isSaneVector(p->pos));
+		assert(isSaneVector(p->vel));
+		assert(isSaneVector(p->F));
+	}
 
 	/* vel(t + dt/2) = vel(t) + acc(t)*dt/2 */
 	p->vel = add(p->vel, scale(p->F, dt / (2 * p->m)));
@@ -875,21 +916,36 @@ static void verletHelper1(Particle *p)
 	/* pos(t + dt) = pos(t) + vel(t + dt/2)*dt */
 	p->pos = add(p->pos, scale(p->vel, dt));
 
-	assert(isSaneVector(p->pos));
-	assert(isSaneVector(p->vel));
+	if (DEBUG_VECTOR_SANITY) {
+		debugVectorSanity(p->pos, "verletHelper1");
+		debugVectorSanity(p->vel, "verletHelper1");
+	} else {
+		assert(isSaneVector(p->pos));
+		assert(isSaneVector(p->vel));
+	}
 }
 static void verletHelper2(Particle *p)
 {
 	double dt = config.timeStep;
 
-	assert(isSaneVector(p->pos));
-	assert(isSaneVector(p->vel));
-	assert(isSaneVector(p->F));
+	if (DEBUG_VECTOR_SANITY) {
+		debugVectorSanity(p->pos, "verletHelper2");
+		debugVectorSanity(p->vel, "verletHelper2");
+		debugVectorSanity(p->F,   "verletHelper2");
+	} else {
+		assert(isSaneVector(p->pos));
+		assert(isSaneVector(p->vel));
+		assert(isSaneVector(p->F));
+	}
 
 	/* vel(t + dt) = vel(t + dt/2) + acc(t + dt)*dt/2 */
 	p->vel = add(p->vel, scale(p->F, dt / (2*p->m)));
 
-	assert(isSaneVector(p->vel));
+	if (DEBUG_VECTOR_SANITY) {
+		debugVectorSanity(p->vel, "verletHelper2");
+	} else {
+		assert(isSaneVector(p->vel));
+	}
 }
 static void verlet(void)
 {
@@ -907,9 +963,15 @@ static void langevinBBKhelper1(Particle *p)
 
 	Vec3 tmp1, tmp2;
 
-	assert(isSaneVector(p->pos));
-	assert(isSaneVector(p->vel));
-	assert(isSaneVector(p->F));
+	if (DEBUG_VECTOR_SANITY) {
+		debugVectorSanity(p->pos, "langevinBBKhelper1");
+		debugVectorSanity(p->vel, "langevinBBKhelper1");
+		debugVectorSanity(p->F,   "langevinBBKhelper1");
+	} else {
+		assert(isSaneVector(p->pos));
+		assert(isSaneVector(p->vel));
+		assert(isSaneVector(p->F));
+	}
 
 	/* from v(t) to v(t + dt/2) */
 	tmp1 = scale(p->vel, 1 - gamma*dt/2);
@@ -919,8 +981,14 @@ static void langevinBBKhelper1(Particle *p)
 	/* from r(t) to r(t + dt) */
 	p->pos = add(p->pos, scale(p->vel, dt));
 
-	assert(isSaneVector(p->pos));
-	assert(isSaneVector(p->vel));
+
+	if (DEBUG_VECTOR_SANITY) {
+		debugVectorSanity(p->pos, "langevinBBKhelper1");
+		debugVectorSanity(p->vel, "langevinBBKhelper1");
+	} else {
+		assert(isSaneVector(p->pos));
+		assert(isSaneVector(p->vel));
+	}
 }
 static void langevinBBKhelper2(Particle *p)
 {
@@ -928,9 +996,15 @@ static void langevinBBKhelper2(Particle *p)
 	double gamma = config.langevinGamma;
 	double T     = config.thermostatTemp;
 
-	assert(isSaneVector(p->pos));
-	assert(isSaneVector(p->vel));
-	assert(isSaneVector(p->F));
+	if (DEBUG_VECTOR_SANITY) {
+		debugVectorSanity(p->pos, "langevinBBKhelper2");
+		debugVectorSanity(p->vel, "langevinBBKhelper2");
+		debugVectorSanity(p->F,   "langevinBBKhelper2");
+	} else {
+		assert(isSaneVector(p->pos));
+		assert(isSaneVector(p->vel));
+		assert(isSaneVector(p->F));
+	}
 
 	/* Regular forces have been calculated. Add the random force due 
 	 * to collisions to the total force. The result is:
@@ -945,8 +1019,13 @@ static void langevinBBKhelper2(Particle *p)
 	Vec3 tmp = add(p->vel, scale(p->F, dt / (2*p->m)));
 	p->vel = scale(tmp, 1 / (1 + gamma*dt/2));
 
-	assert(isSaneVector(p->pos));
-	assert(isSaneVector(p->F));
+	if (DEBUG_VECTOR_SANITY) {
+		debugVectorSanity(p->pos, "langevinBBKhelper2");
+		debugVectorSanity(p->vel, "langevinBBKhelper2");
+	} else {
+		assert(isSaneVector(p->pos));
+		assert(isSaneVector(p->vel));
+	}
 }
 
 /* BBK integrator for Langevin dynamics. Uses the one based on 
