@@ -104,7 +104,7 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	Vec3 offset;
 	offset.x = 0;
 	offset.z = 0;
-	offset.y = (-n * HELIX_DELTA_Z) / 2.0;
+	offset.y = (-order * n * HELIX_DELTA_Z) / 2.0;
 
 	/* <v^2> = 3 T k_B / m
 	 * -> per dimension: gaussian with variance T k_B / m */
