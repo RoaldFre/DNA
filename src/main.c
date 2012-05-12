@@ -12,6 +12,7 @@
 #include "world.h"
 #include "render.h"
 #include "samplers.h"
+#include "math.h"
 
 #define DEF_DATA_PATH "data.txt"
 
@@ -341,10 +342,7 @@ static void buildRopeTestWorld(void)
 
 int main(int argc, char **argv)
 {
-	/* seed random generator */
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	srand(tv.tv_usec ^ tv.tv_sec ^ getpid());
+	seedRandom();
 
 	parseArguments(argc, argv);
 

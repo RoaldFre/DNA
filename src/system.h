@@ -2,7 +2,7 @@
 #define _SYSTEM_H_
 
 #include <stdbool.h>
-#include "vmath.h"
+#include "math.h"
 
 typedef struct
 {

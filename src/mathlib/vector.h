@@ -1,7 +1,7 @@
 #ifndef KOSMOS_VECTOR_H
 #define KOSMOS_VECTOR_H
 
-#include "../vmath.h" /* For Vec3 definition */
+#include "../math.h" /* For Vec3 definition */
 
 Vec3 vec3_add(Vec3 a, Vec3 b);
 Vec3 vec3_sub(Vec3 a, Vec3 b);

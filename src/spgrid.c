@@ -1,5 +1,5 @@
 #include "spgrid.h"
-#include "vmath.h"
+#include "math.h"
 #include <stdio.h>
 #include <stdlib.h>
 
