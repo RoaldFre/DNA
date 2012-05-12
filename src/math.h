@@ -151,6 +151,19 @@ static __inline__ double dihedral(Vec3 v1, Vec3 v2, Vec3 v3)
 	return atan2(length(v2) * dot(v1, v2xv3), dot(v1xv2, v2xv3));
 }
 
+/* Helper for function below */
+static double _periodic(double period, double val)
+{
+	if (-period/2.0 > val) {
+		do val += period; while (-period/2.0 > val);
+		return val;
+	}
+	if (val >= period/2.0) {
+		do val -= period; while (val >= period/2.0);
+		return val;
+	}
+	return val;
+}
 /* Returns the vector clamped to periodic boundary conditions.
  * PostConditions:
  *     -period/2.0 <= res.x   &&   res.x < period/2.0
@@ -160,23 +173,13 @@ static __inline__ double dihedral(Vec3 v1, Vec3 v2, Vec3 v3)
 static __inline__ Vec3 periodic(double period, Vec3 v)
 {
 	Vec3 res;
-	Vec3 offset = (Vec3) {period/2.0, period/2.0, period/2.0};
-	Vec3 shifted = add(v, offset);
-	/* Fmod doesn't handle negative values the way we want it to, so we 
-	 * need an extra check for the sign.
-	 * TODO: see if we can do this without a branch! */
-	res.x = fmod(shifted.x, period);
-	if (res.x < 0) res.x += period;
-	res.y = fmod(shifted.y, period);
-	if (res.y < 0) res.y += period;
-	res.z = fmod(shifted.z, period);
-	if (res.z < 0) res.z += period;
-
-	res = sub(res, offset);
+	res.x = _periodic(period, v.x);
+	res.y = _periodic(period, v.y);
+	res.z = _periodic(period, v.z);
 	
-	assert(period/2.0 <= res.x  &&  res.x < period/2.0);
-	assert(period/2.0 <= res.y  &&  res.y < period/2.0);
-	assert(period/2.0 <= res.z  &&  res.z < period/2.0);
+	assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
+	assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
+	assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
 
 	return res;
 }
