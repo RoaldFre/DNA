@@ -901,9 +901,9 @@ static void verletHelper1(Particle *p)
 	double dt = config.timeStep;
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "verletHelper1");
-		debugVectorSanity(p->vel, "verletHelper1");
-		debugVectorSanity(p->F,   "verletHelper1");
+		debugVectorSanity(p->pos, "start verletHelper1");
+		debugVectorSanity(p->vel, "start verletHelper1");
+		debugVectorSanity(p->F,   "start verletHelper1");
 	} else {
 		assert(isSaneVector(p->pos));
 		assert(isSaneVector(p->vel));
@@ -917,8 +917,8 @@ static void verletHelper1(Particle *p)
 	p->pos = add(p->pos, scale(p->vel, dt));
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "verletHelper1");
-		debugVectorSanity(p->vel, "verletHelper1");
+		debugVectorSanity(p->pos, "end verletHelper1");
+		debugVectorSanity(p->vel, "end verletHelper1");
 	} else {
 		assert(isSaneVector(p->pos));
 		assert(isSaneVector(p->vel));
@@ -929,9 +929,9 @@ static void verletHelper2(Particle *p)
 	double dt = config.timeStep;
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "verletHelper2");
-		debugVectorSanity(p->vel, "verletHelper2");
-		debugVectorSanity(p->F,   "verletHelper2");
+		debugVectorSanity(p->pos, "start verletHelper2");
+		debugVectorSanity(p->vel, "start verletHelper2");
+		debugVectorSanity(p->F,   "start verletHelper2");
 	} else {
 		assert(isSaneVector(p->pos));
 		assert(isSaneVector(p->vel));
@@ -942,7 +942,7 @@ static void verletHelper2(Particle *p)
 	p->vel = add(p->vel, scale(p->F, dt / (2*p->m)));
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->vel, "verletHelper2");
+		debugVectorSanity(p->vel, "end verletHelper2");
 	} else {
 		assert(isSaneVector(p->vel));
 	}
@@ -964,9 +964,9 @@ static void langevinBBKhelper1(Particle *p)
 	Vec3 tmp1, tmp2;
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "langevinBBKhelper1");
-		debugVectorSanity(p->vel, "langevinBBKhelper1");
-		debugVectorSanity(p->F,   "langevinBBKhelper1");
+		debugVectorSanity(p->pos, "start langevinBBKhelper1");
+		debugVectorSanity(p->vel, "start langevinBBKhelper1");
+		debugVectorSanity(p->F,   "start langevinBBKhelper1");
 	} else {
 		assert(isSaneVector(p->pos));
 		assert(isSaneVector(p->vel));
@@ -983,8 +983,8 @@ static void langevinBBKhelper1(Particle *p)
 
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "langevinBBKhelper1");
-		debugVectorSanity(p->vel, "langevinBBKhelper1");
+		debugVectorSanity(p->pos, "end langevinBBKhelper1");
+		debugVectorSanity(p->vel, "end langevinBBKhelper1");
 	} else {
 		assert(isSaneVector(p->pos));
 		assert(isSaneVector(p->vel));
@@ -997,9 +997,9 @@ static void langevinBBKhelper2(Particle *p)
 	double T     = config.thermostatTemp;
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "langevinBBKhelper2");
-		debugVectorSanity(p->vel, "langevinBBKhelper2");
-		debugVectorSanity(p->F,   "langevinBBKhelper2");
+		debugVectorSanity(p->pos, "start langevinBBKhelper2");
+		debugVectorSanity(p->vel, "start langevinBBKhelper2");
+		debugVectorSanity(p->F,   "start langevinBBKhelper2");
 	} else {
 		assert(isSaneVector(p->pos));
 		assert(isSaneVector(p->vel));
@@ -1020,8 +1020,8 @@ static void langevinBBKhelper2(Particle *p)
 	p->vel = scale(tmp, 1 / (1 + gamma*dt/2));
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "langevinBBKhelper2");
-		debugVectorSanity(p->vel, "langevinBBKhelper2");
+		debugVectorSanity(p->pos, "end langevinBBKhelper2");
+		debugVectorSanity(p->vel, "end langevinBBKhelper2");
 	} else {
 		assert(isSaneVector(p->pos));
 		assert(isSaneVector(p->vel));
