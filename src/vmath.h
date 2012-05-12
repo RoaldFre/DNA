@@ -177,8 +177,8 @@ static __inline__ Vec3 fromCilindrical(double r, double phi, double height)
 static __inline__ double randNorm(void)
 {
 	/* Box-Muller transform */
-	double u1 = ((double) rand()) / RAND_MAX;
-	double u2 = ((double) rand()) / RAND_MAX;
+	double u1 = ((double) (rand() + 1)) / RAND_MAX;
+	double u2 = ((double) (rand() + 1)) / RAND_MAX;
 
 	return sqrt(-2*log(u1)) * cos(2*M_PI*u2);
 }
