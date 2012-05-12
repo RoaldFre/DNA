@@ -44,7 +44,6 @@ static GLushort *sphereIndex;
 
 static Font *font;
 static SDL_Surface *surface;
-static GLfloat view_angle;
 #define FPS_STRING_CHARS 32
 static char fps_string[FPS_STRING_CHARS];
 static Quaternion cam_orientation;
@@ -331,12 +330,6 @@ static bool handleEvents(void)
 				printf("\nRequested Quit.\n\n");
 				return false;
 				break;
-			case SDLK_LEFT:
-				view_angle--;
-				break;
-			case SDLK_RIGHT:
-				view_angle++;
-				break;
 			case SDLK_UP:
 				config.timeStep *= 1.1;
 				printf("Time step: %f\n", 
@@ -553,8 +546,6 @@ static void render(RenderConf *rc)
 	/* 3D */
 	renderSet3D();
 
-/*	view_angle += 0.01;*/
-
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	mat3_from_quat(m3, quat_conjugate(cam_orientation));
@@ -562,8 +553,8 @@ static void render(RenderConf *rc)
 	glMultMatrixd(m4);
 	glTranslatef(-cam_position.x, -cam_position.y, -cam_position.z);
 
-	//glRotatef(view_angle, 0, 1, 0);
 
+	/* Line loops for world box */
 	glColor3f(0.0, 1.0, 0.0);
 	glBegin(GL_LINE_LOOP);
 		glVertex3f(-ws/2, -ws/2, -ws/2);
@@ -579,6 +570,8 @@ static void render(RenderConf *rc)
 		glVertex3f(+ws/2, +ws/2, -ws/2);
 	glEnd();
 
+
+	/* Strands */
 	for (int s = 0; s < world.numStrands; s++)
 		renderStrand(&world.strands[s], rc);
 
