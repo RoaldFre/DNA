@@ -29,6 +29,9 @@ diff: $(OBJECTS) diffusion.o
 diffdebug:
 	make -B OPTIM="-O0" DEBUG="-DDEBUG" diff
 
+difffastdebug:
+	make -B DEBUG="-DDEBUG" diff
+
 .c.o:
 	@echo "CC	$@"
 	@gcc -o $@ $(CFLAGS) -c $<
