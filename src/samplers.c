@@ -142,9 +142,9 @@ static bool particlesSquaredDisplacementSample(SamplerData *sd, void *state)
 	printVectorExp(COM);
 	printf("\n");
 
-	if (squaredDisplacement > 0.16 * SQUARE(world.worldSize)) {
-		fprintf(stderr, "WARNING! displacement > 0.4*worldsize. "
-				"Possibly errors due to periodic boundary "
+	if (squaredDisplacement > 0.25 * SQUARE(world.worldSize)) {
+		fprintf(stderr, "WARNING! displacement > 0.5*worldsize. "
+				"Probably errors due to periodic boundary "
 				"conditions! Bailing out!\n");
 		return false;
 	}
