@@ -128,11 +128,6 @@ static void printUsage(void)
 	printf("Parameters for velocity Verlet integrator + Berendsen termostat:\n");
 	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
 	printf("             default: %d * timestep\n", DEF_COUPLING_TIMESTEP_FACTOR);
-
-
-
-	printf(" -P <flt>  total simulation time Period (in nanoseconds)\n");
-	printf("             default: loop indefinitely\n");
 }
 
 static void parseArguments(int argc, char **argv)
