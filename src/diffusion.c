@@ -314,7 +314,10 @@ void die(const char *fmt, ...)
 
 int main(int argc, char **argv)
 {
-	srand(time(NULL)); //seed random generator
+	/* seed random generator */
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	srand(tv.tv_usec ^ tv.tv_sec ^ getpid());
 
 	parseArguments(argc, argv);
 
