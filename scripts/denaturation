@@ -2,7 +2,7 @@
 
 set -e
 
-main=../main
+main=../src/main
 timestep=20
 interval=100
 time=80

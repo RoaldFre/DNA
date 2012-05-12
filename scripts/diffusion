@@ -3,7 +3,7 @@
 
 set -e
 
-main=../diffusion
+main=../src/diffusion
 timestep=50
 interval=100
 time=50
