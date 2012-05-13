@@ -85,10 +85,10 @@ void reboxParticles(void)
 {
 	double gridSize = nb * boxSize;
 
-	assert(spgridSanityCheck(false, true));
-
 	if (nb == 1)
 		return;
+
+	assert(spgridSanityCheck(false, true));
 
 	for (int i = 0; i < nb*nb*nb; i++) {
 		Box *currentBox = &grid[i];
