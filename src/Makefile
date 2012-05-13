@@ -52,5 +52,5 @@ difffastdebug:
 	@gcc -o $@ $(CFLAGS) -c $<
 
 clean:
-	rm -f *.o mathlib/*.o
+	rm -f *.o mathlib/*.o tinymt/*.o
 
