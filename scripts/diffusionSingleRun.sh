@@ -1,12 +1,13 @@
 #!/bin/sh
 
-gamma=$1
-N=$2
-runNumber=$3
+destinationDir=$1
+gamma=$2
+N=$3
+runNumber=$4
 
 set -e
 
-main=../src/diffusion
+main=diffusion #Should be in current working dir, or in $PATH
 timestep=40
 interval=10
 time=100
@@ -24,8 +25,8 @@ fps=10
 
 outputBaseName=`mktemp`
 nameSuffix="dt${timestep}_wait${wait}_time${time}_N${N}_g${gamma}_${runNumber}"
-particleFilenameBase="data/diff_particle_${nameSuffix}"
-strandFilenameBase="data/diff_strand_${nameSuffix}"
+particleFilenameBase="$destinationDir/diff_particle_${nameSuffix}"
+strandFilenameBase="$destinationDir/diff_strand_${nameSuffix}"
 
 
 seq=`perl -e "print 'A'x$N"`

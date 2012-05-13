@@ -1,10 +1,11 @@
-gamma=$1
-N=$2
-nRuns=$3
+destinationDir=$1
+gamma=$2
+N=$3
+nRuns=$4
 
 for run in `seq 1 $nRuns`
 do
-	./diffusionSingleRun.sh $gamma $N $run &
+	./diffusionSingleRun.sh $destinationDir $gamma $N $run &
 done
 
 wait
