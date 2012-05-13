@@ -384,14 +384,8 @@ void forEveryConnectionPair(void (*f)(Particle*, Particle*, Particle*, Particle*
 /* PERIODIC VECTOR FUNCTIONS */
 Vec3 nearestImageVector(Vec3 v1, Vec3 v2)
 {
-	Vec3 res;
 	double L = nb * boxSize;
-	/* +5*L/2 instead of simply +L/2 to make sure that the first 
-	 * argument of fmod is positive. Otherwise, this won't work! */
-	res.x = fmod(v2.x - v1.x + 5*L/2, L)  -  L/2;
-	res.y = fmod(v2.y - v1.y + 5*L/2, L)  -  L/2;
-	res.z = fmod(v2.z - v1.z + 5*L/2, L)  -  L/2;
-	return res;
+	return periodic(L, sub(v2, v1));
 }
 
 double nearestImageDistance(Vec3 v1, Vec3 v2)
