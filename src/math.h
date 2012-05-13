@@ -111,8 +111,8 @@ static __inline__ Vec3 cross(Vec3 v, Vec3 w)
 	x.y = v.z * w.x  -  v.x * w.z;
 	x.z = v.x * w.y  -  v.y * w.x;
 
-	assert(fabs(dot(v, x) / length(v) / length(x)) < 1e-10);
-	assert(fabs(dot(w, x) / length(w) / length(x)) < 1e-10);
+	assert(fabs(dot(v, x) / length(v) / length(x)) < 1e-5);
+	assert(fabs(dot(w, x) / length(w) / length(x)) < 1e-5);
 
 	return x;
 }
@@ -136,7 +136,9 @@ static __inline__ double distance(Vec3 a, Vec3 b)
 
 static __inline__ double cosAngle(Vec3 v, Vec3 w)
 {
-	return dot(v, w) / (length(v) * length (w));
+	double c = dot(v, w) / (length(v) * length (w));
+	/* Known to be strictly larger than 1 due to numerical errors! */
+	return MIN(1, c);
 }
 
 static __inline__ double angle(Vec3 v, Vec3 w)

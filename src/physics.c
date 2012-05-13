@@ -162,14 +162,20 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	double lbl = length(b);
 	double adotb = dot(a, b);
 	double costheta = adotb / (lal * lbl);
+
+	if (costheta >= 1 - 1e-10)
+		/* Note, sometimes costheta > 1, due to numerical errors!
+		 * Either way, if costheta almost equal to 1: theta is 
+		 * almost equal to 0 and we are at an (unstable) 
+		 * equilibrium. We just bail out without applying a force, 
+		 * because otherwise we would end up dividing by zero 
+		 * below. */
+		return;
+
 	double theta = acos(costheta);
 	double sintheta = sqrt(1 - costheta*costheta);
-
-	// TODO correct cut off?
-	if (fabs(sintheta) < 1e-30)
-		/* "No" force (unstable equilibrium), numerical instability 
-		 * otherwise */
-		return;
+	/* Note: the positive sign for the square root is always correct, 
+	 * because the angle is always less than 180 degrees! */
 
 	Vec3 tmp1, tmp2, F1, F2, F3;
 
@@ -189,10 +195,8 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	debugVectorSanity(F2, "Fangle");
 	p2->F = sub(p2->F, F2);	
 
-	assert(ktheta == 0 
-		|| fabs(dot(a, F1) / length(a) / length(F1)) < 1e-5);
-	assert(ktheta == 0
-		|| fabs(dot(b, F3) / length(b) / length(F3)) < 1e-5);
+	assert(fabs(dot(a, F1) / length(a) / length(F1)) < 1e-5);
+	assert(fabs(dot(b, F3) / length(b) / length(F3)) < 1e-5);
 }
 
 
@@ -1013,6 +1017,7 @@ static void langevinBBKhelper2(Particle *p)
 	 * prefactor before p->m when looping over all particles. */
 	double Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * gamma * p->m / dt);
 	Vec3 R = randNormVec(Rstddev);
+	debugVectorSanity(R, "randNormVec in langevinBBKhelper2");
 	p->F = add(p->F, R);
 
 	/* from v(t + dt/2) to v(t + dt) */
