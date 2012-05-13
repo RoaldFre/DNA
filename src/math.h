@@ -111,8 +111,8 @@ static __inline__ Vec3 cross(Vec3 v, Vec3 w)
 	x.y = v.z * w.x  -  v.x * w.z;
 	x.z = v.x * w.y  -  v.y * w.x;
 
-	assert(fabs(dot(v, x) / length(v) / length(x)) < 1e-5);
-	assert(fabs(dot(w, x) / length(w) / length(x)) < 1e-5);
+	//assert(fabs(dot(v, x) / length(v) / length(x)) < 1e-5);
+	//assert(fabs(dot(w, x) / length(w) / length(x)) < 1e-5);
 
 	return x;
 }
