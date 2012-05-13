@@ -127,7 +127,7 @@ static void FbondSB(Particle *sugar, Particle *base)
 }
 
 /* ANGLE */
-/* V = ktheta * (theta - theta0) 
+/* V = ktheta/2 * (theta - theta0)^2
  *
  * p1 \       /p3
  *     \theta/
@@ -163,10 +163,10 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	double adotb = dot(a, b);
 	double costheta = adotb / (lal * lbl);
 
-	if (costheta >= 1 - 1e-10)
-		/* Note, sometimes costheta > 1, due to numerical errors!
-		 * Either way, if costheta almost equal to 1: theta is 
-		 * almost equal to 0 and we are at an (unstable) 
+	if (fabs(costheta) >= 1 - 1e-5)
+		/* Note, sometimes |costheta| > 1, due to numerical errors!
+		 * Either way, if |costheta| almost equal to 1: theta is 
+		 * almost equal to 0 or pi and we are at an (unstable) 
 		 * equilibrium. We just bail out without applying a force, 
 		 * because otherwise we would end up dividing by zero 
 		 * below. */
@@ -182,17 +182,17 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	tmp1 = scale(b, 1/(lal * lbl));
 	tmp2 = scale(a, adotb / (lal*lal*lal * lbl));
 	F1 = scale(sub(tmp1, tmp2), ktheta * (theta - theta0) / sintheta);
-	debugVectorSanity(F1, "Fangle");
+	debugVectorSanity(F1, "Fangle F1");
 	p1->F = add(p1->F, F1);	
 
 	tmp1 = scale(a, 1/(lal * lbl));
 	tmp2 = scale(b, adotb / (lbl*lbl*lbl * lal));
 	F3 = scale(sub(tmp1, tmp2), ktheta * (theta - theta0) / sintheta);
-	debugVectorSanity(F3, "Fangle");
+	debugVectorSanity(F3, "Fangle F3");
 	p3->F = add(p3->F, F3);	
 
 	F2 = add(F1, F3); /* actually -F2 */
-	debugVectorSanity(F2, "Fangle");
+	debugVectorSanity(F2, "Fangle F2");
 	p2->F = sub(p2->F, F2);	
 
 	assert(fabs(dot(a, F1) / length(a) / length(F1)) < 1e-5);
