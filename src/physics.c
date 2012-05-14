@@ -19,7 +19,7 @@ static InteractionSettings interactions;
  * This is useful for rare bugs because it only checks for vector sanity, 
  * whereas compiling with assertions checks all assertions and is therefore 
  * slower. */
-#define DEBUG_VECTOR_SANITY true
+#define DEBUG_VECTOR_SANITY false
 
 static void debugVectorSanity(Vec3 v, const char *location)
 {
