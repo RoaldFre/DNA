@@ -1,6 +1,7 @@
-function data = parse2DRuns(directory)
+function data = parse2DRuns(filesglob)
 
-files = glob([directory, "/*"]);
+#files = glob([directory, "/*"]);
+files = glob(filesglob);
 
 nRuns = numel(files);
 
