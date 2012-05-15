@@ -1,7 +1,7 @@
 #Disable building with rendering by passing RENDER=no to make
 RENDER = yes
 
-OBJECTS = system.o math.o task.o measure.o samplers.o physics.o world.o spgrid.o tinymt/tinymt64.o render.o
+OBJECTS = system.o math.o task.o measure.o samplers.o physics.o world.o spgrid.o tinymt/tinymt64.o render.o octave.o
 EXTRA_RENDER_OBJECTS = font.o mathlib/vector.o mathlib/quaternion.o mathlib/matrix.o
 
 LIBS = -lm

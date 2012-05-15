@@ -42,6 +42,9 @@ typedef struct {
 
 	/* Size of the string buffer above. */
 	int strBufSize;
+
+	/* The time interval at which you are called. */
+	double sampleInterval;
 } SamplerData;
 
 typedef enum

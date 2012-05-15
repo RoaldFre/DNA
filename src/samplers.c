@@ -1,7 +1,8 @@
+#include <string.h>
 #include "samplers.h"
 #include "physics.h"
 #include "spgrid.h"
-#include <string.h>
+#include "octave.h"
 
 /* Simple sampler start that just passes the configuration data as the 
  * state pointer. */
@@ -311,17 +312,12 @@ static void* hairpinStart(void *conf)
 	hsd->currentStep = 0;
 	hsd->startTime = getTime();
 
-	/* Set this once here, so all steps have the exact same number of 
-	 * iterations. It's a PITA to do data processing otherwise. */
-	hsd->numMeasureIterations = hsc->measureTime / config.timeStep;
-
-	printf("# Starting to sample at time %e\n", getTime());
+	octaveScalar("sampleStartTime", getTime());
 
 	return hsd;
 }
 static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 {
-	UNUSED(sd);
 	HairpinSamplerData *hsd = (HairpinSamplerData*) state;
 	HairpinSamplerConfig *hsc = &hsd->conf;
 
@@ -343,8 +339,8 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 		if (correctlyBound >= requiredBounds) {
 			hsd->confirmationStartTime = time;
 			hsd->status = WAITING_FOR_CONFIRMATION;
-			printf("# Reached binding threshold of %d base pairs "
-					"at %e after a time %e\n",
+			octaveComment("Reached binding threshold of %d base "
+					"pairs at %e after a time %e\n",
 					requiredBounds, time, time - hsd->startTime);
 		}
 		break;
@@ -352,56 +348,84 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 		if (correctlyBound < requiredBounds) {
 			/* It was a dud! */
 			hsd->status = WAITING_TO_FORM;
-			printf("# Could not confirm, waiting to form again at %e\n",
-					time);
+			octaveComment("Could not confirm, waiting to form "
+					"again at %e\n", time);
 			break;
 		}
 		if (time - hsd->confirmationStartTime
 						< hsc->confirmationTime)
 			break; /* need to wait for confirmation */
 
-		printf("# Confirmed, at %e after a time since initial threshold %e\n",
-				time, time - hsd->startTime - hsc->confirmationTime);
-		printf("# Current thermostat temperature is %f\n",
-				config.thermostatTemp);
 		/* We have confirmation: start relaxation phase */
-		/* FALL THROUGH! */
+
+		/* Set this once here, so all steps have the exact same number of 
+		 * iterations. It's a PITA to do data processing otherwise. */
+		hsd->numMeasureIterations = hsc->measureTime / sd->sampleInterval;
+
+		/* Dump all info before starting 3D matrix */
+		octaveComment("Confirmed at %e after a time since initial "
+				"threshold %e\n", time,
+				time - hsd->startTime - hsc->confirmationTime);
+
+		octaveScalar("timeTillZipping",
+				time - hsd->startTime - hsc->confirmationTime);
+		octaveScalar("temperature", config.thermostatTemp);
+
+		octaveScalar("confirmationTime",  hsc->confirmationTime);
+		octaveScalar("relaxationTime",    hsc->relaxationTime);
+		octaveScalar("measureTime",       hsc->measureTime);
+		octaveScalar("allowedUnboundBPs", hsc->allowedUnboundBPs);
+		octaveScalar("timestep",          config.timeStep);
+
+		octaveMatrixHeader("temperatures", hsc->numSteps, 1);
+		for (int i = 0; i < hsc->numSteps; i++)
+			printf("%e\n", hsc->Tstart + i * hsc->Tstep);
+
+		/* Start the header for the 3D matrix of data */
+		octaveComment("Series of 2D matrices of the form");
+		octaveComment("data(:,:,i)' =");
+		octaveComment(" [ time(1)  numBound(1)  lastBasePair(1)  ...  middleBasePair(1)");
+		octaveComment("   time(2)  numBound(2)  lastBasePair(2)  ...  middleBasePair(2)");
+		octaveComment("    ...        ...            ...         ...        ...        ");
+		octaveComment("   time(n)  numBound(n)  lastBasePair(n)  ...  middleBasePair(n) ]");
+		octaveComment("NOTE THE TRANSPOSED SIGN at the end of data(:,:,)'  <-- !!");
+		octaveComment("Each such 2D matix i is measured with the corresponding");
+		octaveComment("temperature in the array 'temperatures': temperatures(i).");
+		octave3DMatrixHeader("data",
+				2 + n/2,
+				hsd->numMeasureIterations,
+				hsc->numSteps);
+
+		/* INTENTIONAL FALL THROUGH! */
 	case START_RELAXATION:
 		hsd->relaxStartTime = time;
 		hsd->status = WAITING_TO_RELAX;
 		/* Set temperature */
 		config.thermostatTemp = hsc->Tstart
 				+ hsd->currentStep * hsc->Tstep;
-		printf("# Setting temperature to %f -- step %d\n",
-				config.thermostatTemp, hsd->currentStep);
-		printf("# Starting relaxation period with duration %e\n",
-				hsc->relaxationTime);
 		break;
 	case WAITING_TO_RELAX:
 		if (time - hsd->relaxStartTime < hsc->relaxationTime)
 			break;
-		printf("# Relaxation done at %e -- step %d\n",
-				time, hsd->currentStep);
-		printf("Starting measurement period with duration %e\n",
-				hsc->measureTime);
+		/* Relaxation done */
 		hsd->measureStartTime = time;
 		hsd->measureIteration = 0;
 		hsd->status = MEASURING;
 		break;
 	case MEASURING:
 		hsd->measureIteration++;
-		if (hsd->measureIteration >= hsd->numMeasureIterations) {
+		if (hsd->measureIteration > hsd->numMeasureIterations) {
 			/* End of this measurement run */
 			hsd->currentStep++;
 			if (hsd->currentStep >= hsc->numSteps) {
-				printf("# Sampled to the end! :-)");
+				octaveComment("# Sampled to the end! :-)");
 				return SAMPLER_STOP; /* All done! */
 			}
 
 			hsd->status = START_RELAXATION;
 			break;
 		}
-		printf("%e %d ", time, correctlyBound);
+		printf("%e\n%d\n", time, correctlyBound);
 		/* print (half of) the config */
 		for (int i = 0; i < n/2; i++) {
 			int j = n - 1 - i;
@@ -409,9 +433,9 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 					     &world.strands[0].Bs[j]);
 			if (V < hsc->energyThreshold) {
 				correctlyBound++;
-				printf("1 ");
+				printf("1\n");
 			} else {
-				printf("0 ");
+				printf("0\n");
 			}
 		}
 		printf("\n");

@@ -51,7 +51,7 @@ static MeasurementConf measurementConf =
 	.measureInterval = -1,
 	.measureWait = 0,
 	.measureFile = DEF_DATA_PATH,
-	.verbose = false, /* Be quiet: lessen network load on cluster jobs */
+	.verbose = true,
 	.renderStrBufSize = 64,
 	.renderStrX = 10,
 	.renderStrY = 80,
@@ -420,6 +420,7 @@ int main(int argc, char **argv)
 	hairpin.sampler = hairpinSampler(&hsc);
 	hairpin.measConf = measurementConf;
 	hairpin.measConf.measureFile = hairpinFile;
+	hairpin.measConf.verbose = false; /* We already have output from basePairing */
 	Task hairpinTask = measurementTask(&hairpin);
 
 	Task renderTask = makeRenderTask(&renderConf);

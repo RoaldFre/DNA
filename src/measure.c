@@ -161,6 +161,7 @@ static void *measStart(void *initialData)
 	state->samplerData.sample = 0;
 	state->samplerData.strBufSize = meas->measConf.renderStrBufSize;
 	state->samplerData.string = mid->strBuf;
+	state->samplerData.sampleInterval = meas->measConf.measureInterval;
 
 	/* If we don't wait to relax: start sampler now */
 	if (state->measStatus == SAMPLING)
