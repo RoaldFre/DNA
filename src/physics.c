@@ -559,7 +559,7 @@ static void Fexclusion(Particle *p1, Particle *p2)
 static double calcInvDebyeLength(void)
 {
 	double T = config.thermostatTemp;
-	double saltCon = DEF_SALTCON;
+	double saltCon = config.saltConcentration;
 	double lambdaBDenom, lambdaB;
 
 	if (T == 0)

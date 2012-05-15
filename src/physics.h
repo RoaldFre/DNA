@@ -20,6 +20,8 @@
 #define EPSILON		1.81e-21 	/* 0.26 kcal/mol = 1.81e-21 J/particle */
 #define ELECTRON_CHARGE	1.602177e-19
 #define ENERGY_FACTOR	(1/ELECTRON_CHARGE) /* Energies in electron volt */
+#define CELSIUS_TO_KELVIN 273.15
+#define CELSIUS(T)	(T + CELSIUS_TO_KELVIN)
 
 
 /* STRUCTURE OF THE HELIX. SEE TABLE I IN KNOTTS */
@@ -99,7 +101,6 @@
 /* COULOMB INTERACTION (between phosphates) */
 #define VACUUM_PERMITTIVITY	8.8541e-12 /* Farad/m */
 #define H2O_PERMETTIVITY	(80 * VACUUM_PERMITTIVITY)
-#define DEF_SALTCON		50  /* 50 mol/m^3 */
 
 /* THERMODYNAMICS */
 #define BOLTZMANN_CONSTANT	1.38065e-23

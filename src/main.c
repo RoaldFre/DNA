@@ -17,9 +17,11 @@
 #define DEF_DATA_PATH "data.txt"
 
 /* Defaults */
-#define DEF_BASE_SEQUENCE		"ACCAATTTTTTTTTTTTTTGGG" /* T_12 in Bonnet */
+#define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
 #define DEF_TIMESTEP 			20.0
-#define DEF_TEMPERATURE 		300.0
+#define DEF_INITIAL_TEMPERATURE		CELSIUS(70)
+#define DEF_SAMPLING_TEMPERATURE	CELSIUS(20)
+#define DEF_SALT_CONCENTRATION		50  /* mol/m^3 */
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
 #define DEF_TRUNCATION_LENGTH		20.0 //TODO sane?
@@ -53,6 +55,11 @@ static MeasurementConf measurementConf =
 	.renderStrX = 10,
 	.renderStrY = 80,
 };
+static BasePairingConfig bpc =
+{
+	.energyThreshold = -0.1 * EPSILON,
+	.T = DEF_SAMPLING_TEMPERATURE,
+};
 static RenderConf renderConf =
 {
 	.framerate = DEF_RENDER_FRAMERATE,
@@ -72,8 +79,8 @@ static IntegratorConf integratorConf =
 			.enableExclusion= true,
 			.enableBasePair	= true,
 			.enableCoulomb	= true,
-			.mutuallyExclusivePairForces = false,
-			.basePairInteraction = BASE_PAIR_DOUBLE_STRAND,
+			.mutuallyExclusivePairForces = true,
+			.basePairInteraction = BASE_PAIR_HAIRPIN,
 	},
 };
 static const char* baseSequence = DEF_BASE_SEQUENCE;
@@ -91,8 +98,12 @@ static void printUsage(void)
 	printf(" -d        build a Double helix with complementary strand as well\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
-	printf(" -T <flt>  Temperature\n");
-	printf("             default: %f\n", DEF_TEMPERATURE);
+	printf(" -E <flt>  initial Equilibration temperature during relaxation phase\n");
+	printf("             default: %f\n", DEF_INITIAL_TEMPERATURE);
+	printf(" -T <flt>  Temperature during sampling\n");
+	printf("             default: %f\n", DEF_SAMPLING_TEMPERATURE);
+	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
+	printf("             default: %f\n", DEF_SAMPLING_TEMPERATURE);
 	printf(" -r        Render\n");
 	printf(" -f <flt>  desired Framerate when rendering.\n");
 	printf("             default: %f)\n", DEF_RENDER_FRAMERATE);
@@ -135,15 +146,16 @@ static void parseArguments(int argc, char **argv)
 	int c;
 
 	/* defaults */
-	config.timeStep 	= DEF_TIMESTEP * TIME_FACTOR;
-	config.thermostatTemp	= DEF_TEMPERATURE;
-	config.truncationLen    = DEF_TRUNCATION_LENGTH * LENGTH_FACTOR;
-	config.langevinGamma	= DEF_LANGEVIN_GAMMA;
+	config.timeStep 	 = DEF_TIMESTEP * TIME_FACTOR;
+	config.thermostatTemp	 = DEF_INITIAL_TEMPERATURE;
+	config.saltConcentration = DEF_SALT_CONCENTRATION;
+	config.truncationLen     = DEF_TRUNCATION_LENGTH * LENGTH_FACTOR;
+	config.langevinGamma	 = DEF_LANGEVIN_GAMMA;
 
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:T:g:c:f:rR:Fl:S:b:v:i:W:I:P:D:h")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:v:i:W:I:P:D:h")) != -1)
 	{
 		switch (c)
 		{
@@ -158,10 +170,20 @@ static void parseArguments(int argc, char **argv)
 			if (config.timeStep <= 0)
 				die("Invalid timestep %s\n", optarg);
 			break;
-		case 'T':
+		case 'E':
 			config.thermostatTemp = atof(optarg);
 			if (config.thermostatTemp < 0)
-				die("Invalid temperature %s\n", optarg);
+				die("Invalid equilibration temperature %s\n", optarg);
+			break;
+		case 'T':
+			bpc.T = atof(optarg);
+			if (bpc.T < 0)
+				die("Invalid sampling temperature %s\n", optarg);
+			break;
+		case 'N':
+			config.saltConcentration = atof(optarg);
+			if (config.saltConcentration < 0)
+				die("Invalid salt concentration %s\n", optarg);
 			break;
 		case 'g':
 			config.langevinGamma = atof(optarg);
@@ -364,9 +386,6 @@ int main(int argc, char **argv)
 	verbose.sampler = dumpStatsSampler();
 	Task verboseTask = measurementTask(&verbose);
 
-	BasePairingConfig bpc;
-	bpc.energyThreshold = -0.1 * EPSILON;
-	bpc.T = 293;
 	Measurement basePairing;
 	basePairing.sampler = basePairingSampler(&bpc);
 	basePairing.measConf = measurementConf;

@@ -11,7 +11,7 @@ typedef struct
 	double thermostatTau;   /* Thermostat relaxation time */
 	double langevinGamma;	/* Friction coefficient for Langevin dynamics */
 	double truncationLen;	/* Length at which potentials are truncated */
-	double saltConcentration; /* Na+ concentration in the environment */
+	double saltConcentration; /* Na+ concentration, in mol/m^3 */
 } Config;
 
 extern Config config;
