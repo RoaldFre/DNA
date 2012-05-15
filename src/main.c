@@ -21,7 +21,7 @@
 #define DEF_TIMESTEP 			20.0
 #define DEF_INITIAL_TEMPERATURE		CELSIUS(70)
 #define DEF_SAMPLING_TEMPERATURE	CELSIUS(20)
-#define DEF_SALT_CONCENTRATION		50  /* mol/m^3 */
+#define DEF_SALT_CONCENTRATION		200  /* mol/m^3 */
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
 #define DEF_TRUNCATION_LENGTH		20.0 //TODO sane?
@@ -336,32 +336,6 @@ void die(const char *fmt, ...)
 	exit(1);
 }
 
-#if 0
-/* Suitable flags to test:
- * ./main -r -v10 -c0 -T0
- */
-static void buildRopeTestWorld(void)
-{
-	allocWorld(2, worldSize);
-
-	fillStrand(&world.strands[0], baseSequence);
-	fillStrand(&world.strands[1], baseSequence);
-
-	Strand *s = &world.strands[1];
-	/* Rotate 90 degrees, small offset, and launch it towards the first 
-	 * strand :-) */
-	Vec3 deltaPos = { 50e-10, 0, 0};
-	Vec3 deltaVel = {-80e+3, 0, 0};
-	for (int i = 0; i < 3 * s->numMonomers; i++) {
-		double tmp = s->all[i].pos.y;
-		s->all[i].pos.y = s->all[i].pos.z;
-		s->all[i].pos.z = tmp;
-		s->all[i].pos = add(s->all[i].pos, deltaPos);
-		s->all[i].vel = add(s->all[i].vel, deltaVel);
-	}
-}
-#endif
-
 int main(int argc, char **argv)
 {
 	seedRandom();
@@ -400,7 +374,6 @@ int main(int argc, char **argv)
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
 	tasks[3] = &basePairingTask;
-	//tasks[3] = NULL;
 	Task task = sequence(tasks, 4);
 	bool everythingOK = run(&task);
 
