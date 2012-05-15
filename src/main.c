@@ -105,7 +105,7 @@ static void printUsage(void)
 	printf(" -T <flt>  Temperature during sampling\n");
 	printf("             default: %f\n", DEF_SAMPLING_TEMPERATURE);
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
-	printf("             default: %f\n", DEF_SAMPLING_TEMPERATURE);
+	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
 	printf(" -r        Render\n");
 	printf(" -f <flt>  desired Framerate when rendering.\n");
 	printf("             default: %f)\n", DEF_RENDER_FRAMERATE);
