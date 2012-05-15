@@ -106,7 +106,7 @@ static void printUsage(void)
 	printf("             default: (number of monomers) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
 	printf(" -b <num>  number of Boxes per dimension\n");
 	printf("             default: max so that boxsize >= potential truncation length\n");
-	printf(" -v <int>  Verbose: dump statistics every <flt> femtoseconds\n");
+	printf(" -v <int>  Verbose: dump statistics every <flt> picoseconds\n");
 	printf(" -i <type> Integrator to use. Values for <type>:\n");
 	printf("             l: Langevin (velocity BBK) [default]\n");
 	printf("             v: velocity Verlet with Berendsen thermostat\n");
@@ -205,7 +205,7 @@ static void parseArguments(int argc, char **argv)
 						optarg);
 			break;
 		case 'v':
-			verboseConf.measureInterval = atof(optarg) * TIME_FACTOR;
+			verboseConf.measureInterval = atof(optarg) * NANOSECONDS;
 			if (verboseConf.measureInterval <= 0)
 				die("Verbose: invalid verbose interval %s\n",
 						optarg);
