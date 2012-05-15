@@ -1,18 +1,65 @@
 \section{Methods}
 
-The potential energy of the complete system can be written as
+A full atomic simulation of a DNA
+
+\subsection{DNA structure}
+
+\subsection{Interactions}
+
+The potential energy of the complete system consists of
 \begin{equation}
-V_\text{total} = V_\text{bond} + V_\text{angle} + V_\text{dihedral} + V_\text{stack} + V_\text{bp} + V_\text{ex} + V_\text{qq}
+V_\text{total} = V_\text{bond} + V_\text{angle} + V_\text{dihedral} + V_\text{stack} + V_\text{bp} + V_\text{ex} + V_\text{qq}.
 \end{equation}
-where we can write the different potentials as
-\begin{eqnarray}
-V_{\text{bond}} = &\sum_i^{N_{\text{bond}}}& \left[ k_1 \left(d_i - d_{0_i}\right)^2 + k_2 \left(d_i - d_{0_i}\right)^4\right] \\
-V_\text{angle} =  &\sum_i^{N_\text{angle}}& \frac{k_\theta}{2} \left[ \theta_i - \theta_{0_i} \right]^2\\
-V_\text{dihedral} =  &\sum_i^{N_\text{dihedral}}& k_\phi \left[ 1 - \cos (\phi_i - \phi_{0_i}) \right]\\
-V_\text{stack} =  &\sum_{i<j}^{N_\text{stack}}& 4\varepsilon \left[ \left(\frac{\sigma_{ij}}{r_{ij}} \right)^{12} - \left(\frac{\sigma_{ij}}{r_{ij}} \right)^{6} \right]\\
-V_\text{bp} =  &\sum_{\text{base pairs}}^{N_\text{bp}}& 4\varepsilon_{\text{bp}_i} \left[ 5\left(\frac{\sigma_{\text{bp}_i}}{r_{ij}} \right)^{12} - 6\left(\frac{\sigma_{\text{bp}_i}}{r_{ij}} \right)^{10} \right]\\
-V_\text{excl} =  &\sum_{i<j}^{N_\text{ex}}&\begin{cases} 4\varepsilon \left[ \left(\frac{\sigma_{0}}{r_{ij}} \right)^{12} - \left(\frac{\sigma_{0}}{r_{ij}} \right)^{6} \right] + \varepsilon \qquad &\text{if }r_{ij} < d_\text{cut}, \\ 0 \qquad &\text{if }r_{ij} \geq d_\text{cut} \end{cases}\\
-V_\text{qq} =&\sum_{i<j}^N & \frac{q_i q_j}{4\pi \varepsilon_0 \varepsilon_k r_{ij}} \exp \left(- \frac{r_{ij}}{k_D}  \right)
-\end{eqnarray}
+We will now sketch the specific potential terms one by one.
+
+\paragraph{Bond potential} The typical expression for the intramolecular bonds between molecules in the same DNA strand is a sum over all bonds of a quadratic and a quartic potential term
+\begin{equation}
+V_{\text{bond}} = \sum_i^{N_{\text{bond}}} \left[ k_1 \left(d_i - d_{0_i}\right)^2 + k_2 \left(d_i - d_{0_i}\right)^4\right]
+\end{equation}
+(the `stretch´ term) around equilibrium distances $d_{0_i}$ as defined in the standard B-form structure of double strand DNA, and coupling constants $k_1$ and $k_2$ taken to be $\varepsilon$ and $100 \varepsilon$, respectively -- where $\epsilon$ is the energy unit taken to be $0.26$ kcal/mol, as in the rest of this paper.
+
+\paragraph{Bond angle potential} The angle that forms between three consecutively bound sites in a DNA strand is regulated by the sum over all bond angles of the quadratic term (`bend' force)
+\begin{equation}
+V_\text{angle} =  \sum_i^{N_\text{angle}} \frac{k_\theta}{2} \left[ \theta_i - \theta_{0_i} \right]^2
+\end{equation}
+where we define an equilibrium angle $\theta_0$ from the DNA B-form, and a constant $K_\theta = 400\varepsilon / (\text{radian})^ 2$.
+
+\paragraph{Dihedral angle potential} The third and last potential defining the structural properties of the strand regulates the dihedral angle between four consecutive bound sites on the same strand
+\begin{equation}
+V_\text{dihedral} =  \sum_i^{N_\text{dihedral}} k_\phi \left[ 1 - \cos (\phi_i - \phi_{0_i}) \right]
+\end{equation}
+with $\phi_{0_i}$ the equilibrium dihedral angle from the DNA B-form definitions, and constant $k_\phi = 4\varepsilon$.
+
+\paragraph{Stacking potential} The stacking potential is a Leonard-Jones type potential describing the base stacking phenomena and regulates the rigidity of the DNA backbone,
+\begin{equation}
+V_\text{stack} =  \sum_{i<j}^{N_\text{stack}} 4\varepsilon \left[ \left(\frac{\sigma_{ij}}{r_{ij}} \right)^{12} - \left(\frac{\sigma_{ij}}{r_{ij}} \right)^{6} \right]
+\end{equation}
+modeled with the G$\bar{o}$-type \& native contact scheme developed by Hoang \& Cieplak \cite{hoangcieplak} with a cut-off distance of $9$ \AA. It is important to observe that this induces not only a stacking interaction between the $i$th and $(i+1)$th base, but also between the $i$th and $(i+2)$th base. (Hence the sum over all stackings $i$ and $j$, with $i < j$ to avoid double counting). $\sigma_{ij}$ depends on the type of bases for which the stacking is calculated.
+
+\paragraph{Basepairing potential} A hydrogen bonding interaction between two complimentary bases (zero if not complementary) is written as
+\begin{equation}
+V_\text{bp} =  \sum_{\text{base pairs}}^{N_\text{bp}} 4\varepsilon_{\text{bp}_i} \left[ 5\left(\frac{\sigma_{\text{bp}_i}}{r_{ij}} \right)^{12} - 6\left(\frac{\sigma_{\text{bp}_i}}{r_{ij}} \right)^{10} \right]
+\end{equation}
+where we have $\sigma_{bp}$ depending on the type of complimentary basepair ($\sigma_{AT} = 2.9002 \AA,\ \sigma_{GC} = 2.8694 \AA$) and constants $\varepsilon_{GC} = 4\varepsilon$ and $\varepsilon_{AT} = (2/3)\epsilon_{GC}$.
+
+\paragraph{Exclusion potential} In the original and follow-up versions of the 3SPN model (Knotts \etal \cite{knotts2007coarse}, Sambriski \etal \cite{sambriski2009mesoscale}) a Leonard-Jones type potential was used to describe excluded volume interactions between mismatched bases (yielding $\sigma_0 = 1.0 \times 2^{-1/6}$ \AA) and other molecules (even on other strands) that do not interact via the Coulomb or basepairing potential (yielding $\sigma_0 = 6.86 \times 2^{-1/6}$ \AA):
+\begin{equation}
+V_\text{excl} =  \sum_{i<j}^{N_\text{ex}}\begin{cases} 4\varepsilon \left[ \left(\frac{\sigma_{0}}{r_{ij}} \right)^{12} - \left(\frac{\sigma_{0}}{r_{ij}} \right)^{6} \right] + \varepsilon \qquad &\text{if }r_{ij} < d_\text{cut}, \\ 0 \qquad &\text{if }r_{ij} \geq d_\text{cut} \end{cases} \end{equation}
+where a cut-off value of 6.86 \AA is imposed. This will make sure two strands do not cross each other when simulating DNA hybridisation, and also that a single strand does not cross itself during a hairpin formation simulation. Florescu \& Joyeux \cite{florescu2011thermal} report that the exclusion potential is not necessary when simulating long double stranded DNA helices; we decided however to keep this potential for the above reasons although it slowes down CPU time by a factor $\sim 2$.
+
+\paragraph{Coulombic potential} The final potential in our model is the screened electrostatic Coulomb interaction between the phosphate molecules situated on the backbone of the DNA strands. It is modeled using a Debye-H\"uckel approximation with a Debye length $\kappa_D$ depending on the salt concentration of the environment,
+\begin{equation}
+V_\text{qq} =\sum_{i<j}^N  \frac{q_i q_j}{4\pi \varepsilon_0 \varepsilon_k r_{ij}} \exp \left(- \frac{r_{ij}}{k_D}  \right)
+\label{coulomb}\end{equation}
+where the Debye length can be written as
+\begin{equation}
+\kappa_D = \left( \frac{\varepsilon_0 \varepsilon_k RT}{2N^2_A e^2 I} \right)^{0.5}
+\end{equation}
+where we use the vacuum permittivity $\varepsilon_0$, Avogadro´s number $N_A$, the electronic charge $e$ and the ionic strength $I$. For the default value of the ionic strength [Na$^+$]=50 mM (milimolair, equal to milimol/liter) this yields $\kappa_D$ = 13.603 \AA. The other values in \ref{coulomb} are the dielectric constant $\varepsilon_k = 78$ for water, and the charges on the interacting molecules (phosphates, with $q_i = -1$ so $q_i q_j = 1$).
+
+The interactions are defined so that two molecules are excluded from the nonbonded interactions if they constitute a bond. On top of that, $V_\text{stack}$, $V_\text{bp}$ and $V_\text{ex}$ are modeled as mutually exclusive. Our codebase makes sure that this is handled correctly, to avoid the unphysical pairing of bases on the same strand or to avoid cases where an exclusion potential is working on two sites already interacting via Coulombic interaction.
 
 
+\subsection{Space Partitioning}
+
+\subsection{Dynamics}
