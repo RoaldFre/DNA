@@ -38,8 +38,12 @@ main: $(OBJECTS) main.o
 	@gcc -o main $(CFLAGS) $(OBJECTS) main.o $(LIBS) -ggdb $(PROFILE)
 
 doubleStrand: $(OBJECTS) doubleStrand.o
-	@echo "LD	main"
+	@echo "LD	doubleStrand"
 	@gcc -o doubleStrand $(CFLAGS) $(OBJECTS) doubleStrand.o $(LIBS) -ggdb $(PROFILE)
+
+hairpin: $(OBJECTS) hairpin.o
+	@echo "LD	hairpin"
+	@gcc -o hairpin $(CFLAGS) $(OBJECTS) hairpin.o $(LIBS) -ggdb $(PROFILE)
 
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"
