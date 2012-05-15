@@ -145,6 +145,7 @@ typedef struct {
 	Integrator integrator;
 	InteractionSettings interactionSettings;
 	int numBoxes; /* For space partition grid */
+	double reboxInterval; /* time interval after which to rebox the particles */
 } IntegratorConf;
 
 void dumpStats(void);

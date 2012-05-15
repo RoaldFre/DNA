@@ -19,6 +19,7 @@
 /* Defaults */
 #define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
 #define DEF_TIMESTEP 			20.0
+#define DEF_REBOX_INTERVAL		200.0
 #define DEF_INITIAL_TEMPERATURE		CELSIUS(70)
 #define DEF_SAMPLING_TEMPERATURE	CELSIUS(20)
 #define DEF_SALT_CONCENTRATION		200  /* mol/m^3 */
@@ -71,6 +72,7 @@ static IntegratorConf integratorConf =
 {
 	.integrator = DEF_INTEGRATOR,
 	.numBoxes   = -1, /* guard */
+	.reboxInterval = DEF_REBOX_INTERVAL * FEMTOSECONDS,
 	.interactionSettings = {
 			.enableBond	= true,
 			.enableAngle	= true,
@@ -155,7 +157,7 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:v:i:W:I:P:D:h")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:B:v:i:W:I:P:D:h")) != -1)
 	{
 		switch (c)
 		{
@@ -225,6 +227,11 @@ static void parseArguments(int argc, char **argv)
 			if (integratorConf.numBoxes <= 0)
 				die("Invalid number of boxes %s\n",
 						optarg);
+			break;
+		case 'B':
+			integratorConf.reboxInterval = atof(optarg) * FEMTOSECONDS;
+			if (integratorConf.reboxInterval <= 0)
+				die("Invalid rebox interval %s\n", optarg);
 			break;
 		case 'v':
 			verboseConf.measureInterval = atof(optarg) * NANOSECONDS;
