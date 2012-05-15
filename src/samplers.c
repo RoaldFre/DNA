@@ -326,7 +326,7 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 		if (correctlyBound >= requiredBounds) {
 			hsd->confirmationStartTime = time;
 			hsd->status = WAITING_FOR_CONFIRMATION;
-			printf("Reached binding threshold of %d base pairs at %e\n",
+			printf("# Reached binding threshold of %d base pairs at %e\n",
 					requiredBounds, time);
 		}
 		break;
@@ -334,7 +334,7 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 		if (correctlyBound < requiredBounds) {
 			/* It was a dud! */
 			hsd->status = WAITING_TO_FORM;
-			printf("Could not confirm, waiting to form again at %e\n",
+			printf("# Could not confirm, waiting to form again at %e\n",
 					time);
 			break;
 		}
@@ -342,7 +342,7 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 						< hsc->confirmationTime)
 			break; /* need to wait for confirmation */
 
-		printf("Confirmd, at %e\n", time);
+		printf("# Confirmd, at %e\n", time);
 		/* We have confirmation: start relaxation phase */
 		/* FALL THROUGH! */
 	case START_RELAXATION:
@@ -351,13 +351,13 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 		/* Set temperature */
 		config.thermostatTemp = hsc->Tstart
 				+ hsd->currentStep * hsc->Tstep;
-		printf("Setting temperature to %f, step %d\n",
+		printf("# Setting temperature to %f, step %d\n",
 				config.thermostatTemp, hsd->currentStep);
 		break;
 	case WAITING_TO_RELAX:
 		if (time - hsd->relaxStartTime < hsc->relaxationTime)
 			break;
-		printf("Relaxation done at %e, step %d\n",
+		printf("# Relaxation done at %e, step %d\n",
 				time, hsd->currentStep);
 		hsd->measureStartTime = time;
 		hsd->status = MEASURING;
@@ -366,8 +366,10 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 		if (time - hsd->measureStartTime >= hsc->measureTime) {
 			/* End of this measurement run */
 			hsd->currentStep++;
-			if (hsd->currentStep >= hsc->numSteps)
+			if (hsd->currentStep >= hsc->numSteps) {
+				printf("# Sampled to the end! :-)");
 				return SAMPLER_STOP; /* All done! */
+			}
 
 			hsd->status = START_RELAXATION;
 			break;
