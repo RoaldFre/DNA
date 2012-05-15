@@ -22,7 +22,15 @@ Sampler particleSquaredDisplacementSampler(Particle *p);
  * the strand. */
 Sampler strandCOMSquaredDisplacementSampler(Strand *s);
 
-/* Sampler that counts the number of base pair bindings. A pair is 'bound' 
- * if its base pair potential is lower than the given threshold. */
-Sampler basePairingSampler(double energyThreshold);
+typedef struct {
+	/* A pair is 'bound' if its base pair potential is lower than the 
+	 * given threshold. */
+	double energyThreshold;
+
+	/* When starting to sample, set the thermostat to this temperature 
+	 * value. */
+	double T;
+} BasePairingConfig;
+/* Sampler that counts the number of base pair bindings. */
+Sampler basePairingSampler(BasePairingConfig *bpc);
 #endif

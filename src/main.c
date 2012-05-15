@@ -364,8 +364,11 @@ int main(int argc, char **argv)
 	verbose.sampler = dumpStatsSampler();
 	Task verboseTask = measurementTask(&verbose);
 
+	BasePairingConfig bpc;
+	bpc.energyThreshold = -0.1 * EPSILON;
+	bpc.T = 293;
 	Measurement basePairing;
-	basePairing.sampler = basePairingSampler(-0.1 * EPSILON);
+	basePairing.sampler = basePairingSampler(&bpc);
 	basePairing.measConf = measurementConf;
 	Task basePairingTask = measurementTask(&basePairing);
 
