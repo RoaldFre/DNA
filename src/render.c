@@ -355,21 +355,21 @@ static bool handleEvents(void)
 				return false;
 				break;
 			case SDLK_UP:
-				config.timeStep *= 1.1;
+				config.timeStep *= 1.02;
 				printf("Time step: %f\n", 
 						config.timeStep / TIME_FACTOR);
 				break;
 			case SDLK_DOWN:
-				config.timeStep /= 1.1;
+				config.timeStep /= 1.02;
 				printf("Time step: %f\n",
 						config.timeStep / TIME_FACTOR);
 				break;
 			case SDLK_SPACE:
-				config.thermostatTemp *= 1.1;
+				config.thermostatTemp *= 1.02;
 				printf("Temperature: %f\n", config.thermostatTemp);
 				break;
 			case SDLK_BACKSPACE:
-				config.thermostatTemp /= 1.1;
+				config.thermostatTemp /= 1.02;
 				printf("Temperature: %f\n", config.thermostatTemp);
 				break;
 			case SDLK_RETURN:
