@@ -380,7 +380,7 @@ static BasePairInfo getBasePairInfo(Particle *p1, Particle *p2)
 		int i1 = p1->strandIndex;
 		int i2 = p2->strandIndex;
 
-		if (i1 != n - i2)
+		if (i1 != n - 1 - i2)
 			return bpi;
 		break;
 	case BASE_PAIR_DOUBLE_STRAND:
