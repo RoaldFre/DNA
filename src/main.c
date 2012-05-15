@@ -18,7 +18,7 @@
 
 /* Defaults */
 #define DEF_BASE_SEQUENCE		"ACCAATTTTTTTTTTTTTTGGG" /* T_12 in Bonnet */
-#define DEF_TIMESTEP 			1.0
+#define DEF_TIMESTEP 			20.0
 #define DEF_TEMPERATURE 		300.0
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
