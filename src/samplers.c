@@ -309,6 +309,8 @@ static void* hairpinStart(void *conf)
 	hsd->currentStep = 0;
 	hsd->startTime = getTime();
 
+	printf("# Starting to sample at time %e\n", getTime());
+
 	return hsd;
 }
 static SamplerSignal hairpinSample(SamplerData *sd, void *state)
@@ -353,6 +355,8 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 
 		printf("# Confirmed, at %e after a time %e\n",
 				time, time - hsd->startTime);
+		printf("# Current thermostat temperature is %f\n",
+				config.thermostatTemp);
 		/* We have confirmation: start relaxation phase */
 		/* FALL THROUGH! */
 	case START_RELAXATION:
@@ -361,17 +365,17 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 		/* Set temperature */
 		config.thermostatTemp = hsc->Tstart
 				+ hsd->currentStep * hsc->Tstep;
-		printf("# Setting temperature to %f, step %d\n",
+		printf("# Setting temperature to %f -- step %d\n",
 				config.thermostatTemp, hsd->currentStep);
-		printf("# Starting relaxation with duration %e\n",
+		printf("# Starting relaxation period with duration %e\n",
 				hsc->relaxationTime);
 		break;
 	case WAITING_TO_RELAX:
 		if (time - hsd->relaxStartTime < hsc->relaxationTime)
 			break;
-		printf("# Relaxation done at %e, step %d\n",
+		printf("# Relaxation done at %e -- step %d\n",
 				time, hsd->currentStep);
-		printf("Starting measurement with duration %e\n",
+		printf("Starting measurement period with duration %e\n",
 				hsc->measureTime);
 		hsd->measureStartTime = time;
 		hsd->status = MEASURING;
