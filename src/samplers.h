@@ -33,4 +33,20 @@ typedef struct {
 } BasePairingConfig;
 /* Sampler that counts the number of base pair bindings. */
 Sampler basePairingSampler(BasePairingConfig *bpc);
+
+typedef struct {
+	double energyThreshold;
+	double confirmationTime; /* Time the molecule has to be fully 
+				    zipped in order for it to be considered 
+				    a stable hairpin */
+	int allowedUnboundBPs; /* Number of unbound basepairs to allow */
+	double Tstart; /* Initial temperature for determining critical temperature */
+	double Tstep; /* Temperature step for determining critical temperature */
+	int numSteps; /* Number of steps when determining critical temperature */
+	double relaxationTime; /* Time to wait for relaxation after bumping temperature */
+	double measureTime; /* Time to measure per tempretare after relaxation */
+} HairpinSamplerConfig;
+
+Sampler hairpinSampler(HairpinSamplerConfig *hsc);
+
 #endif
