@@ -4,22 +4,21 @@ set -e
 
 destinationDirRoot=$1
 N=$2
-relaxTemp=$3
-sampleTemp=$4
-startTemp=$5
-stepTemp=$6
-nSteps=$7
-measureTime=$8
-allowedUnbound=$9
-suffix=${10} # job label when running on cluster
+sampleTemp=$3 #XXX given to -E as well, but wait=0 so shouldn't matter
+startTemp=$4
+stepTemp=$5
+nSteps=$6
+measureTime=$7
+allowUnbounded=$8
+suffix=$9 # job label when running on cluster
 
 set -e
 
 main=hairpin # Should be in current working dir, or in $PATH
-timestep=20
+timestep=15
 interval=10
-time=1000
-wait=50
+time=1450
+wait=0
 
 fps=10
 #render="-r -R 3 -f $fps"
@@ -34,8 +33,8 @@ hairpinFilename="$destinationDir/hairpin_${nameSuffix}"
 
 mkdir -p $destinationDir
 
-seq=`perl -e "print 'C'x$N,Gx$N"`
-$main -t $timestep -E $relaxTemp -T $sampleTemp -I $interval -P $time -W $wait -s $seq -D $outputBaseName 
+seq=`perl -e "print 'C'x$N,'G'x$N"`
+$main -t $timestep -E $sampleTemp -T $sampleTemp -I $interval -P $time -W $wait -s $seq -D $outputBaseName -A $startTemp -B $stepTemp -C $nSteps -G $measureTime -H $allowUnbounded
 mv ${outputBaseName}_basePair ${basePairFilename}
 mv ${outputBaseName}_hairpin ${hairpinFilename}
 
