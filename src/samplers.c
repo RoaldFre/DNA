@@ -228,6 +228,24 @@ static bool basePairingSample(SamplerData *sd, void *state)
 		}
 	}
 
+	/* Matching base pairs if one strands in the world (assumed to be a 
+	 * hairpin) */
+	if (world.numStrands == 1) {
+		correctlyBound = 0;
+		int n = world.strands[0].numMonomers;
+		for (int i = 0; i < n/2; i++) {
+			int j = n - 1 - i; //TODO
+			double V = VbasePair(&world.strands[0].Bs[i],
+					     &world.strands[0].Bs[j]);
+			if (V < bpc->energyThreshold) {
+				correctlyBound++;
+				printf("1 ");
+			} else {
+				printf("0 ");
+			}
+		}
+	}
+
 	if (correctlyBound >= 0) {
 		printf("%e\t%d\t%d\n", getTime(), bpcd.count, correctlyBound);
 		if(sd->string != NULL)
