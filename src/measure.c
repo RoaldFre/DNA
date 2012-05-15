@@ -184,8 +184,7 @@ static TaskSignal measTick(void *state)
 	bool verbose        = measConf->verbose;
 	double time = getTime();
 
-	bool everythingOK = true;
-	bool finishedSampling = false;
+	SamplerSignal samplerSignal = SAMPLER_OK;
 
 	if (measInterval < 0)
 		return TASK_OK;
@@ -230,7 +229,7 @@ static TaskSignal measTick(void *state)
 		}
 
 		measState->intervalTime -= measInterval;
-		everythingOK = samplerSample(measState);
+		samplerSignal = samplerSample(measState);
 		measState->samplerData.sample++;
 		
 		if (measTime < 0)
@@ -240,7 +239,7 @@ static TaskSignal measTick(void *state)
 		if (time >= endTime) {
 			if (verbose)
 				printf("\nFinished sampling!\n");
-			finishedSampling = true; /* Stop running */
+			return TASK_STOP;
 		}
 		break;
 	default:
@@ -248,11 +247,13 @@ static TaskSignal measTick(void *state)
 		assert(false);
 	}
 
-	if (!everythingOK)
-		return TASK_ERROR;
-	if (finishedSampling)
-		return TASK_STOP;
-	return TASK_OK;
+	switch(samplerSignal) {
+		case SAMPLER_OK:	return TASK_OK;
+		case SAMPLER_STOP:	return TASK_STOP;
+		case SAMPLER_ERROR:	return TASK_ERROR;
+		default: fprintf(stderr, "Received unknown sampler signal!");
+			assert(false);	return TASK_ERROR;
+	}
 }
 
 static void measStop(void *state)

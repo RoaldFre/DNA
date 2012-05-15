@@ -25,12 +25,12 @@ static void *avgTempStart(void *conf)
 	double *accum = malloc(sizeof *accum); //yes, this is a silly malloc :P
 	return accum;
 }
-static bool avgTempSample(SamplerData *sd, void *data)
+static SamplerSignal avgTempSample(SamplerData *sd, void *data)
 {
 	UNUSED(sd);
 	double *accum = (double*) data;
 	*accum += temperature();
-	return true;
+	return SAMPLER_OK;
 }
 static void avgTempStop(SamplerData *sd, void *data)
 {
@@ -53,12 +53,12 @@ Sampler averageTemperatureSampler(void)
 
 /* STATS / VERBOSE */
 
-static bool dumpStatsSample(SamplerData *sd, void *data)
+static SamplerSignal dumpStatsSample(SamplerData *sd, void *data)
 {
 	UNUSED(sd);
 	UNUSED(data);
 	dumpStats();
-	return true;
+	return SAMPLER_OK;
 }
 Sampler dumpStatsSampler(void)
 {
@@ -79,14 +79,14 @@ typedef struct
 	Particle *ps;
 	int num;
 } ParticlesCOMSamplerConf;
-static bool particlesCOMSample(SamplerData *sd, void *data)
+static SamplerSignal particlesCOMSample(SamplerData *sd, void *data)
 {
 	UNUSED(sd);
 	ParticlesCOMSamplerConf *pcsc = (ParticlesCOMSamplerConf*) data;
 	Vec3 COM = getCOM(pcsc->ps, pcsc->num);
 	printVectorExp(COM);
 	printf("\n");
-	return true;
+	return SAMPLER_OK;
 }
 static Sampler particlesCOMSampler(Particle *ps, int num)
 {
@@ -130,7 +130,7 @@ static void *particlesSquaredDisplacementStart(void *conf)
 	sdc->initialTime = getTime();
 	return sdc;
 }
-static bool particlesSquaredDisplacementSample(SamplerData *sd, void *state)
+static SamplerSignal particlesSquaredDisplacementSample(SamplerData *sd, void *state)
 {
 	UNUSED(sd);
 	SquaredDisplacementConf *sdc = (SquaredDisplacementConf*) state;
@@ -147,11 +147,11 @@ static bool particlesSquaredDisplacementSample(SamplerData *sd, void *state)
 		fprintf(stderr, "WARNING! displacement > 0.5*worldsize. "
 				"Probably errors due to periodic boundary "
 				"conditions! Bailing out!\n");
-		return false;
+		return SAMPLER_ERROR;
 	}
 
 
-	return true;
+	return SAMPLER_OK;
 }
 static Sampler particlesSquaredDisplacementSampler(Particle *ps, int num)
 {
@@ -198,7 +198,7 @@ static void* basePairingStart(void *conf)
 	config.thermostatTemp = bpc->T;
 	return bpc;
 }
-static bool basePairingSample(SamplerData *sd, void *state)
+static SamplerSignal basePairingSample(SamplerData *sd, void *state)
 {
 	BasePairingConfig *bpc = (BasePairingConfig*) state;
 
@@ -234,7 +234,7 @@ static bool basePairingSample(SamplerData *sd, void *state)
 		correctlyBound = 0;
 		int n = world.strands[0].numMonomers;
 		for (int i = 0; i < n/2; i++) {
-			int j = n - 1 - i; //TODO
+			int j = n - 1 - i;
 			double V = VbasePair(&world.strands[0].Bs[i],
 					     &world.strands[0].Bs[j]);
 			if (V < bpc->energyThreshold) {
@@ -259,7 +259,7 @@ static bool basePairingSample(SamplerData *sd, void *state)
 					"All BPs: %d", bpcd.count);
 	}
 
-	return true;
+	return SAMPLER_OK;
 }
 Sampler basePairingSampler(BasePairingConfig *bpc)
 {

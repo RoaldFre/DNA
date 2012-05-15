@@ -44,6 +44,13 @@ typedef struct {
 	int strBufSize;
 } SamplerData;
 
+typedef enum
+{
+	SAMPLER_OK,	/* Sampler ticked correctly and does not want to stop. */
+	SAMPLER_STOP,	/* Regular stop request. Everything went according to plan. */
+	SAMPLER_ERROR,	/* Error stop request. Something went wrong! */
+} SamplerSignal;
+
 /* A Sampler does the actual measurement by sampling the state of the 
  * world. */
 typedef struct {
@@ -61,7 +68,7 @@ typedef struct {
 	/* Called after sample step i (starts at 0). Gets passed the 
 	 * data pointer that start() returned. Returns false if the 
 	 * measurement has to be stopped, true if everything can continue. */
-	bool (*sample)(SamplerData *sd, void *state);
+	SamplerSignal (*sample)(SamplerData *sd, void *state);
 
 	/* Called at the end of the measurement. The total number of 
 	 * samples that were actually measured is given in n.*/
