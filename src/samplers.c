@@ -294,6 +294,8 @@ typedef struct {
 	double confirmationStartTime;
 	double relaxStartTime;
 	double measureStartTime;
+	int measureIteration;
+	int numMeasureIterations;
 	int currentStep;
 	HairpinSamplerConfig conf;
 } HairpinSamplerData;
@@ -308,6 +310,10 @@ static void* hairpinStart(void *conf)
 	hsd->status = WAITING_TO_FORM;
 	hsd->currentStep = 0;
 	hsd->startTime = getTime();
+
+	/* Set this once here, so all steps have the exact same number of 
+	 * iterations. It's a PITA to do data processing otherwise. */
+	hsd->numMeasureIterations = hsc->measureTime / config.timeStep;
 
 	printf("# Starting to sample at time %e\n", getTime());
 
@@ -337,8 +343,9 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 		if (correctlyBound >= requiredBounds) {
 			hsd->confirmationStartTime = time;
 			hsd->status = WAITING_FOR_CONFIRMATION;
-			printf("# Reached binding threshold of %d base pairs at %e\n",
-					requiredBounds, time);
+			printf("# Reached binding threshold of %d base pairs "
+					"at %e after a time %e\n",
+					requiredBounds, time, time - hsd->startTime);
 		}
 		break;
 	case WAITING_FOR_CONFIRMATION:
@@ -353,8 +360,8 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 						< hsc->confirmationTime)
 			break; /* need to wait for confirmation */
 
-		printf("# Confirmed, at %e after a time %e\n",
-				time, time - hsd->startTime);
+		printf("# Confirmed, at %e after a time since initial threshold %e\n",
+				time, time - hsd->startTime - hsc->confirmationTime);
 		printf("# Current thermostat temperature is %f\n",
 				config.thermostatTemp);
 		/* We have confirmation: start relaxation phase */
@@ -378,10 +385,12 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 		printf("Starting measurement period with duration %e\n",
 				hsc->measureTime);
 		hsd->measureStartTime = time;
+		hsd->measureIteration = 0;
 		hsd->status = MEASURING;
 		break;
 	case MEASURING:
-		if (time - hsd->measureStartTime >= hsc->measureTime) {
+		hsd->measureIteration++;
+		if (hsd->measureIteration >= hsd->numMeasureIterations) {
 			/* End of this measurement run */
 			hsd->currentStep++;
 			if (hsd->currentStep >= hsc->numSteps) {
