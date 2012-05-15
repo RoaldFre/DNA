@@ -23,6 +23,7 @@ static void *avgTempStart(void *conf)
 {
 	UNUSED(conf);
 	double *accum = malloc(sizeof *accum); //yes, this is a silly malloc :P
+	*accum = 0;
 	return accum;
 }
 static SamplerSignal avgTempSample(SamplerData *sd, void *data)
@@ -91,6 +92,7 @@ static SamplerSignal particlesCOMSample(SamplerData *sd, void *data)
 static Sampler particlesCOMSampler(Particle *ps, int num)
 {
 	ParticlesCOMSamplerConf *pcsc = malloc(sizeof(*pcsc));
+	memset(pcsc, 0, sizeof(*pcsc));
 	pcsc->ps = ps;
 	pcsc->num = num;
 
@@ -156,6 +158,7 @@ static SamplerSignal particlesSquaredDisplacementSample(SamplerData *sd, void *s
 static Sampler particlesSquaredDisplacementSampler(Particle *ps, int num)
 {
 	SquaredDisplacementConf *sdc = malloc(sizeof(*sdc));
+	memset(sdc, 0, sizeof(*sdc));
 	sdc->ps = ps;
 	sdc->num = num;
 
@@ -287,6 +290,7 @@ typedef struct {
 		WAITING_TO_RELAX,
 		MEASURING,
 	} status;
+	double startTime;
 	double confirmationStartTime;
 	double relaxStartTime;
 	double measureStartTime;
@@ -298,8 +302,13 @@ static void* hairpinStart(void *conf)
 {
 	HairpinSamplerConfig *hsc = (HairpinSamplerConfig*) conf;
 	HairpinSamplerData *hsd = malloc(sizeof(*hsd));
-	hsd->conf = *hsc;
+	memset(hsd, 0, sizeof(*hsd));
+
+	hsd->conf = *hsc; /* struct copy */
 	hsd->status = WAITING_TO_FORM;
+	hsd->currentStep = 0;
+	hsd->startTime = getTime();
+
 	return hsd;
 }
 static SamplerSignal hairpinSample(SamplerData *sd, void *state)
@@ -342,7 +351,8 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 						< hsc->confirmationTime)
 			break; /* need to wait for confirmation */
 
-		printf("# Confirmd, at %e\n", time);
+		printf("# Confirmed, at %e after a time %e\n",
+				time, time - hsd->startTime);
 		/* We have confirmation: start relaxation phase */
 		/* FALL THROUGH! */
 	case START_RELAXATION:
@@ -353,12 +363,16 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 				+ hsd->currentStep * hsc->Tstep;
 		printf("# Setting temperature to %f, step %d\n",
 				config.thermostatTemp, hsd->currentStep);
+		printf("# Starting relaxation with duration %e\n",
+				hsc->relaxationTime);
 		break;
 	case WAITING_TO_RELAX:
 		if (time - hsd->relaxStartTime < hsc->relaxationTime)
 			break;
 		printf("# Relaxation done at %e, step %d\n",
 				time, hsd->currentStep);
+		printf("Starting measurement with duration %e\n",
+				hsc->measureTime);
 		hsd->measureStartTime = time;
 		hsd->status = MEASURING;
 		break;
