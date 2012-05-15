@@ -18,7 +18,7 @@
 
 /* Defaults */
 #define DEF_BASE_SEQUENCE		"ACCAATTTTTTTTTTTTTTGGG" /* T_12 in Bonnet */
-#define DEF_TIMESTEP 			1.0
+#define DEF_TIMESTEP 			20.0
 #define DEF_TEMPERATURE 		300.0
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
@@ -364,8 +364,11 @@ int main(int argc, char **argv)
 	verbose.sampler = dumpStatsSampler();
 	Task verboseTask = measurementTask(&verbose);
 
+	BasePairingConfig bpc;
+	bpc.energyThreshold = -0.1 * EPSILON;
+	bpc.T = 293;
 	Measurement basePairing;
-	basePairing.sampler = basePairingSampler(-0.1 * EPSILON);
+	basePairing.sampler = basePairingSampler(&bpc);
 	basePairing.measConf = measurementConf;
 	Task basePairingTask = measurementTask(&basePairing);
 

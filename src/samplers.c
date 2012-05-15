@@ -1,6 +1,7 @@
 #include "samplers.h"
 #include "physics.h"
 #include "spgrid.h"
+#include <string.h>
 
 /* Simple sampler start that just passes the configuration data as the 
  * state pointer. */
@@ -191,14 +192,20 @@ static void basePairingCounter(Particle *p1, Particle *p2, void *data)
 	if (V < bpcd->threshold)
 		bpcd->count++;
 }
+static void* basePairingStart(void *conf)
+{
+	BasePairingConfig *bpc = (BasePairingConfig*) conf;
+	config.thermostatTemp = bpc->T;
+	return bpc;
+}
 static bool basePairingSample(SamplerData *sd, void *state)
 {
-	double *threshold = (double*) state;
+	BasePairingConfig *bpc = (BasePairingConfig*) state;
 
 	/* All base pairs */
 	BasePairingCounterData bpcd;
 	bpcd.count = 0;
-	bpcd.threshold = *threshold;
+	bpcd.threshold = bpc->energyThreshold;
 	forEveryPairD(&basePairingCounter, &bpcd);
 
 	/* Matching base pairs if two equal-length strands in the world 
@@ -212,7 +219,7 @@ static bool basePairingSample(SamplerData *sd, void *state)
 			int j = n - 1 - i; //TODO
 			double V = VbasePair(&world.strands[0].Bs[i],
 					     &world.strands[1].Bs[j]);
-			if (V < *threshold) {
+			if (V < bpc->energyThreshold) {
 				correctlyBound++;
 				printf("1 ");
 			} else {
@@ -236,14 +243,14 @@ static bool basePairingSample(SamplerData *sd, void *state)
 
 	return true;
 }
-Sampler basePairingSampler(double energyThreshold)
+Sampler basePairingSampler(BasePairingConfig *bpc)
 {
 	Sampler sampler;
-	double *thresholdCpy = malloc(sizeof(*thresholdCpy));
-	*thresholdCpy = energyThreshold;
+	BasePairingConfig *bpcCopy = malloc(sizeof(*bpcCopy));
+	memcpy(bpcCopy, bpc, sizeof(*bpcCopy));
 
-	sampler.samplerConf = thresholdCpy;
-	sampler.start  = &passConf;
+	sampler.samplerConf = bpcCopy;
+	sampler.start  = &basePairingStart;
 	sampler.sample = &basePairingSample;
 	sampler.stop   = &freeState;
 	return sampler;
