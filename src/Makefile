@@ -37,6 +37,10 @@ main: $(OBJECTS) main.o
 	@echo "LD	main"
 	@gcc -o main $(CFLAGS) $(OBJECTS) main.o $(LIBS) -ggdb $(PROFILE)
 
+doubleStrand: $(OBJECTS) doubleStrand.o
+	@echo "LD	main"
+	@gcc -o doubleStrand $(CFLAGS) $(OBJECTS) doubleStrand.o $(LIBS) -ggdb $(PROFILE)
+
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"
 	@gcc -o diffusion $(CFLAGS) $(OBJECTS) diffusion.o $(LIBS) -ggdb $(PROFILE)
