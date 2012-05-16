@@ -61,7 +61,7 @@ static BasePairingConfig bpc =
 	.energyThreshold = -0.1 * EPSILON,
 	.T = CELSIUS(DEF_SAMPLING_TEMPERATURE),
 };
-static HairpinSamplerConfig hsc =
+static HairpinFormationSamplerConfig hsc =
 {
 	.energyThreshold = -0.1 * EPSILON,
 	.confirmationTime = 1 * NANOSECONDS,
@@ -417,7 +417,7 @@ int main(int argc, char **argv)
 	Task basePairingTask = measurementTask(&basePairing);
 
 	Measurement hairpin;
-	hairpin.sampler = hairpinSampler(&hsc);
+	hairpin.sampler = hairpinFormationSampler(&hsc);
 	hairpin.measConf = measurementConf;
 	hairpin.measConf.measureFile = hairpinFile;
 	hairpin.measConf.verbose = false; /* We already have output from basePairing */

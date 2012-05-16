@@ -45,8 +45,8 @@ typedef struct {
 	int numSteps; /* Number of steps when determining critical temperature */
 	double relaxationTime; /* Time to wait for relaxation after bumping temperature */
 	double measureTime; /* Time to measure per tempretare after relaxation */
-} HairpinSamplerConfig;
+} HairpinFormationSamplerConfig;
 
-Sampler hairpinSampler(HairpinSamplerConfig *hsc);
+Sampler hairpinFormationSampler(HairpinFormationSamplerConfig *hsc);
 
 #endif
