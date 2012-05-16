@@ -376,6 +376,7 @@ static SamplerSignal hairpinSample(SamplerData *sd, void *state)
 		octaveScalar("measureTime",       hsc->measureTime);
 		octaveScalar("allowedUnboundBPs", hsc->allowedUnboundBPs);
 		octaveScalar("timestep",          config.timeStep);
+		octaveScalar("numMonomers",       n);
 
 		octaveMatrixHeader("temperatures", hsc->numSteps, 1);
 		for (int i = 0; i < hsc->numSteps; i++)
