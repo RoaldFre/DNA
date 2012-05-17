@@ -957,7 +957,6 @@ static void verlet(void)
 	forEveryParticle(&verletHelper1);
 	calculateForces(); /* acc(t + dt) */
 	forEveryParticle(&verletHelper2);
-	reboxParticles(); //TODO only once every N iterations...
 }
 
 static void langevinBBKhelper1(Particle *p)
@@ -1035,11 +1034,11 @@ static void langevinBBKhelper2(Particle *p)
 
 /* BBK integrator for Langevin dynamics. Uses the one based on 
  * velocity-verlet to include calculation of the velocities. 
- * See http://localscf.com/LangevinDynamics.aspx */
+ * See http://localscf.com/LangevinDynamics.aspx 
+ * (relocated to http://localscf.com/localscf.com/LangevinDynamics.aspx.html atm) */
 static void langevinBBK(void)
 {
 	forEveryParticle(&langevinBBKhelper1); /* updates positions */
-	reboxParticles(); //TODO only once every N iterations(?)
 	calculateForces();
 	forEveryParticle(&langevinBBKhelper2);
 }
@@ -1070,6 +1069,8 @@ static void stepPhysics(Integrator integrator)
 typedef struct
 {
 	Integrator integrator;
+	double reboxInterval;
+	double lastReboxTime;
 } IntegratorState;
 /* The integrator task is responsible for handeling the space partition 
  * grid */
@@ -1086,6 +1087,8 @@ static void *integratorTaskStart(void *initialData)
 
 	IntegratorState *state = malloc(sizeof(*state));
 	state->integrator = ic->integrator;
+	state->reboxInterval = ic->reboxInterval;
+	state->lastReboxTime = 0;
 
 	free(initialData);
 	return state;
@@ -1094,6 +1097,12 @@ static TaskSignal integratorTaskTick(void *state)
 {
 	IntegratorState *is = (IntegratorState*) state;
 	stepPhysics(is->integrator);
+
+	if (getTime() > is->lastReboxTime + is->reboxInterval) {
+		reboxParticles();
+		is->lastReboxTime = getTime();
+	}
+
 	return TASK_OK;
 }
 static void integratorTaskStop(void *state)

@@ -1,7 +1,7 @@
 #Disable building with rendering by passing RENDER=no to make
 RENDER = yes
 
-OBJECTS = system.o math.o task.o measure.o samplers.o physics.o world.o spgrid.o tinymt/tinymt64.o render.o
+OBJECTS = system.o math.o task.o measure.o samplers.o physics.o world.o spgrid.o tinymt/tinymt64.o render.o octave.o
 EXTRA_RENDER_OBJECTS = font.o mathlib/vector.o mathlib/quaternion.o mathlib/matrix.o
 
 LIBS = -lm
@@ -38,8 +38,12 @@ main: $(OBJECTS) main.o
 	@gcc -o main $(CFLAGS) $(OBJECTS) main.o $(LIBS) -ggdb $(PROFILE)
 
 doubleStrand: $(OBJECTS) doubleStrand.o
-	@echo "LD	main"
+	@echo "LD	doubleStrand"
 	@gcc -o doubleStrand $(CFLAGS) $(OBJECTS) doubleStrand.o $(LIBS) -ggdb $(PROFILE)
+
+hairpin: $(OBJECTS) hairpin.o
+	@echo "LD	hairpin"
+	@gcc -o hairpin $(CFLAGS) $(OBJECTS) hairpin.o $(LIBS) -ggdb $(PROFILE)
 
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"

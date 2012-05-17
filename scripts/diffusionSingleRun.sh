@@ -5,19 +5,19 @@ set -e
 destinationDir=$1
 gamma=$2
 N=$3
-suffix=$4 # job label when running on cluster
+timestep=$4
+time=$5
+wait=$6
+suffix=$7 # job label when running on cluster
 
 set -e
 
 main=diffusion #Should be in current working dir, or in $PATH
-timestep=40
 interval=10
-time=1000
-wait=50
 sizeFactor=1e10 #So we don't have problems with periodic boundary condition!
 boxes="-b1" #So we don't grind ourselves to a halt with the above (huge) worldsize!
 
-T=300
+T=296
 
 integrator=l
 

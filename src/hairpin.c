@@ -14,15 +14,15 @@
 #include "samplers.h"
 #include "math.h"
 
-#define DEF_DATA_PATH "data.txt"
+#define DEF_DATA_PATH "data"
 
 /* Defaults */
 #define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
 #define DEF_TIMESTEP 			20.0
 #define DEF_REBOX_INTERVAL		200.0
-#define DEF_INITIAL_TEMPERATURE		CELSIUS(70)
-#define DEF_SAMPLING_TEMPERATURE	CELSIUS(20)
-#define DEF_SALT_CONCENTRATION		200  /* mol/m^3 */
+#define DEF_INITIAL_TEMPERATURE		70.0
+#define DEF_SAMPLING_TEMPERATURE	20.0
+#define DEF_SALT_CONCENTRATION		200.0  /* mol/m^3 */
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
 #define DEF_TRUNCATION_LENGTH		20.0 //TODO sane?
@@ -59,7 +59,18 @@ static MeasurementConf measurementConf =
 static BasePairingConfig bpc =
 {
 	.energyThreshold = -0.1 * EPSILON,
-	.T = DEF_SAMPLING_TEMPERATURE,
+	.T = CELSIUS(DEF_SAMPLING_TEMPERATURE),
+};
+static HairpinFormationSamplerConfig hsc =
+{
+	.energyThreshold = -0.1 * EPSILON,
+	.confirmationTime = 1 * NANOSECONDS,
+	.allowedUnboundBPs = 2,
+	.Tstart = 20,
+	.Tstep = 15,
+	.numSteps = 4,
+	.relaxationTime = 0.5 * NANOSECONDS,
+	.measureTime = 100 * NANOSECONDS,
 };
 static RenderConf renderConf =
 {
@@ -78,7 +89,7 @@ static IntegratorConf integratorConf =
 			.enableAngle	= true,
 			.enableDihedral	= true,
 			.enableStack	= true,
-			.enableExclusion= false,
+			.enableExclusion= true,
 			.enableBasePair	= true,
 			.enableCoulomb	= true,
 			.mutuallyExclusivePairForces = true,
@@ -100,9 +111,9 @@ static void printUsage(void)
 	printf(" -d        build a Double helix with complementary strand as well\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
-	printf(" -E <flt>  initial Equilibration temperature during relaxation phase\n");
+	printf(" -E <flt>  initial Equilibration temperature during relaxation phase (Celsius)\n");
 	printf("             default: %f\n", DEF_INITIAL_TEMPERATURE);
-	printf(" -T <flt>  Temperature during sampling\n");
+	printf(" -T <flt>  Temperature during sampling (Celsius)\n");
 	printf("             default: %f\n", DEF_SAMPLING_TEMPERATURE);
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
 	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
@@ -119,6 +130,8 @@ static void printUsage(void)
 	printf("             default: (number of monomers) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
 	printf(" -b <num>  number of Boxes per dimension\n");
 	printf("             default: max so that boxsize >= potential truncation length\n");
+	printf(" -x <flt>  time interval between reboXing (in femtoseconds)\n");
+	printf("             default: %f\n", DEF_REBOX_INTERVAL);
 	printf(" -v <int>  Verbose: dump statistics every <flt> picoseconds\n");
 	printf(" -i <type> Integrator to use. Values for <type>:\n");
 	printf("             l: Langevin (velocity BBK) [default]\n");
@@ -134,6 +147,13 @@ static void printUsage(void)
 	printf(" -D <path> Data file to Dump measurement output\n");
 	printf("             default: %s\n", DEF_DATA_PATH);
 	printf("\n");
+	printf("Parameters for hairpin measurement: (see code for explanation & defaults :P)\n");
+	printf(" -A <flt>  startTemp (Celsius)\n");
+	printf(" -B <flt>  stepTemp\n");
+	printf(" -C <int>  nSteps\n");
+	printf(" -G <flt>  measureTime per step (nanoseconds)\n");
+	printf(" -H <int>  allowed unbounded base pairs\n");
+	printf("\n");
 	printf("Parameters for Langevin integrator:\n");
 	printf(" -g <flt>  Gamma: friction coefficient for Langevin dynamics\n");
 	printf("             default: %e\n", DEF_LANGEVIN_GAMMA);
@@ -148,8 +168,8 @@ static void parseArguments(int argc, char **argv)
 	int c;
 
 	/* defaults */
-	config.timeStep 	 = DEF_TIMESTEP * TIME_FACTOR;
-	config.thermostatTemp	 = DEF_INITIAL_TEMPERATURE;
+	config.timeStep 	 = DEF_TIMESTEP * FEMTOSECONDS;
+	config.thermostatTemp	 = CELSIUS(DEF_INITIAL_TEMPERATURE);
 	config.saltConcentration = DEF_SALT_CONCENTRATION;
 	config.truncationLen     = DEF_TRUNCATION_LENGTH * LENGTH_FACTOR;
 	config.langevinGamma	 = DEF_LANGEVIN_GAMMA;
@@ -157,7 +177,7 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:B:v:i:W:I:P:D:h")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:hA:B:C:G:H:")) != -1)
 	{
 		switch (c)
 		{
@@ -168,17 +188,17 @@ static void parseArguments(int argc, char **argv)
 			buildCompStrand = true;
 			break;
 		case 't':
-			config.timeStep = atof(optarg) * TIME_FACTOR;
+			config.timeStep = atof(optarg) * FEMTOSECONDS;
 			if (config.timeStep <= 0)
 				die("Invalid timestep %s\n", optarg);
 			break;
 		case 'E':
-			config.thermostatTemp = atof(optarg);
+			config.thermostatTemp = CELSIUS(atof(optarg));
 			if (config.thermostatTemp < 0)
 				die("Invalid equilibration temperature %s\n", optarg);
 			break;
 		case 'T':
-			bpc.T = atof(optarg);
+			bpc.T = CELSIUS(atof(optarg));
 			if (bpc.T < 0)
 				die("Invalid sampling temperature %s\n", optarg);
 			break;
@@ -193,7 +213,7 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid friction coefficient %s\n", optarg);
 			break;
 		case 'c':
-			config.thermostatTau = atof(optarg) * TIME_FACTOR;
+			config.thermostatTau = atof(optarg) * FEMTOSECONDS;
 			if (config.thermostatTau < 0)
 				die("Invalid thermostat relaxation time %s\n",
 						optarg);
@@ -218,7 +238,7 @@ static void parseArguments(int argc, char **argv)
 			config.truncationLen = atof(optarg) * LENGTH_FACTOR;
 			break;
 		case 'S':
-			worldSize = atof(optarg) * 1e-10;
+			worldSize = atof(optarg) * A;
 			if (worldSize <= 0)
 				die("Invalid world size %s\n", optarg);
 			break;
@@ -228,7 +248,7 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid number of boxes %s\n",
 						optarg);
 			break;
-		case 'B':
+		case 'x':
 			integratorConf.reboxInterval = atof(optarg) * FEMTOSECONDS;
 			if (integratorConf.reboxInterval <= 0)
 				die("Invalid rebox interval %s\n", optarg);
@@ -270,6 +290,22 @@ static void parseArguments(int argc, char **argv)
 		case 'h':
 			printUsage();
 			exit(0);
+			break;
+		/* A,B,C,G,H: because I'm running out of sensible letters ... */
+		case 'A':
+			hsc.Tstart = CELSIUS(atof(optarg));
+			break;
+		case 'B':
+			hsc.Tstep = atof(optarg);
+			break;
+		case 'C':
+			hsc.numSteps = atoi(optarg);
+			break;
+		case 'G':
+			hsc.measureTime = atof(optarg) * NANOSECONDS;
+			break;
+		case 'H':
+			hsc.allowedUnboundBPs = atoi(optarg);
 			break;
 		case ':':
 			printUsage();
@@ -367,22 +403,41 @@ int main(int argc, char **argv)
 	verbose.sampler = dumpStatsSampler();
 	Task verboseTask = measurementTask(&verbose);
 
+	const char *filenameBase = measurementConf.measureFile;
+	char *basePairFile, *hairpinFile;
+	if (0 >	asprintf(&basePairFile, "%s_basePair", filenameBase))
+		die("Could not create base pair file name string!\n");
+	if (0 > asprintf(&hairpinFile, "%s_hairpin", filenameBase))
+		die("Could not create hairpin file name string!\n");
+
 	Measurement basePairing;
 	basePairing.sampler = basePairingSampler(&bpc);
 	basePairing.measConf = measurementConf;
+	basePairing.measConf.measureFile = basePairFile;
 	Task basePairingTask = measurementTask(&basePairing);
+
+	Measurement hairpin;
+	hairpin.sampler = hairpinFormationSampler(&hsc);
+	hairpin.measConf = measurementConf;
+	hairpin.measConf.measureFile = hairpinFile;
+	hairpin.measConf.verbose = false; /* We already have output from basePairing */
+	Task hairpinTask = measurementTask(&hairpin);
 
 	Task renderTask = makeRenderTask(&renderConf);
 
 	Task integratorTask = makeIntegratorTask(&integratorConf);
 
-	Task *tasks[4];
+	Task *tasks[5];
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
 	tasks[3] = &basePairingTask;
-	Task task = sequence(tasks, 4);
+	tasks[4] = &hairpinTask;;
+	Task task = sequence(tasks, 5);
 	bool everythingOK = run(&task);
+
+	free(basePairFile);
+	free(hairpinFile);
 
 	if (!everythingOK)
 		return 1;
