@@ -1,18 +1,20 @@
 \section{Results}
-
-\begin{figure} \begin{center}
-\input{images/data_knotts1/data_T270} \input{images/data_knotts1/data_T300}
-\input{images/data_knotts1/data_T330} \input{images/data_knotts1/data_T360}
+\begin{figure}[h] \begin{minipage}{7cm}
+\input{images/data_knotts1/data_T270} \end{minipage} \begin{minipage}{7cm} \input{images/data_knotts1/data_T300} \end{minipage}
+\begin{minipage}{7cm}
+\input{images/data_knotts1/data_T330} \end{minipage} \begin{minipage}{7cm}\input{images/data_knotts1/data_T360}\end{minipage}\begin{center}
 \input{images/data_knotts1/data_T390}
-\end{center}\end{figure}
-
-
-\begin{figure}\begin{center}
-\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/data_T270.png}\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/data_T300.png}\\
-\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/data_T330.png}\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/data_T360.png}\\
-\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/data_T390.png}\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/knotts1_80ns.png}
-\caption{Knotts1: GCGTCATACAGTGC 14bp DNA double strand at [Na+] = 50mM. Plots of open (blue) and closed (red) basepairs as a function of time, at 270K (top-left); 300K (top-right); 330K (center-left); 360K (center-right); 390K (bottom-left); evolution of total closed basepairs in time for the various temperatures (bottom-right). }\end{center}
+\caption{Basepair configuration (black: open, white: closed) for the 5'\-GCGTCATACAGTGC\-3' configuration of a B-DNA double helix (Knotts III.A.1, \cite{knotts2007coarse}) for different temperatures. Top-left: 270K; top-right: 300K; middle-left: 330K; middle-right: 360K; bottom: 390K. The timescale on the x-axis is always in seconds (about 30 nanoseconds simulated).}\end{center}
 \end{figure}
 
 
+%\begin{figure}\begin{center}
+%\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/data_T270.png}\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/data_T300.png}\\
+%\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/data_T330.png}\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/data_T360.png}\\
+%\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/data_T390.png}\includegraphics[width=8cm]{../scripts/data_knotts1_80ns/knotts1_80ns.png}
+%\caption{Knotts1: GCGTCATACAGTGC 14bp DNA double strand at [Na+] = 50mM. Plots of open (blue) and closed (red) basepairs as a function of time, at 270K (top-left); 300K (top-right); 330K (center-left); 360K (center-right); 390K (bottom-left); evolution of total closed basepairs in time for the various temperatures (bottom-right). }\end{center}
+%\end{figure}
+
+\begin{figure}\begin{center}
 \input{images/knotts1_lines}
+\caption{Longer (80 nanoseconds) time-evolution of the denaturation (number of closed basepairs) of the Knotts III.A.1 B-DNA configuration.}\end{center}\end{figure}
