@@ -66,7 +66,7 @@ typedef struct {
 
 	/* Called at the start of the measurement. Returns the state 
 	 * pointer that gets passed to the functions below. */
-	void *(*start)(void *samplerConf);
+	void *(*start)(SamplerData *sd, void *samplerConf);
 
 	/* Called after sample step i (starts at 0). Gets passed the 
 	 * data pointer that start() returned. Returns false if the 

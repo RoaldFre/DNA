@@ -61,17 +61,28 @@ static BasePairingConfig bpc =
 	.energyThreshold = -0.1 * EPSILON,
 	.T = CELSIUS(DEF_SAMPLING_TEMPERATURE),
 };
-static HairpinFormationSamplerConfig hsc =
+static HairpinFormationSamplerConfig hfc =
 {
 	.energyThreshold = -0.1 * EPSILON,
 	.confirmationTime = 1 * NANOSECONDS,
-	.allowedUnboundBPs = 2,
-	.Tstart = 20,
-	.Tstep = 15,
-	.numSteps = 4,
-	.relaxationTime = 0.5 * NANOSECONDS,
-	.measureTime = 100 * NANOSECONDS,
+	.allowedUnboundBPs = 1,
 };
+static HairpinMeltingTempSamplerConfig hmtc =
+{
+	.energyThreshold = -0.1 * EPSILON,
+	.Tstart = 20,
+	.Tstep = 10,
+	.numSteps = 10,
+	.relaxationTime = 5 * NANOSECONDS,
+	.measureTime = 100 * NANOSECONDS,
+	.verbose = false,
+};
+static enum {
+	HAIRPIN_MELTING_TEMPERATURE,
+	HAIRPIN_FORMATION_TIME,
+	HAIRPIN_NO_MEASUREMENT,
+} hairpinMeasurementType = HAIRPIN_NO_MEASUREMENT;
+
 static RenderConf renderConf =
 {
 	.framerate = DEF_RENDER_FRAMERATE,
@@ -137,6 +148,15 @@ static void printUsage(void)
 	printf("             l: Langevin (velocity BBK) [default]\n");
 	printf("             v: velocity Verlet with Berendsen thermostat\n");
 	printf("\n");
+	printf("Parameters for Langevin integrator:\n");
+	printf(" -g <flt>  Gamma: friction coefficient for Langevin dynamics\n");
+	printf("             default: %e\n", DEF_LANGEVIN_GAMMA);
+	printf("\n");
+	printf("Parameters for velocity Verlet integrator + Berendsen termostat:\n");
+	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
+	printf("             default: %d * timestep\n", DEF_COUPLING_TIMESTEP_FACTOR);
+	printf("\n");
+	printf("\n");
 	printf("Parameters for measurements:\n");
 	printf(" -W <flt>  Waiting time before starting the measurement (in nanosectonds)\n");
 	printf("             default: 0 (ie, no relaxation phase)\n");
@@ -146,21 +166,20 @@ static void printUsage(void)
 	printf("             default: sample indefinitely\n");
 	printf(" -D <path> Data file to Dump measurement output\n");
 	printf("             default: %s\n", DEF_DATA_PATH);
+	printf(" -X <m|f>  measurement to perform:\n");
+	printf("             m: hairpin Melting temperature\n");
+	printf("             f: hairpin Formation time\n");
 	printf("\n");
-	printf("Parameters for hairpin measurement: (see code for explanation & defaults :P)\n");
+	printf("Parameters for hairpin melting temperature measurement:\n");
 	printf(" -A <flt>  startTemp (Celsius)\n");
 	printf(" -B <flt>  stepTemp\n");
 	printf(" -C <int>  nSteps\n");
 	printf(" -G <flt>  measureTime per step (nanoseconds)\n");
+	printf(" -L <flt>  reLaxTime per step (nanoseconds)\n");
+	printf(" -V        Be verbose: also dump hairpin state to file\n");
+	printf("Parameters for hairpin formation measurement:\n");
 	printf(" -H <int>  allowed unbounded base pairs\n");
 	printf("\n");
-	printf("Parameters for Langevin integrator:\n");
-	printf(" -g <flt>  Gamma: friction coefficient for Langevin dynamics\n");
-	printf("             default: %e\n", DEF_LANGEVIN_GAMMA);
-	printf("\n");
-	printf("Parameters for velocity Verlet integrator + Berendsen termostat:\n");
-	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
-	printf("             default: %d * timestep\n", DEF_COUPLING_TIMESTEP_FACTOR);
 }
 
 static void parseArguments(int argc, char **argv)
@@ -177,7 +196,7 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:hA:B:C:G:H:")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:hA:B:C:G:L:V:H:X:")) != -1)
 	{
 		switch (c)
 		{
@@ -293,19 +312,38 @@ static void parseArguments(int argc, char **argv)
 			break;
 		/* A,B,C,G,H: because I'm running out of sensible letters ... */
 		case 'A':
-			hsc.Tstart = CELSIUS(atof(optarg));
+			hmtc.Tstart = CELSIUS(atof(optarg));
 			break;
 		case 'B':
-			hsc.Tstep = atof(optarg);
+			hmtc.Tstep = atof(optarg);
 			break;
 		case 'C':
-			hsc.numSteps = atoi(optarg);
+			hmtc.numSteps = atoi(optarg);
 			break;
 		case 'G':
-			hsc.measureTime = atof(optarg) * NANOSECONDS;
+			hmtc.measureTime = atof(optarg) * NANOSECONDS;
+			break;
+		case 'L':
+			hmtc.relaxationTime = atof(optarg) * NANOSECONDS;
 			break;
 		case 'H':
-			hsc.allowedUnboundBPs = atoi(optarg);
+			hfc.allowedUnboundBPs = atoi(optarg);
+			break;
+		case 'V':
+			hmtc.verbose = true;
+			break;
+		case 'X':
+			switch(optarg[0]) {
+			case 'f': 
+				hairpinMeasurementType = HAIRPIN_FORMATION_TIME;
+				break;
+			case 'm':
+				hairpinMeasurementType = HAIRPIN_MELTING_TEMPERATURE;
+				break;
+			default:
+				die("Unknown hairpin measurement type '%s'\n", optarg);
+				break;
+			}
 			break;
 		case ':':
 			printUsage();
@@ -404,23 +442,35 @@ int main(int argc, char **argv)
 	Task verboseTask = measurementTask(&verbose);
 
 	const char *filenameBase = measurementConf.measureFile;
-	char *basePairFile, *hairpinFile;
+	char *basePairFile;
 	if (0 >	asprintf(&basePairFile, "%s_basePair", filenameBase))
 		die("Could not create base pair file name string!\n");
-	if (0 > asprintf(&hairpinFile, "%s_hairpin", filenameBase))
-		die("Could not create hairpin file name string!\n");
 
+#if 0
 	Measurement basePairing;
 	basePairing.sampler = basePairingSampler(&bpc);
 	basePairing.measConf = measurementConf;
 	basePairing.measConf.measureFile = basePairFile;
+	basePairing.measConf.verbose = false; /* Let output come from 
+						 hairpin sampler */
 	Task basePairingTask = measurementTask(&basePairing);
+#endif
 
 	Measurement hairpin;
-	hairpin.sampler = hairpinFormationSampler(&hsc);
+	switch (hairpinMeasurementType) {
+	case HAIRPIN_MELTING_TEMPERATURE:
+		hairpin.sampler = hairpinMeltingTempSampler(&hmtc);
+		break;
+	case HAIRPIN_FORMATION_TIME:
+		hairpin.sampler = hairpinFormationSampler(&hfc);
+		break;
+	case HAIRPIN_NO_MEASUREMENT:
+		/* This is probably an error, so die */
+		die("You should give a hairpin measurement type!\n");
+	default:
+		assert(false); die("Unknown hairpin measurement type!\n");
+	}
 	hairpin.measConf = measurementConf;
-	hairpin.measConf.measureFile = hairpinFile;
-	hairpin.measConf.verbose = false; /* We already have output from basePairing */
 	Task hairpinTask = measurementTask(&hairpin);
 
 	Task renderTask = makeRenderTask(&renderConf);
@@ -431,13 +481,13 @@ int main(int argc, char **argv)
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
-	tasks[3] = &basePairingTask;
+	//tasks[3] = &basePairingTask;
+	tasks[3] = NULL; /* Disabled atm */
 	tasks[4] = &hairpinTask;;
 	Task task = sequence(tasks, 5);
 	bool everythingOK = run(&task);
 
 	free(basePairFile);
-	free(hairpinFile);
 
 	if (!everythingOK)
 		return 1;

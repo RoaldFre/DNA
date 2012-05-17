@@ -1,10 +1,7 @@
 *.o
 octave-core
 core
-main
-diffusion
 tags
 *.aux
-*.pdf
 latex/images
 data.txt
