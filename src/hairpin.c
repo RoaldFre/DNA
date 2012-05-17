@@ -22,11 +22,11 @@
 #define DEF_REBOX_INTERVAL		200.0
 #define DEF_INITIAL_TEMPERATURE		70.0
 #define DEF_SAMPLING_TEMPERATURE	20.0
-#define DEF_SALT_CONCENTRATION		200.0  /* mol/m^3 */
-#define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
+#define DEF_SALT_CONCENTRATION		100.0  /* mol/m^3 */
+#define DEF_LANGEVIN_GAMMA		5e12
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
-#define DEF_TRUNCATION_LENGTH		20.0 //TODO sane?
-#define DEF_MONOMER_WORLDSIZE_FACTOR    5.0
+#define DEF_TRUNCATION_LENGTH		20.0
+#define DEF_MONOMER_WORLDSIZE_FACTOR    4.5
 #define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_MEASUREMENT_WAIT 		4e4
 #define DEF_RENDER_FRAMERATE 		30.0
@@ -66,6 +66,10 @@ static HairpinFormationSamplerConfig hfc =
 	.energyThreshold = -0.1 * EPSILON,
 	.confirmationTime = 1 * NANOSECONDS,
 	.allowedUnboundBPs = 1,
+	.allowedBoundBPs = 1,
+	.zippingTemperature = CELSIUS(20),
+	.unzippingTemperature = CELSIUS(90),
+	.zippedRelaxationTime = 5 * NANOSECONDS,
 };
 static HairpinMeltingTempSamplerConfig hmtc =
 {
@@ -170,6 +174,8 @@ static void printUsage(void)
 	printf("             m: hairpin Melting temperature\n");
 	printf("             f: hairpin Formation time\n");
 	printf("\n");
+	printf("For more info and default values of params below: see code :P\n");
+	//TODO parameter names are a mess
 	printf("Parameters for hairpin melting temperature measurement:\n");
 	printf(" -A <flt>  startTemp (Celsius)\n");
 	printf(" -B <flt>  stepTemp\n");
@@ -179,6 +185,10 @@ static void printUsage(void)
 	printf(" -V        Be verbose: also dump hairpin state to file\n");
 	printf("Parameters for hairpin formation measurement:\n");
 	printf(" -H <int>  allowed unbounded base pairs\n");
+	printf(" -M <int>  allowed bounded base pairs\n");
+	printf(" -O <flt>  zipping temperature (Celsius)\n");
+	printf(" -Q <flt>  unzipping temperature (Celsius)\n");
+	printf(" -U <flt>  zipped relaxation phase duration (nanoseconds)\n");
 	printf("\n");
 }
 
@@ -196,7 +206,7 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:hA:B:C:G:L:V:H:X:")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:hA:B:C:G:L:VH:M:O:Q:U:")) != -1)
 	{
 		switch (c)
 		{
@@ -326,11 +336,23 @@ static void parseArguments(int argc, char **argv)
 		case 'L':
 			hmtc.relaxationTime = atof(optarg) * NANOSECONDS;
 			break;
+		case 'V':
+			hmtc.verbose = true;
+			break;
 		case 'H':
 			hfc.allowedUnboundBPs = atoi(optarg);
 			break;
-		case 'V':
-			hmtc.verbose = true;
+		case 'M':
+			hfc.allowedBoundBPs = atoi(optarg);
+			break;
+		case 'O':
+			hfc.zippingTemperature = CELSIUS(atof(optarg));
+			break;
+		case 'Q':
+			hfc.unzippingTemperature = CELSIUS(atof(optarg));
+			break;
+		case 'U':
+			hfc.zippedRelaxationTime = atof(optarg) * NANOSECONDS;
 			break;
 		case 'X':
 			switch(optarg[0]) {

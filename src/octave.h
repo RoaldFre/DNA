@@ -8,7 +8,7 @@ void octaveMatrixHeader(const char *name, int rows, int cols);
 
 /* After this, you print:
  *  - every column below the nex one in the 2D matrix name(:,:,i)
- *  - do this for all such matrices i = 1:nz
- * Put only one value per line */
+ *    [ie: dump the matrix in column major form]
+ *  - do this for all such matrices i = 1:nz */
 void octave3DMatrixHeader(const char *name, int nx, int ny, int nz);
 
