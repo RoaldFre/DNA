@@ -21,7 +21,7 @@ Knotts \etal \cite{knotts2007coarse} used the DNA molecular data of ref. \cite{c
 
 \begin{table}[htdp]
 \caption{Structural data for B-DNA helices, calculated by Knotts \etal \cite{knotts2007coarse}.}
-\begin{center}
+\begin{center} \footnotesize
 \begin{tabular}{|l|rrrrc|c|}
 \hline
  &\ \  x (\AA)\ \ &\ \  y (\AA)\ \  &\ \  z (\AA)\ \  &\ \  r (\AA)\ \  &\ \  $\phi$ (degrees)\ \  & \ \ Mass (amu) \\
@@ -40,7 +40,7 @@ Guanine base (Gb) & 0.628 & 0.540 & 0.053 & 0.828 & 40.691 & 150.1\\
 
 Schematically, this structure yields the major and minor grooves as illustrated in Figure \ref{schematic_knotts}. The phosphate and sugar sites on the backbone of the molecule are placed at the centers of mass of the molecules; bases Ab and Gb are placed at the N1 position of the B-DNA isoform; bases Tb and Cb at the N3 position. 
 
-\begin{figure}[htbp]
+\begin{figure}[h]
 \begin{center}
 \includegraphics{schematic_structure_knotts}
 \caption{The schematic structure of the model for B-DNA, from Knotts \etal \cite{knotts2007coarse}. Note the placing of the three sites per nucleus relative to the original atomic structure in the upper right panel.}
@@ -90,7 +90,7 @@ where we have $\sigma_{bp}$ depending on the type of complimentary basepair ($\s
 \paragraph{Exclusion potential} In the original and follow-up versions of the 3SPN model (Knotts \etal \cite{knotts2007coarse}, Sambriski \etal \cite{sambriski2009mesoscale}) a Leonard-Jones type potential was used to describe excluded volume interactions between mismatched bases (yielding $\sigma_0 = 1.0 \times 2^{-1/6}$ \AA) and other molecules (even on other strands) that do not interact via the Coulomb or basepairing potential (yielding $\sigma_0 = 6.86 \times 2^{-1/6}$ \AA):
 \begin{equation}
 V_\text{excl} =  \sum_{i<j}^{N_\text{ex}}\begin{cases} 4\varepsilon \left[ \left(\frac{\sigma_{0}}{r_{ij}} \right)^{12} - \left(\frac{\sigma_{0}}{r_{ij}} \right)^{6} \right] + \varepsilon \qquad &\text{if }r_{ij} < d_\text{cut}, \\ 0 \qquad &\text{if }r_{ij} \geq d_\text{cut} \end{cases} \end{equation}
-where a cut-off value of 6.86 \AA is imposed. This will make sure two strands do not cross each other when simulating DNA hybridisation, and also that a single strand does not cross itself during a hairpin formation simulation. Florescu \& Joyeux \cite{florescu2011thermal} report that the exclusion potential is not necessary when simulating long double stranded DNA helices; we decided however to keep this potential for the above reasons although it slowes down CPU time by a factor $\sim 2$.
+where a cut-off value of 6.86 \AA\ is imposed. This will make sure two strands do not cross each other when simulating DNA hybridisation, and also that a single strand does not cross itself during a hairpin formation simulation. Florescu \& Joyeux \cite{florescu2011thermal} report that the exclusion potential is not necessary when simulating long double stranded DNA helices; we decided however to keep this potential for the above reasons although it slowes down CPU time by a factor $\sim 2$.
 
 \paragraph{Coulombic potential} The final potential in our model is the screened electrostatic Coulomb interaction between the phosphate molecules situated on the backbone of the DNA strands. It is modeled using a Debye-H\"uckel approximation with a Debye length $\kappa_D$ depending on the salt concentration of the environment,
 \begin{equation}
