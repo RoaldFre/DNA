@@ -26,7 +26,7 @@
 #define DEF_LANGEVIN_GAMMA		5e12
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
 #define DEF_TRUNCATION_LENGTH		20.0
-#define DEF_MONOMER_WORLDSIZE_FACTOR    4.5
+#define DEF_MONOMER_WORLDSIZE_FACTOR    4.3
 #define DEF_MONOMERS_PER_RENDER 	2000
 #define DEF_MEASUREMENT_WAIT 		4e4
 #define DEF_RENDER_FRAMERATE 		30.0
@@ -142,7 +142,7 @@ static void printUsage(void)
 	printf("             negative value: sets truncation to worldsize/2\n");
 	printf("             default: %f\n", DEF_TRUNCATION_LENGTH);
 	printf(" -S <flt>  Size of world (in Angstrom).\n");
-	printf("             default: (number of monomers) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
+	printf("             default: (number of monomers + 2) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
 	printf(" -b <num>  number of Boxes per dimension\n");
 	printf("             default: max so that boxsize >= potential truncation length\n");
 	printf(" -x <flt>  time interval between reboXing (in femtoseconds)\n");
@@ -390,7 +390,7 @@ static void parseArguments(int argc, char **argv)
 	}
 
 	if (worldSize < 0)
-		worldSize = LENGTH_FACTOR * strlen(baseSequence)
+		worldSize = LENGTH_FACTOR * (strlen(baseSequence) + 2)
 					* DEF_MONOMER_WORLDSIZE_FACTOR;
 
 	if (config.thermostatTau < 0)
