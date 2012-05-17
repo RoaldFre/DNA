@@ -3,6 +3,5 @@ octave-core
 core
 tags
 *.aux
-*.pdf
 latex/images
 data.txt
