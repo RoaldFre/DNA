@@ -9,4 +9,7 @@ nMonomers = dataSize(2) - 3;
 time = data(:, nMonomers + 1);
 config = data(:, 1:nMonomers); %monomer configuration
 
+
+
 imagesc(time, 1:nMonomers, data(1:nSamples, 1:nMonomers)');
+colormap(bone(2));
