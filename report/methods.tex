@@ -1,6 +1,6 @@
 \section{Methods}
 
-Full atom simulations of DNA molecules exist (todo: citations) but are computationally very heavy. In 2007, the group of De Pablo \cite{knotts2007coarse} applied the technique of coarse graining to a molecular simulation of DNA: instead of simulating all atoms, a DNA monomer is represented by three sites: the sugar, the phosphate and the base. For simulations where one is mainly interested in the timescale behaviour or global dynamics of the DNA molecule this is a very good approximation: it is computationally cheap (and easily optimized) while describing the DNA helical structure quite good. 
+Full atom simulations of DNA molecules exist (todo: citations) but are computationally very heavy. In 2007, the group of De Pablo \cite{knotts2007coarse} applied the technique of coarse graining to a molecular simulation of DNA: instead of simulating all atoms, a DNA monomer is represented by three sites: the sugar, the phosphate and the base. For simulations where one is mainly interested in the timescale behaviour or global dynamics of the DNA molecule this is a very good approximation: it is computationally cheap (and easy to optimize) while describing the DNA helical structure quite good. 
 
 \subsection{DNA structure}
 
@@ -104,7 +104,10 @@ where we use the vacuum permittivity $\varepsilon_0$, Avogadro´s number $N_A$, 
 
 The interactions are defined so that two molecules are excluded from the nonbonded interactions if they constitute a bond. On top of that, $V_\text{stack}$, $V_\text{bp}$ and $V_\text{ex}$ are modeled as mutually exclusive. Our codebase makes sure that this is handled correctly, to avoid the unphysical pairing of bases on the same strand or to avoid cases where an exclusion potential is working on two sites already interacting via Coulombic interaction. All non-specified geometric and interaction constants are taken from Table III in \cite{knotts2007coarse}.
 
+Because we work with a space partitioning scheme, we will also truncate the potential energies that we use at a certain chosen truncation length (default at $20$ \AA) and shift them so that they yield a potential energy of zero when calculated at the truncation distance.
 
 \subsection{Space Partitioning}
+
+
 
 \subsection{Dynamics}
