@@ -1,8 +1,53 @@
 \section{Methods}
 
-A full atomic simulation of a DNA
+Full atom simulations of DNA molecules exist (todo: citations) but are computationally very heavy. In 2007, the group of De Pablo \cite{knotts2007coarse} applied the technique of coarse graining to a molecular simulation of DNA: instead of simulating all atoms, a DNA monomer is represented by three sites: the sugar, the phosphate and the base. For simulations where one is mainly interested in the timescale behaviour or global dynamics of the DNA molecule this is a very good approximation: it is computationally cheap (and easily optimized) while describing the DNA helical structure quite good. 
 
 \subsection{DNA structure}
+
+In this paper, we follow the approach of Knotts, De Pablo \etal \cite{knotts2007coarse} to model the structure of B-DNA. In Figure \ref{dna_forms}, the main three structural forms of DNA are illustrated.
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=14cm]{dna_forms.png}
+\caption{Structural forms of DNA: A-DNA (left), B-DNA (center) and Z-DNA (right). Figure from \href{http://www.molecularstation.com}{molecularstation.com}.}
+\label{dna_forms}
+\end{center}
+\end{figure}
+
+
+The algorithm to build up a single strand is to follow the screw symmetry of B-DNA by placing consecutive monomers on the $z$-axis of space (separated by an axial rise of $3.38$ \AA), and rotating each consecutive monomer by an angle of $36$ degrees. In practice, this means that if a monomer is placed at location $(r, \phi, z)$, the consecutive monomer on the same strand is placed at $(r, \phi + 36\degree, z + 3.38\ \AA)$. To build up the complementary strand (yielding the characteristic double stranded helical structure of DNA), an atom at $(x, y, z)$ on the first strands has its complementary atom on the other strand at $(x, -y, -z)$ with the $x$-axis always taken to be parallel to the line connecting the complementary bases of the complementary monomers.
+
+Knotts \etal \cite{knotts2007coarse} used the DNA molecular data of ref. \cite{crcBiochem1976}, and averaged positions for each of the three sites per nucleus yielding the data in table \ref{dnaStructureData}.
+
+\begin{table}[htdp]
+\caption{Structural data for B-DNA helices, calculated by Knotts \etal \cite{knotts2007coarse}.}
+\begin{center}
+\begin{tabular}{|l|rrrrc|c|}
+\hline
+ &\ \  x (\AA)\ \ &\ \  y (\AA)\ \  &\ \  z (\AA)\ \  &\ \  r (\AA)\ \  &\ \  $\phi$ (degrees)\ \  & \ \ Mass (amu) \\
+\hline
+Phosphate (P) & -0.628 & 8.896 & 2.186 & 8.918 & 94.038 & 94.97 \\
+Sugar (S) & 2.365 & 6.568 & 1.280 & 6.981 & 70.197 & 83.11 \\
+Adenine base (Ab) & 0.575 & 0.516 & 0.051 & 0.773 & 41.905 & 134.1\\
+Thymine base (Tb) & 0.159 & 2.344 & 0.191 & 2.349 & 86.119 & 125.1\\
+Cytosine base (Cb) & 0.199 & 2.287 & 0.187 & 2.296 & 85.027 & 110.1\\
+Guanine base (Gb) & 0.628 & 0.540 & 0.053 & 0.828 & 40.691 & 150.1\\
+\hline
+\end{tabular}
+\end{center}
+\label{dnaStructureData}
+\end{table}%
+
+Schematically, this structure yields the major and minor grooves as illustrated in Figure \ref{schematic_knotts}. The phosphate and sugar sites on the backbone of the molecule are placed at the centers of mass of the molecules; bases Ab and Gb are placed at the N1 position of the B-DNA isoform; bases Tb and Cb at the N3 position. 
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics{schematic_structure_knotts}
+\caption{The schematic structure of the model for B-DNA, from Knotts \etal \cite{knotts2007coarse}. Note the placing of the three sites per nucleus relative to the original atomic structure in the upper right panel.}
+\label{schematic_knotts}
+\end{center}
+\end{figure}
+
 
 \subsection{Interactions}
 
@@ -57,7 +102,7 @@ where the Debye length can be written as
 \end{equation}
 where we use the vacuum permittivity $\varepsilon_0$, Avogadro´s number $N_A$, the electronic charge $e$ and the ionic strength $I$. For the default value of the ionic strength [Na$^+$]=50 mM (milimolair, equal to milimol/liter) this yields $\kappa_D$ = 13.603 \AA. The other values in \ref{coulomb} are the dielectric constant $\varepsilon_k = 78$ for water, and the charges on the interacting molecules (phosphates, with $q_i = -1$ so $q_i q_j = 1$).
 
-The interactions are defined so that two molecules are excluded from the nonbonded interactions if they constitute a bond. On top of that, $V_\text{stack}$, $V_\text{bp}$ and $V_\text{ex}$ are modeled as mutually exclusive. Our codebase makes sure that this is handled correctly, to avoid the unphysical pairing of bases on the same strand or to avoid cases where an exclusion potential is working on two sites already interacting via Coulombic interaction.
+The interactions are defined so that two molecules are excluded from the nonbonded interactions if they constitute a bond. On top of that, $V_\text{stack}$, $V_\text{bp}$ and $V_\text{ex}$ are modeled as mutually exclusive. Our codebase makes sure that this is handled correctly, to avoid the unphysical pairing of bases on the same strand or to avoid cases where an exclusion potential is working on two sites already interacting via Coulombic interaction. All non-specified geometric and interaction constants are taken from Table III in \cite{knotts2007coarse}.
 
 
 \subsection{Space Partitioning}
