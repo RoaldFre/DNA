@@ -78,7 +78,8 @@ static void *samplerStart(MeasTaskState *measState)
 		return NULL;
 
 	switchStdout(streamState); /* Switch stdout to file */
-	void *ret = sampler->start(sampler->samplerConf);
+	void *ret = sampler->start(&measState->samplerData, 
+					sampler->samplerConf);
 	switchStdout(streamState); /* Switch stdout back */
 
 	return ret;
@@ -239,7 +240,7 @@ static TaskSignal measTick(void *state)
 		fflush(stdout);
 		if (time >= endTime) {
 			if (verbose)
-				printf("\nFinished sampling!\n");
+				printf("\nFinished sampling period!\n");
 			return TASK_STOP;
 		}
 		break;
@@ -249,11 +250,20 @@ static TaskSignal measTick(void *state)
 	}
 
 	switch(samplerSignal) {
-		case SAMPLER_OK:	return TASK_OK;
-		case SAMPLER_STOP:	return TASK_STOP;
-		case SAMPLER_ERROR:	return TASK_ERROR;
-		default: fprintf(stderr, "Received unknown sampler signal!");
-			assert(false);	return TASK_ERROR;
+		case SAMPLER_OK:
+			return TASK_OK;
+		case SAMPLER_STOP:
+			if (verbose)
+				printf("\nSampler requested polite quit.\n");
+			return TASK_STOP;
+		case SAMPLER_ERROR:
+			if (verbose)
+				printf("\nSampler encountered error!\n");
+			return TASK_ERROR;
+		default:
+			fprintf(stderr, "Received unknown sampler signal!");
+			assert(false);
+			return TASK_ERROR;
 	}
 }
 

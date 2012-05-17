@@ -79,7 +79,9 @@ extern World world;
 
 bool allocWorld(int numStrands, double worldSize);
 bool allocStrand(Strand *s, int numMonomers);
-/* Allocates the strand and fills it up with the given base sequence. */
+/* Allocates the strand and fills it up with the given base sequence. The 
+ * strand will be <3'-sequence-5'>, ie the 3' matches the first char of 
+ * the string, and the last char of the sequence is the 5' end */
 void fillStrand(Strand *s, const char *sequence);
 void fillComplementaryStrand(Strand *s, const char *baseSequence);
 void freeWorld(void);

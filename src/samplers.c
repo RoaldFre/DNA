@@ -6,8 +6,9 @@
 
 /* Simple sampler start that just passes the configuration data as the 
  * state pointer. */
-static void *passConf(void *conf)
+static void *passConf(SamplerData *sd, void *conf)
 {
+	UNUSED(sd);
 	return conf;
 }
 /* Simple sampler stop that just frees the state. */
@@ -20,8 +21,9 @@ static void freeState(SamplerData *sd, void *state)
 
 /* TEMPERATURE */
 
-static void *avgTempStart(void *conf)
+static void *avgTempStart(SamplerData *sd, void *conf)
 {
+	UNUSED(sd);
 	UNUSED(conf);
 	double *accum = malloc(sizeof *accum); //yes, this is a silly malloc :P
 	*accum = 0;
@@ -126,8 +128,9 @@ typedef struct
 	double initialTime;
 } SquaredDisplacementConf;
 
-static void *particlesSquaredDisplacementStart(void *conf)
+static void *particlesSquaredDisplacementStart(SamplerData *sd, void *conf)
 {
+	UNUSED(sd);
 	SquaredDisplacementConf *sdc = (SquaredDisplacementConf*) conf;
 	sdc->initialPos = getCOM(sdc->ps, sdc->num);
 	sdc->initialTime = getTime();
@@ -196,8 +199,9 @@ static void basePairingCounter(Particle *p1, Particle *p2, void *data)
 	if (V < bpcd->threshold)
 		bpcd->count++;
 }
-static void* basePairingStart(void *conf)
+static void* basePairingStart(SamplerData *sd, void *conf)
 {
+	UNUSED(sd);
 	BasePairingConfig *bpc = (BasePairingConfig*) conf;
 	config.thermostatTemp = bpc->T;
 	return bpc;
@@ -211,6 +215,7 @@ static SamplerSignal basePairingSample(SamplerData *sd, void *state)
 	bpcd.count = 0;
 	bpcd.threshold = bpc->energyThreshold;
 	forEveryPairD(&basePairingCounter, &bpcd);
+	int n = world.strands[0].numMonomers;
 
 	/* Matching base pairs if two equal-length strands in the world 
 	 * (assumed to be complementary) */
@@ -218,7 +223,6 @@ static SamplerSignal basePairingSample(SamplerData *sd, void *state)
 	if (world.numStrands == 2  &&  (world.strands[0].numMonomers
 					== world.strands[1].numMonomers)) {
 		correctlyBound = 0;
-		int n = world.strands[0].numMonomers;
 		for (int i = 0; i < n; i++) {
 			int j = n - 1 - i; //TODO
 			double V = VbasePair(&world.strands[0].Bs[i],
@@ -236,7 +240,6 @@ static SamplerSignal basePairingSample(SamplerData *sd, void *state)
 	 * hairpin) */
 	if (world.numStrands == 1) {
 		correctlyBound = 0;
-		int n = world.strands[0].numMonomers;
 		for (int i = 0; i < n/2; i++) {
 			int j = n - 1 - i;
 			double V = VbasePair(&world.strands[0].Bs[i],
@@ -282,177 +285,279 @@ Sampler basePairingSampler(BasePairingConfig *bpc)
 
 
 
-/* HAIR PINS */
+/* HAIR PIN FORMATION */
+static int getCorrectlyBoundHairpinBasePairs(Strand *s, double energyThreshold)
+{
+	int correctlyBound = 0;
+	int n = s->numMonomers;
+	for (int i = 0; i < n/2; i++) {
+		int j = n - 1 - i;
+		double V = VbasePair(&s->Bs[i], &s->Bs[j]);
+		if (V < energyThreshold)
+			correctlyBound++;
+	}
+	return correctlyBound;
+}
+
 typedef struct {
 	enum {
 		WAITING_TO_FORM,
 		WAITING_FOR_CONFIRMATION,
-		START_RELAXATION,
-		WAITING_TO_RELAX,
-		MEASURING,
 	} status;
 	double startTime;
 	double confirmationStartTime;
-	double relaxStartTime;
-	double measureStartTime;
-	int measureIteration;
-	int numMeasureIterations;
-	int currentStep;
 	HairpinFormationSamplerConfig conf;
 } HairpinFormationSamplerData;
 
-static void* hairpinFormationStart(void *conf)
+static void* hairpinFormationStart(SamplerData *sd, void *conf)
 {
-	HairpinFormationSamplerConfig *hfsc = (HairpinFormationSamplerConfig*) conf;
-	HairpinFormationSamplerData *hfsd = malloc(sizeof(*hfsd));
-	memset(hfsd, 0, sizeof(*hfsd));
+	UNUSED(sd);
+	HairpinFormationSamplerConfig *hfc =
+			(HairpinFormationSamplerConfig*) conf;
+	HairpinFormationSamplerData *hfd = malloc(sizeof(*hfd));
+	memset(hfd, 0, sizeof(*hfd));
 
-	hfsd->conf = *hfsc; /* struct copy */
-	hfsd->status = WAITING_TO_FORM;
-	hfsd->currentStep = 0;
-	hfsd->startTime = getTime();
+	hfd->conf = *hfc; /* struct copy */
+	hfd->status = WAITING_TO_FORM;
+	hfd->startTime = getTime();
 
 	octaveScalar("sampleStartTime", getTime());
 
-	return hfsd;
+	return hfd;
 }
 static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 {
-	HairpinFormationSamplerData *hfsd = (HairpinFormationSamplerData*) state;
-	HairpinFormationSamplerConfig *hfsc = &hfsd->conf;
+	HairpinFormationSamplerData *hfd =
+			(HairpinFormationSamplerData*) state;
+	HairpinFormationSamplerConfig *hfc = &hfd->conf;
 
-	int correctlyBound = 0;
+	int correctlyBound = getCorrectlyBoundHairpinBasePairs(
+				&world.strands[0], hfc->energyThreshold);
 	int n = world.strands[0].numMonomers;
-	for (int i = 0; i < n/2; i++) {
-		int j = n - 1 - i;
-		double V = VbasePair(&world.strands[0].Bs[i],
-				     &world.strands[0].Bs[j]);
-		if (V < hfsc->energyThreshold)
-			correctlyBound++;
-	}
+	int requiredBounds = n/2 - hfc->allowedUnboundBPs;
 
-	int requiredBounds = n/2 - hfsc->allowedUnboundBPs;
+	if(sd->string != NULL)
+		snprintf(sd->string, sd->strBufSize,
+				"Correct hairpin BPs: %d, required: %d",
+				correctlyBound, requiredBounds);
+
 	double time = getTime();
 
-	switch (hfsd->status) {
+	switch (hfd->status) {
 	case WAITING_TO_FORM:
 		if (correctlyBound >= requiredBounds) {
-			hfsd->confirmationStartTime = time;
-			hfsd->status = WAITING_FOR_CONFIRMATION;
+			hfd->confirmationStartTime = time;
+			hfd->status = WAITING_FOR_CONFIRMATION;
 			octaveComment("Reached binding threshold of %d base "
 					"pairs at %e after a time %e\n",
-					requiredBounds, time, time - hfsd->startTime);
+					requiredBounds, time, time - hfd->startTime);
 		}
 		break;
 	case WAITING_FOR_CONFIRMATION:
 		if (correctlyBound < requiredBounds) {
 			/* It was a dud! */
-			hfsd->status = WAITING_TO_FORM;
+			hfd->status = WAITING_TO_FORM;
 			octaveComment("Could not confirm, waiting to form "
 					"again at %e\n", time);
 			break;
 		}
-		if (time - hfsd->confirmationStartTime
-						< hfsc->confirmationTime)
+		if (time - hfd->confirmationStartTime
+						< hfc->confirmationTime)
 			break; /* need to wait for confirmation */
 
-		/* We have confirmation: start relaxation phase */
-
-		/* Set this once here, so all steps have the exact same number of 
-		 * iterations. It's a PITA to do data processing otherwise. */
-		hfsd->numMeasureIterations = hfsc->measureTime / sd->sampleInterval;
-
-		/* Dump all info before starting 3D matrix */
+		/* We have confirmation! */
 		octaveComment("Confirmed at %e after a time since initial "
 				"threshold %e\n", time,
-				time - hfsd->startTime - hfsc->confirmationTime);
+				time - hfd->startTime - hfc->confirmationTime);
 
 		octaveScalar("timeTillZipping",
-				time - hfsd->startTime - hfsc->confirmationTime);
-		octaveScalar("temperature", config.thermostatTemp);
-
-		octaveScalar("confirmationTime",  hfsc->confirmationTime);
-		octaveScalar("relaxationTime",    hfsc->relaxationTime);
-		octaveScalar("measureTime",       hfsc->measureTime);
-		octaveScalar("allowedUnboundBPs", hfsc->allowedUnboundBPs);
-		octaveScalar("timestep",          config.timeStep);
+				time - hfd->startTime - hfc->confirmationTime);
+		octaveScalar("timeAtZipping",
+				time - hfc->confirmationTime);
+		octaveScalar("temperature",       config.thermostatTemp);
+		octaveScalar("allowedUnboundBPs", hfc->allowedUnboundBPs);
 		octaveScalar("numMonomers",       n);
+		octaveScalar("timestep",          config.timeStep);
 
-		octaveMatrixHeader("temperatures", hfsc->numSteps, 1);
-		for (int i = 0; i < hfsc->numSteps; i++)
-			printf("%e\n", hfsc->Tstart + i * hfsc->Tstep);
+		octaveComment("Successful end! :-)");
+		return SAMPLER_STOP;
+	default:
+		fprintf(stderr, "Unknown status in hairpinFormationSample!\n");
+		assert(false); return SAMPLER_ERROR;
+	}
+	return SAMPLER_OK;
+}
+Sampler hairpinFormationSampler(HairpinFormationSamplerConfig *hfc)
+{
+	Sampler sampler;
+	HairpinFormationSamplerConfig *hfcCopy = malloc(sizeof(*hfcCopy));
+	memcpy(hfcCopy, hfc, sizeof(*hfcCopy));
 
+	sampler.samplerConf = hfcCopy;
+	sampler.start  = &hairpinFormationStart;
+	sampler.sample = &hairpinFormationSample;
+	sampler.stop   = &freeState;
+	return sampler;
+}
+
+
+
+/* HAIR PIN MELTING TEMPERATURE */
+typedef struct {
+	enum {
+		START_RELAXATION,
+		WAITING_TO_RELAX,
+		MEASURING,
+	} status;
+	double startTime;
+	double relaxStartTime;
+	double measureStartTime;
+	int measureIteration;
+	int numMeasureIterations;
+	int currentStep;
+	long accumulatedBoundBasePairs;
+	double *averageBPsPerStep;
+	HairpinMeltingTempSamplerConfig conf;
+} HairpinMeltingTempSamplerData;
+
+static void* hairpinMeltingTempStart(SamplerData *sd, void *conf)
+{
+	HairpinMeltingTempSamplerConfig *hmtc = (HairpinMeltingTempSamplerConfig*) conf;
+	HairpinMeltingTempSamplerData *hmtd = malloc(sizeof(*hmtd));
+	memset(hmtd, 0, sizeof(*hmtd));
+
+	hmtd->conf = *hmtc; /* struct copy */
+	hmtd->status = WAITING_TO_FORM;
+	hmtd->currentStep = 0;
+	hmtd->startTime = getTime();
+
+	/* Set this once here, so all steps have the exact same number of 
+	 * iterations. It's a PITA to do data processing otherwise. */
+	hmtd->numMeasureIterations = hmtc->measureTime / sd->sampleInterval;
+
+	/* We need to accumulate these and only dump them at the end, 
+	 * because we cannot interfere with the matrix stream that we dump 
+	 * when 'hmtc->verbose' is true. */
+	hmtd->averageBPsPerStep = calloc(sizeof(*hmtd->averageBPsPerStep), 
+					hmtc->numSteps);
+	int n = world.strands[0].numMonomers;
+	octaveScalar("sampleStartTime",   getTime());
+	octaveScalar("temperature",       config.thermostatTemp);
+	octaveScalar("relaxationTime",    hmtc->relaxationTime);
+	octaveScalar("measureTime",       hmtc->measureTime);
+	octaveScalar("numMonomers",       n);
+	octaveScalar("timestep",          config.timeStep);
+
+	octaveMatrixHeader("temperatures", hmtc->numSteps, 1);
+	for (int i = 0; i < hmtc->numSteps; i++)
+		printf("%e\n", hmtc->Tstart + i * hmtc->Tstep);
+
+	if (hmtc->verbose) {
 		/* Start the header for the 3D matrix of data */
 		octaveComment("Series of 2D matrices of the form");
 		octaveComment("data(:,:,i)' =");
-		octaveComment(" [ time(1)  numBound(1)  lastBasePair(1)  ...  middleBasePair(1)");
-		octaveComment("   time(2)  numBound(2)  lastBasePair(2)  ...  middleBasePair(2)");
-		octaveComment("    ...        ...            ...         ...        ...        ");
-		octaveComment("   time(n)  numBound(n)  lastBasePair(n)  ...  middleBasePair(n) ]");
-		octaveComment("NOTE THE TRANSPOSED SIGN at the end of data(:,:,)'  <-- !!");
+		octaveComment(" [  time(t1) = t1      time(t2) = t2     ...   time(tn) = tn");
+		octaveComment("    numBounds(t1)      numBounds(t2)     ...   numBounds(tn)");
+		octaveComment("   lastBasePair(t1)   lastBasePair(t2)   ...  lastBasePair(tn)");
+		octaveComment("         ...               ...           ...         ...      ");
+		octaveComment("   firstBasePair(tn)  firstBasePair(t2)  ...  firstBasePair(tn) ]");
 		octaveComment("Each such 2D matix i is measured with the corresponding");
 		octaveComment("temperature in the array 'temperatures': temperatures(i).");
 		octave3DMatrixHeader("data",
 				2 + n/2,
-				hfsd->numMeasureIterations,
-				hfsc->numSteps);
+				hmtd->numMeasureIterations,
+				hmtc->numSteps);
+	}
 
-		/* INTENTIONAL FALL THROUGH! */
+	return hmtd;
+}
+static SamplerSignal hairpinMeltingTempSample(SamplerData *sd, void *state)
+{
+	HairpinMeltingTempSamplerData *hmtd = (HairpinMeltingTempSamplerData*) state;
+	HairpinMeltingTempSamplerConfig *hmtc = &hmtd->conf;
+
+	int correctlyBound = getCorrectlyBoundHairpinBasePairs(
+				&world.strands[0], hmtc->energyThreshold);
+
+	if(sd->string != NULL)
+		snprintf(sd->string, sd->strBufSize,
+				"Correct hairpin BPs: %d", correctlyBound);
+
+	double time = getTime();
+
+	switch (hmtd->status) {
 	case START_RELAXATION:
-		hfsd->relaxStartTime = time;
-		hfsd->status = WAITING_TO_RELAX;
+		hmtd->relaxStartTime = time;
+		hmtd->status = WAITING_TO_RELAX;
 		/* Set temperature */
-		config.thermostatTemp = hfsc->Tstart
-				+ hfsd->currentStep * hfsc->Tstep;
+		config.thermostatTemp = hmtc->Tstart
+				+ hmtd->currentStep * hmtc->Tstep;
 		break;
 	case WAITING_TO_RELAX:
-		if (time - hfsd->relaxStartTime < hfsc->relaxationTime)
+		if (time - hmtd->relaxStartTime < hmtc->relaxationTime)
 			break;
 		/* Relaxation done */
-		hfsd->measureStartTime = time;
-		hfsd->measureIteration = 0;
-		hfsd->status = MEASURING;
-		break;
+		hmtd->measureStartTime = time;
+		hmtd->measureIteration = 0;
+		hmtd->accumulatedBoundBasePairs = 0;
+		hmtd->status = MEASURING;
+		/* Intentional fall through */
 	case MEASURING:
-		hfsd->measureIteration++;
-		if (hfsd->measureIteration > hfsd->numMeasureIterations) {
+		hmtd->measureIteration++;
+		if (hmtd->measureIteration > hmtd->numMeasureIterations) {
 			/* End of this measurement run */
-			hfsd->currentStep++;
-			if (hfsd->currentStep >= hfsc->numSteps) {
-				octaveComment("# Sampled to the end! :-)");
+			hmtd->averageBPsPerStep[hmtd->currentStep] = 
+					hmtd->accumulatedBoundBasePairs 
+						/ hmtd->numMeasureIterations;
+
+			hmtd->currentStep++;
+			if (hmtd->currentStep >= hmtc->numSteps) {
+				/* We are finished! Don't forget to dump 
+				 * the accumulated bound base pairs! */
+				octaveMatrixHeader("averageBoundBasePairs", 
+							hmtc->numSteps, 1);
+				for (int i = 0; i < hmtc->numSteps; i++)
+					printf("%e\n", hmtd->averageBPsPerStep[i]);
+
+				octaveComment("Successful end! :-)");
 				return SAMPLER_STOP; /* All done! */
 			}
 
-			hfsd->status = START_RELAXATION;
+			hmtd->status = START_RELAXATION;
 			break;
 		}
-		printf("%e\n%d\n", time, correctlyBound);
-		/* print (half of) the config */
-		for (int i = 0; i < n/2; i++) {
-			int j = n - 1 - i;
-			double V = VbasePair(&world.strands[0].Bs[i],
-					     &world.strands[0].Bs[j]);
-			if (V < hfsc->energyThreshold) {
-				correctlyBound++;
-				printf("1\n");
-			} else {
-				printf("0\n");
+
+		/* Not at the end of this step yet: just sample */
+		hmtd->accumulatedBoundBasePairs += correctlyBound;
+		if (hmtc->verbose) {
+			printf("%e\n%d\n", time, correctlyBound);
+			/* print (half of) the config */
+			int n = world.strands[0].numMonomers;
+			for (int i = 0; i < n/2; i++) {
+				int j = n - 1 - i;
+				double V = VbasePair(&world.strands[0].Bs[i],
+						     &world.strands[0].Bs[j]);
+				if (V < hmtc->energyThreshold) {
+					printf("1\n");
+				} else {
+					printf("0\n");
+				}
 			}
+			printf("\n");
 		}
-		printf("\n");
 		break;
 	}
 	return SAMPLER_OK;
 }
-Sampler hairpinFormationSampler(HairpinFormationSamplerConfig *hfsc)
+Sampler hairpinMeltingTempSampler(HairpinMeltingTempSamplerConfig *hmtc)
 {
 	Sampler sampler;
-	HairpinFormationSamplerConfig *hpcCopy = malloc(sizeof(*hpcCopy));
-	memcpy(hpcCopy, hfsc, sizeof(*hpcCopy));
+	HairpinMeltingTempSamplerConfig *hmtcCopy = malloc(sizeof(*hmtcCopy));
+	memcpy(hmtcCopy, hmtc, sizeof(*hmtcCopy));
 
-	sampler.samplerConf = hpcCopy;
-	sampler.start  = &hairpinFormationStart;
-	sampler.sample = &hairpinFormationSample;
+	sampler.samplerConf = hmtcCopy;
+	sampler.start  = &hairpinMeltingTempStart;
+	sampler.sample = &hairpinMeltingTempSample;
 	sampler.stop   = &freeState;
 	return sampler;
 }

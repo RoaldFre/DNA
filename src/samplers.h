@@ -40,13 +40,35 @@ typedef struct {
 				    zipped in order for it to be considered 
 				    a stable hairpin */
 	int allowedUnboundBPs; /* Number of unbound basepairs to allow */
-	double Tstart; /* Initial temperature for determining critical temperature */
-	double Tstep; /* Temperature step for determining critical temperature */
-	int numSteps; /* Number of steps when determining critical temperature */
-	double relaxationTime; /* Time to wait for relaxation after bumping temperature */
-	double measureTime; /* Time to measure per tempretare after relaxation */
 } HairpinFormationSamplerConfig;
 
-Sampler hairpinFormationSampler(HairpinFormationSamplerConfig *hsc);
+Sampler hairpinFormationSampler(HairpinFormationSamplerConfig *hfc);
+
+
+typedef struct {
+	/* A pair is 'bound' if its base pair potential is lower than the 
+	 * given threshold. */
+	double energyThreshold;
+
+	/* Time to wait for relaxation after bumping temperature */
+	double relaxationTime;
+	/* Time to let the system thermally equilibrate before starting to 
+	 * measure */
+	double measureTime;
+
+	/* Start measuring at 'Tstart'. Then change the temperature by a 
+	 * difference 'Tstep' and measure again. Do this until you have 
+	 * measured a total of 'numSteps' times. */
+	double Tstart;
+	double Tstep;
+	int numSteps;
+
+	/* If 'verbose' is true: dump full configuration of hairpin at 
+	 * every sample tick. If it is false: only dump the average number 
+	 * of bound base pairs (also dumped when 'verbose' is enabled). */
+	bool verbose;
+} HairpinMeltingTempSamplerConfig;
+
+Sampler hairpinMeltingTempSampler(HairpinMeltingTempSamplerConfig *hsc);
 
 #endif
