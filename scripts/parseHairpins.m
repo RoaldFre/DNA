@@ -1,4 +1,4 @@
-function [timesTillZipping, temperature, temperatures, allData, measureTime, timestep, allowedUnboundBPs] = parseHairpins(filesglob, alsoLoadFullData)
+function [timesTillZipping, timesTillUnzipping, temperature, temperatures, data, measureTime, timestep, allowedUnboundBPs, allowedBoundBps] = parseHairpins(filesglob, alsoLoadFullData);
 
 if (nargin < 1)
 	error("Not enough arguments!");
@@ -19,6 +19,7 @@ clear data;
 %only load the actual data in a 4D array
 for run = 1:nRuns
 	timesTillZipping(run) = load(files{run}, "timeTillZipping").timeTillZipping;
+	timesTillUnzipping(run) = load(files{run}, "timeTillUnzipping").timeTillUnzipping;
 	if (alsoLoadFullData)
 		allData(:,:,:,run) = load(files{run}, "data").data;
 	end

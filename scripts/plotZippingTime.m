@@ -1,57 +1,57 @@
 Ns = [];
 
-dir="/home/other/roald/clusterdata/hairpin/formation_T20_dt15_time2000_allowUnb1/";
-theseNs = [4 6 8 10 12 14 16 18 20];
-prevNum = numel(Ns);
-Ns = [Ns theseNs];
-currNum = numel(Ns);
-for i = (prevNum + 1) : currNum
-	[time, err] = averageZippingTime([dir, "N", num2str(Ns(i)), "*/formation*"]);
-	zippingTimes(i) = time;
-	zippingTimeErrs(i) = err;
+dir="/home/other/roald/clusterdata/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time10000/";
+Ns = [5 10 15 20 30 40];
+for i = 1 : numel(Ns)
+	[zipTime, zipErr, unzipTime, unzipErr] = averageZippingTime([dir, "N", num2str(Ns(i)), "*/formation*"]);
+	zippingTimes(i) = zipTime;
+	zippingTimeErrs(i) = zipErr;
+	unzippingTimes(i) = unzipTime;
+	unzippingTimeErrs(i) = unzipErr;
 end
 
+[Ns; zippingTimes; unzippingTimes]
 
 
-dir="/home/other/roald/clusterdata/hairpin/formation_T20_dt15_time2000_allowUnb2/";
-theseNs = [25 30 35 40 45 50];
-prevNum = numel(Ns);
-Ns = [Ns theseNs];
-currNum = numel(Ns);
-for i = (prevNum + 1) : currNum
-	[time, err] = averageZippingTime([dir, "N", num2str(Ns(i)), "*/formation*"]);
-	zippingTimes(i) = time;
-	zippingTimeErrs(i) = err;
-end
+[zipCte, zipExponent, zipCteErr, zipExponentErr] = loglogRegression(Ns', zippingTimes', 1, 1, zippingTimeErrs')
+[zipCte, zipCteErr]
+[zipExponent, zipExponentErr]
 
-
-
-
-[cte, exponent, cteErr, exponentErr] = loglogregression(Ns, zippingTimes, 1, 1, zippingTimeErrs)
-[cte, cteErr]
-[exponent, exponentErr]
-
-
-%[cte, exponent, shift, cteErr, exponentErr, shiftErr] = loglogregressionWithShift(Ns, zippingTimes, 1, 1, zippingTimeErrs)
-%[cte, cteErr]
-%[exponent, exponentErr]
-%[shift, shiftErr]
+[unzipCte, unzipExponent, unzipCteErr, unzipExponentErr] = loglogRegression(Ns', unzippingTimes', 1, 1, unzippingTimeErrs')
+[unzipCte, unzipCteErr]
+[unzipExponent, unzipExponentErr]
 
 
 fitNs = linspace(min(Ns), max(Ns), 100);
-fitTimes = cte * fitNs.^exponent;
+fitZipTimes = zipCte * fitNs.^zipExponent;
+fitUnzipTimes = unzipCte * fitNs.^unzipExponent;
 
 
-close all; clf;
 hold on;
 
 h = loglogerr(Ns, zippingTimes, zippingTimeErrs);
 set(h, "marker", ".");
 set(h, "linestyle", "none");
 
-loglog(fitNs, fitTimes);
+loglog(fitNs, fitZipTimes);
+
+h = loglogerr(Ns, unzippingTimes, unzippingTimeErrs);
+set(h, "marker", ".");
+set(h, "color", "r");
+set(h, "linestyle", "none");
+
+loglog(fitNs, fitUnzipTimes, "r");
 
 hold off;
+
+
+
+
+
+return
+
+
+
 
 
 figure;
@@ -60,7 +60,14 @@ h = errorbar(Ns, zippingTimes, zippingTimeErrs);
 set(h, "marker", ".");
 set(h, "linestyle", "none");
 
-plot(fitNs, fitTimes);
+plot(fitNs, fitZipTimes);
+
+h = errorbar(Ns, unzippingTimes, unzippingTimeErrs);
+set(h, "marker", ".");
+set(h, "linestyle", "none");
+
+plot(fitNs, fitunzipTimes, "r");
+
 hold off;
 
 
