@@ -135,6 +135,37 @@ static void FbondSB(Particle *sugar, Particle *base)
  *       \ /
  *        p2
  */
+typedef struct {
+	double P5SB;
+	double P3SB;
+} AngleBaseInfo;
+static AngleBaseInfo getAngleBaseInfo(ParticleType base)
+{
+	AngleBaseInfo info;
+	switch (base) {
+	case BASE_A:
+		info.P5SB = ANGLE_P_5S_A;
+		info.P3SB = ANGLE_P_3S_A;
+		break;
+	case BASE_T:
+		info.P5SB = ANGLE_P_5S_T;
+		info.P3SB = ANGLE_P_3S_T;
+		break;
+	case BASE_C:
+		info.P5SB = ANGLE_P_5S_C;
+		info.P3SB = ANGLE_P_3S_C;
+		break;
+	case BASE_G:
+		info.P5SB = ANGLE_P_5S_G;
+		info.P3SB = ANGLE_P_3S_G;
+		break;
+	default:
+		fprintf(stderr, "Unknown base type in getAngleBaseInfo!\n");
+		assert(false);
+	}
+	return info;
+}
+
 static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 {
 	if (!interactions.enableAngle)
@@ -147,6 +178,16 @@ static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 
 	double dtheta = angle(a, b) - theta0;
 	return ktheta/2 * dtheta*dtheta;
+}
+static double VangleP5SB(Particle *p, Particle *s, Particle *b)
+{
+	AngleBaseInfo info = getAngleBaseInfo(b->type);
+	return Vangle(p, s, b, info.P5SB);
+}
+static double VangleP3SB(Particle *p, Particle *s, Particle *b)
+{
+	AngleBaseInfo info = getAngleBaseInfo(b->type);
+	return Vangle(p, s, b, info.P3SB);
 }
 static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 {
@@ -197,6 +238,16 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 
 	assert(fabs(dot(a, F1) / length(a) / length(F1)) < 1e-5);
 	assert(fabs(dot(b, F3) / length(b) / length(F3)) < 1e-5);
+}
+static void FangleP5SB(Particle *p, Particle *s, Particle *b)
+{
+	AngleBaseInfo info = getAngleBaseInfo(b->type);
+	Fangle(p, s, b, info.P5SB);
+}
+static void FangleP3SB(Particle *p, Particle *s, Particle *b)
+{
+	AngleBaseInfo info = getAngleBaseInfo(b->type);
+	Fangle(p, s, b, info.P3SB);
 }
 
 
@@ -301,7 +352,7 @@ static void FdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
 {
 	DihedralBaseInfo info = getDihedralBaseInfo(b->type);
-	Vdihedral(b, s1, p, s2, info.dihedralBS3P5S);
+	Fdihedral(b, s1, p, s2, info.dihedralBS3P5S);
 }
 static void FdihedralS3P5SB(Particle *s1, Particle *p,
 				Particle *s2, Particle *b)
@@ -705,7 +756,7 @@ static void strandForces(Strand *s) {
 	/* Bottom monomer */
 	FbondSB(&s->Ss[0], &s->Bs[0]);
 	Fbond(&s->Ss[0], &s->Ps[0], BOND_S5_P);
-	Fangle(&s->Ps[0], &s->Ss[0], &s->Bs[0], ANGLE_P_5S_A);
+	FangleP5SB(&s->Ps[0], &s->Ss[0], &s->Bs[0]);
 
 	/* Rest of the monomers */
 	for (int i = 1; i < s->numMonomers; i++) {
@@ -715,10 +766,10 @@ static void strandForces(Strand *s) {
 
 		Fstack(&s->Bs[i], &s->Bs[i-1], 1);
 
-		Fangle(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_5S_A);
-		Fangle(&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
-		Fangle(&s->Ps[i-1], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_3S_A);
-		Fangle(&s->Ss[i-1], &s->Ps[i-1], &s->Ss[ i ], ANGLE_S5_P_3S);
+		FangleP5SB(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ]);
+		Fangle    (&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
+		FangleP3SB(&s->Ps[i-1], &s->Ss[ i ], &s->Bs[ i ]);
+		Fangle    (&s->Ss[i-1], &s->Ps[i-1], &s->Ss[ i ], ANGLE_S5_P_3S);
 
 		FdihedralBS3P5S(&s->Bs[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1]);
 		FdihedralS3P5SB(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1]);
@@ -819,19 +870,18 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 	Vb += VbondSB(&s->Ss[0], &s->Bs[0]);
 	Vb += Vbond(&s->Ss[0], &s->Ps[0], BOND_S5_P);
 
-	Va += Vangle(&s->Bs[0], &s->Ss[0], &s->Ps[0], ANGLE_P_5S_A);
+	Va += VangleP5SB(&s->Ps[0], &s->Ss[0], &s->Bs[0]);
 	for (int i = 1; i < s->numMonomers; i++) {
 		Vb += VbondSB(&s->Ss[i], &s->Bs[i]);
 		Vb += Vbond(&s->Ss[i], &s->Ps[i],   BOND_S5_P);
 		Vb += Vbond(&s->Ss[i], &s->Ps[i-1], BOND_S3_P);
 
-		//printf("base %2d and %2d-1:\t",i,i);
 		Vs += Vstack(&s->Bs[i], &s->Bs[i-1], 1);
 
-		Va += Vangle(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_5S_A);
-		Va += Vangle(&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
-		Va += Vangle(&s->Ps[i-1], &s->Ss[ i ], &s->Bs[ i ], ANGLE_P_3S_A);
-		Va += Vangle(&s->Ss[i-1], &s->Ps[i-1], &s->Ss[ i ], ANGLE_S5_P_3S);
+		Va += VangleP5SB(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ]);
+		Va += Vangle    (&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
+		Va += VangleP3SB(&s->Ps[i-1], &s->Ss[ i ], &s->Bs[ i ]);
+		Va += Vangle    (&s->Ss[i-1], &s->Ps[i-1], &s->Ss[ i ], ANGLE_S5_P_3S);
 
 		Vd += VdihedralBS3P5S(&s->Bs[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1]);
 		Vd += VdihedralS3P5SB(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1]);
@@ -841,7 +891,6 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 		if (i < 2) continue;
 		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
 							DIHEDRAL_S3_P_5S3_P);
-		//printf("base %2d and %2d-2:\t",i,i);
 		Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 2);
 	}
 
