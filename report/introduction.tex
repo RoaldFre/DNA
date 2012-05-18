@@ -17,10 +17,10 @@ In 2011, Florescu \& Joyeux \cite{florescu2011thermal} further extended this mod
 
 We want to use this 3SPN model to research the effects of different loop structures (loop size, length of the complementary stem, \ldots) on interesting DNA behaviour, namely re/denaturation (`zipping/unzipping') and hairpin formation (the zipping of a single DNA strand with complementary base pairs, separated by a loop of non-complementary base pairs, as illustrated below).
 \begin{verbatim}
-                                                                X X
-                                                      --- CCTGCX   X
-           ---CCTGCXXXXXXXXGCAGG---	      to           --- GGACGX   X
-                                                                X X
+                                                         X X
+                                               --- CCTGCX   X
+    ---CCTGCXXXXXXXXGCAGG---	      to           --- GGACGX   X
+                                                         X X
 \end{verbatim}We wrote a custom implementation of the 3SPN model with emphasis on performance, using the technique of spacial partitioning \cite{plimpton1995fast} to improve the performance of short ranged interactions.
 
 The model will be used to investigate the scaling dynamics of the zipping and unzipping times of DNA hairpins with varying stem length. The formation of such hairpins in single stranded DNA has been shown to be very relevant for gene expression \cite{oettinger2000hairpins}. It has also been shown that hairpin formation is closely linked to translocation of DNA through nanopores \cite{carlon2011anomalous}. Hence, it is certainly relevant to have a better understanding of hairpin formation.
