@@ -10,16 +10,15 @@ nSteps=$5
 measureTime=$6
 relaxTime=$7
 wait=$8
-seqDescription=$9 # used as directory name
-suffix=${10} # job label when running on cluster
+saltConcentration=$9
+seqDescription=${10} # used as directory name
+suffix=${11} # job label when running on cluster
 
 set -e
 
 main=hairpin # Should be in current working dir, or in $PATH
 timestep=15
-interval=10
-
-saltConcentration=50
+interval=20
 
 fps=10
 #render="-r -R 3 -f $fps"
