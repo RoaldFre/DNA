@@ -1,8 +1,8 @@
-dir="/home/other/roald/clusterdata/hairpin/";
+#dir="/home/other/roald/clusterdata/hairpin/";
+dir="/home/other/roald/hairpinMelt/meltingTemp_dt15_measTime300_relaxTime20_Tstart10_Tstep40_nSteps3_salt50/";
 
 N = 10;
-filesglob = ([dir, "*N", num2str(N), "*/hairpin*"]);
-%filesglob = "/home/other/roald/clusterdata/hairpin/N4_dt15_time1450_measTime150_Tsample20_Tstart20_Tstep40_nSteps3/hairpin_wait0_interval10_allowUnb1_9929.itf11"
+filesglob = ([dir, "*N", num2str(N), "*/meltingTemp*"]);
 
 [avgFraction, errFraction, temperatures] = zippingTemperature(filesglob, N) 
 
