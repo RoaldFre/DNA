@@ -81,6 +81,12 @@
 #define DIHEDRAL_S3_P_5S3_P	(-179.17 * RAD)
 #define DIHEDRAL_A_S3_P_5S	( -22.60 * RAD)
 #define DIHEDRAL_S3_P_5S_A	(  50.69 * RAD)
+#define DIHEDRAL_T_S3_P_5S	( -33.42 * RAD)
+#define DIHEDRAL_S3_P_5S_T	(  54.69 * RAD)
+#define DIHEDRAL_C_S3_P_5S	( -32.72 * RAD)
+#define DIHEDRAL_S3_P_5S_C	(  54.50 * RAD)
+#define DIHEDRAL_G_S3_P_5S	( -22.30 * RAD)
+#define DIHEDRAL_S3_P_5S_G	(  50.66 * RAD)
 
 /* BASE PAIR INTERACTION */
 #define BASE_PAIR_COUPLING_A_T 	1.928e-20
