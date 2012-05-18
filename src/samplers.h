@@ -35,13 +35,42 @@ typedef struct {
 Sampler basePairingSampler(BasePairingConfig *bpc);
 
 typedef struct {
+	/* Temperature at which to perform the time-to-zipping measurement */
+	double zippingTemperature;
+
+	/* Temperature at which to perform the time-to-unzipping measurement */
+	double unzippingTemperature;
+
+	/* A pair is 'bound' if its base pair potential is lower than the 
+	 * given threshold. */
 	double energyThreshold;
-	double confirmationTime; /* Time the molecule has to be fully 
-				    zipped in order for it to be considered 
-				    a stable hairpin */
-	int allowedUnboundBPs; /* Number of unbound basepairs to allow */
+
+	/* Time the molecule has to be fully zipped(unzipped) in order for 
+	 * it to be considered a stable(melted) hairpin */
+	double confirmationTime;
+
+	/* Number of unbound basepairs to allow when determining whether a 
+	 * hairpin is fully zipped */
+	int allowedUnboundBPs; 
+
+	/* Number of bound basepairs to allow when determining whether a 
+	 * hairpin is fully unzipped */
+	int allowedBoundBPs; 
+
+	/* Time to wait after having confirmed zipping before switching the 
+	 * temperature to 'unzippingTemperature' and waiting for the 
+	 * hairpin to unzip. If after this time, the hairin is not fully 
+	 * zipped, we will wait untill it is and only then start sampling. */
+	double zippedRelaxationTime;
 } HairpinFormationSamplerConfig;
 
+/* When this sampler starts, it sets the temperature to the given 
+ * zippingTemperature in the config file and then waits until the hairpin 
+ * in the world gets formed. It then keeps the strand in this hairpin state 
+ * for the given relaxation time, after which the temperature gets set to 
+ * the unzippingTemperature. Then, the time till unzipping again is 
+ * measured.
+ * See the documentation of HairpinFormationSamplerConfig for more info. */
 Sampler hairpinFormationSampler(HairpinFormationSamplerConfig *hfc);
 
 

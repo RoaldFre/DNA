@@ -301,11 +301,16 @@ static int getCorrectlyBoundHairpinBasePairs(Strand *s, double energyThreshold)
 
 typedef struct {
 	enum {
-		WAITING_TO_FORM,
-		WAITING_FOR_CONFIRMATION,
+		WAITING_TO_ZIP,
+		WAITING_FOR_ZIPPING_CONFIRMATION,
+		RELAXATION_IN_ZIPPED_STATE,
+		WAITING_TO_UNZIP,
+		WAITING_FOR_UNZIPPING_CONFIRMATION,
 	} status;
-	double startTime;
-	double confirmationStartTime;
+	double zippingPhaseStartTime;
+	double unzippingPhaseStartTime;
+	double confirmationStartTime; /* Used for both zipping & unzipping */
+	double timeOfConfirmation; /* Used for both zipping & unzipping */
 	HairpinFormationSamplerConfig conf;
 } HairpinFormationSamplerData;
 
@@ -318,10 +323,23 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 	memset(hfd, 0, sizeof(*hfd));
 
 	hfd->conf = *hfc; /* struct copy */
-	hfd->status = WAITING_TO_FORM;
-	hfd->startTime = getTime();
+	hfd->status = WAITING_TO_ZIP;
+	hfd->zippingPhaseStartTime = getTime();
 
-	octaveScalar("sampleStartTime", getTime());
+	/* Set temperature for zipping */
+	config.thermostatTemp = hfc->zippingTemperature;
+
+	/* Dump info */
+	int n = world.strands[0].numMonomers;
+	octaveScalar("sampleStartTime",         getTime());
+	octaveScalar("zippingPhaseStartTime",   getTime());
+	octaveScalar("zippingTemperature",      hfc->zippingTemperature);
+	octaveScalar("unzippingTemperature",    hfc->unzippingTemperature);
+	octaveScalar("allowedUnboundBPs",       hfc->allowedUnboundBPs);
+	octaveScalar("allowedBoundBPs",         hfc->allowedBoundBPs);
+	octaveScalar("numMonomers",             n);
+	octaveScalar("timestep",                config.timeStep);
+	octaveScalar("sampleInterval",          sd->sampleInterval);
 
 	return hfd;
 }
@@ -334,50 +352,104 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 	int correctlyBound = getCorrectlyBoundHairpinBasePairs(
 				&world.strands[0], hfc->energyThreshold);
 	int n = world.strands[0].numMonomers;
-	int requiredBounds = n/2 - hfc->allowedUnboundBPs;
+	int requiredBounds = n/2 - hfc->allowedUnboundBPs; /* for zipping */
+	int allowedBounds = hfc->allowedBoundBPs; /* for unzipping */
 
 	if(sd->string != NULL)
 		snprintf(sd->string, sd->strBufSize,
-				"Correct hairpin BPs: %d, required: %d",
-				correctlyBound, requiredBounds);
+				"Correct hairpin BPs: %d, thresholds: %d and %d",
+				correctlyBound, allowedBounds, requiredBounds);
 
 	double time = getTime();
 
 	switch (hfd->status) {
-	case WAITING_TO_FORM:
-		if (correctlyBound >= requiredBounds) {
-			hfd->confirmationStartTime = time;
-			hfd->status = WAITING_FOR_CONFIRMATION;
-			octaveComment("Reached binding threshold of %d base "
-					"pairs at %e after a time %e\n",
-					requiredBounds, time, time - hfd->startTime);
-		}
-		break;
-	case WAITING_FOR_CONFIRMATION:
+	case WAITING_TO_ZIP:
+		octaveComment("[waiting to zip] %e %d", time, correctlyBound);
+		if (correctlyBound < requiredBounds)
+			break; /* Keep waiting */
+		
+		/* We have detected initial zipping! */
+		hfd->confirmationStartTime = time;
+		hfd->status = WAITING_FOR_ZIPPING_CONFIRMATION;
+		octaveComment("Reached zipping binding threshold of %d base "
+				"pairs at %e after a time %e", requiredBounds,
+				time, time - hfd->zippingPhaseStartTime);
+		/* Intentional fall through */
+	case WAITING_FOR_ZIPPING_CONFIRMATION:
+		octaveComment("[waiting to zip] %e %d", time, correctlyBound);
 		if (correctlyBound < requiredBounds) {
 			/* It was a dud! */
-			hfd->status = WAITING_TO_FORM;
-			octaveComment("Could not confirm, waiting to form "
-					"again at %e\n", time);
+			hfd->status = WAITING_TO_ZIP;
+			octaveComment("Could not confirm zipping, waiting to "
+					"zip again at %e", time);
+			break;
+		}
+		if (time - hfd->confirmationStartTime
+						< hfc->confirmationTime)
+			break; /* Need to wait for confirmation */
+
+		/* We have zipping confirmation! */
+		double timeTillZipping = time - hfd->zippingPhaseStartTime
+						- hfc->confirmationTime;
+		octaveComment("Confirmed zipping at %e", time);
+		octaveScalar("timeTillZipping", timeTillZipping);
+		octaveComment("Starting relaxation phase in zipped state "
+				"at %e", time);
+		hfd->timeOfConfirmation = time;
+		hfd->status = RELAXATION_IN_ZIPPED_STATE;
+		/* Intentional fall through */
+	case RELAXATION_IN_ZIPPED_STATE:
+		octaveComment("[zipped relaxation] %e %d", time, correctlyBound);
+		if (time - hfd->timeOfConfirmation < hfc->zippedRelaxationTime)
+			break; /* Relax further */
+		/* End of relaxation phase. Go to WAITING_TO_UNZIP if we 
+		 * are still zipped, otherwise, wait until we are zipped 
+		 * again! */
+		if (correctlyBound < requiredBounds) {
+			/* Not zipped! */
+			octaveComment("Relaxation in zipped state: passed "
+					"zippedRelaxationTime but not zipped "
+					"anymore at: %e -- total relax time: %e",
+					time, time - hfd->timeOfConfirmation);
+			break; /* Wait to fully zip again */
+		}
+
+		/* We are still zipped! Go to next phase. */
+		config.thermostatTemp = hfc->unzippingTemperature;
+		octaveScalar("unzippingPhaseStartTime", time);
+		hfd->unzippingPhaseStartTime = time;
+		hfd->status = WAITING_TO_UNZIP;
+		break;
+	case WAITING_TO_UNZIP:
+		octaveComment("[waiting to unzip] %e %d", time, correctlyBound);
+		if (correctlyBound > allowedBounds)
+			break;
+
+		/* We have detected initial unzipping! */
+		hfd->confirmationStartTime = time;
+		hfd->status = WAITING_FOR_UNZIPPING_CONFIRMATION;
+		octaveComment("Reached unzipping binding threshold of %d base "
+				"pairs at %e after a time %e", allowedBounds,
+				time, time - hfd->unzippingPhaseStartTime);
+		/* Intentional fall through */
+	case WAITING_FOR_UNZIPPING_CONFIRMATION:
+		octaveComment("[waiting to unzip] %e %d", time, correctlyBound);
+		if (correctlyBound > allowedBounds) {
+			/* It was a dud! */
+			hfd->status = WAITING_TO_UNZIP;
+			octaveComment("Could not confirm unzipping, waiting "
+					"to unzip again at %e", time);
 			break;
 		}
 		if (time - hfd->confirmationStartTime
 						< hfc->confirmationTime)
 			break; /* need to wait for confirmation */
 
-		/* We have confirmation! */
-		octaveComment("Confirmed at %e after a time since initial "
-				"threshold %e\n", time,
-				time - hfd->startTime - hfc->confirmationTime);
-
-		octaveScalar("timeTillZipping",
-				time - hfd->startTime - hfc->confirmationTime);
-		octaveScalar("timeAtZipping",
-				time - hfc->confirmationTime);
-		octaveScalar("temperature",       config.thermostatTemp);
-		octaveScalar("allowedUnboundBPs", hfc->allowedUnboundBPs);
-		octaveScalar("numMonomers",       n);
-		octaveScalar("timestep",          config.timeStep);
+		/* We have unzipping confirmation! */
+		double timeTillUnzipping = time - hfd->unzippingPhaseStartTime
+						- hfc->confirmationTime;
+		octaveComment("Confirmed unzipping at %e", time);
+		octaveScalar("timeTillUnzipping", timeTillUnzipping);
 
 		octaveComment("Successful end! :-)");
 		return SAMPLER_STOP;
@@ -409,7 +481,6 @@ typedef struct {
 		WAITING_TO_RELAX,
 		MEASURING,
 	} status;
-	double startTime;
 	double relaxStartTime;
 	double measureStartTime;
 	int measureIteration;
@@ -427,9 +498,8 @@ static void* hairpinMeltingTempStart(SamplerData *sd, void *conf)
 	memset(hmtd, 0, sizeof(*hmtd));
 
 	hmtd->conf = *hmtc; /* struct copy */
-	hmtd->status = WAITING_TO_FORM;
+	hmtd->status = START_RELAXATION;
 	hmtd->currentStep = 0;
-	hmtd->startTime = getTime();
 
 	/* Set this once here, so all steps have the exact same number of 
 	 * iterations. It's a PITA to do data processing otherwise. */
@@ -447,6 +517,7 @@ static void* hairpinMeltingTempStart(SamplerData *sd, void *conf)
 	octaveScalar("measureTime",       hmtc->measureTime);
 	octaveScalar("numMonomers",       n);
 	octaveScalar("timestep",          config.timeStep);
+	octaveScalar("sampleInterval",    sd->sampleInterval);
 
 	octaveMatrixHeader("temperatures", hmtc->numSteps, 1);
 	for (int i = 0; i < hmtc->numSteps; i++)
@@ -463,7 +534,7 @@ static void* hairpinMeltingTempStart(SamplerData *sd, void *conf)
 		octaveComment("   firstBasePair(tn)  firstBasePair(t2)  ...  firstBasePair(tn) ]");
 		octaveComment("Each such 2D matix i is measured with the corresponding");
 		octaveComment("temperature in the array 'temperatures': temperatures(i).");
-		octave3DMatrixHeader("data",
+		octave3DMatrixHeader("hairpinState",
 				2 + n/2,
 				hmtd->numMeasureIterations,
 				hmtc->numSteps);
@@ -507,8 +578,8 @@ static SamplerSignal hairpinMeltingTempSample(SamplerData *sd, void *state)
 		if (hmtd->measureIteration > hmtd->numMeasureIterations) {
 			/* End of this measurement run */
 			hmtd->averageBPsPerStep[hmtd->currentStep] = 
-					hmtd->accumulatedBoundBasePairs 
-						/ hmtd->numMeasureIterations;
+				((double) hmtd->accumulatedBoundBasePairs)
+					/ (double) hmtd->numMeasureIterations;
 
 			hmtd->currentStep++;
 			if (hmtd->currentStep >= hmtc->numSteps) {
@@ -530,22 +601,25 @@ static SamplerSignal hairpinMeltingTempSample(SamplerData *sd, void *state)
 		/* Not at the end of this step yet: just sample */
 		hmtd->accumulatedBoundBasePairs += correctlyBound;
 		if (hmtc->verbose) {
-			printf("%e\n%d\n", time, correctlyBound);
-			/* print (half of) the config */
+			printf("%e %d\t", time, correctlyBound);
+			/* print (half of) the hairpin config */
 			int n = world.strands[0].numMonomers;
 			for (int i = 0; i < n/2; i++) {
 				int j = n - 1 - i;
 				double V = VbasePair(&world.strands[0].Bs[i],
 						     &world.strands[0].Bs[j]);
 				if (V < hmtc->energyThreshold) {
-					printf("1\n");
+					printf("1 ");
 				} else {
-					printf("0\n");
+					printf("0 ");
 				}
 			}
 			printf("\n");
 		}
 		break;
+	default:
+		fprintf(stderr, "Unknown status in hairpinMeltingTempSample!\n");
+		assert(false); return SAMPLER_ERROR;
 	}
 	return SAMPLER_OK;
 }
