@@ -339,6 +339,7 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 	octaveScalar("allowedBoundBPs",         hfc->allowedBoundBPs);
 	octaveScalar("numMonomers",             n);
 	octaveScalar("timestep",                config.timeStep);
+	octaveScalar("sampleInterval",          sd->sampleInterval);
 
 	return hfd;
 }
@@ -363,6 +364,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 
 	switch (hfd->status) {
 	case WAITING_TO_ZIP:
+		octaveComment("[waiting to zip] %e %d", time, correctlyBound);
 		if (correctlyBound < requiredBounds)
 			break; /* Keep waiting */
 		
@@ -370,15 +372,16 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		hfd->confirmationStartTime = time;
 		hfd->status = WAITING_FOR_ZIPPING_CONFIRMATION;
 		octaveComment("Reached zipping binding threshold of %d base "
-				"pairs at %e after a time %e\n", requiredBounds,
+				"pairs at %e after a time %e", requiredBounds,
 				time, time - hfd->zippingPhaseStartTime);
 		/* Intentional fall through */
 	case WAITING_FOR_ZIPPING_CONFIRMATION:
+		octaveComment("[waiting to zip] %e %d", time, correctlyBound);
 		if (correctlyBound < requiredBounds) {
 			/* It was a dud! */
 			hfd->status = WAITING_TO_ZIP;
 			octaveComment("Could not confirm zipping, waiting to "
-					"zip again at %e\n", time);
+					"zip again at %e", time);
 			break;
 		}
 		if (time - hfd->confirmationStartTime
@@ -388,14 +391,15 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		/* We have zipping confirmation! */
 		double timeTillZipping = time - hfd->zippingPhaseStartTime
 						- hfc->confirmationTime;
-		octaveComment("Confirmed zipping at %e\n", time);
+		octaveComment("Confirmed zipping at %e", time);
 		octaveScalar("timeTillZipping", timeTillZipping);
 		octaveComment("Starting relaxation phase in zipped state "
-				"at %e\n", time);
+				"at %e", time);
 		hfd->timeOfConfirmation = time;
 		hfd->status = RELAXATION_IN_ZIPPED_STATE;
 		/* Intentional fall through */
 	case RELAXATION_IN_ZIPPED_STATE:
+		octaveComment("[zipped relaxation] %e %d", time, correctlyBound);
 		if (time - hfd->timeOfConfirmation < hfc->zippedRelaxationTime)
 			break; /* Relax further */
 		/* End of relaxation phase. Go to WAITING_TO_UNZIP if we 
@@ -405,7 +409,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 			/* Not zipped! */
 			octaveComment("Relaxation in zipped state: passed "
 					"zippedRelaxationTime but not zipped "
-					"anymore at: %e -- total relax time: %e\n",
+					"anymore at: %e -- total relax time: %e",
 					time, time - hfd->timeOfConfirmation);
 			break; /* Wait to fully zip again */
 		}
@@ -417,6 +421,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		hfd->status = WAITING_TO_UNZIP;
 		break;
 	case WAITING_TO_UNZIP:
+		octaveComment("[waiting to unzip] %e %d", time, correctlyBound);
 		if (correctlyBound > allowedBounds)
 			break;
 
@@ -424,15 +429,16 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		hfd->confirmationStartTime = time;
 		hfd->status = WAITING_FOR_UNZIPPING_CONFIRMATION;
 		octaveComment("Reached unzipping binding threshold of %d base "
-				"pairs at %e after a time %e\n", allowedBounds,
+				"pairs at %e after a time %e", allowedBounds,
 				time, time - hfd->unzippingPhaseStartTime);
 		/* Intentional fall through */
 	case WAITING_FOR_UNZIPPING_CONFIRMATION:
-		if (correctlyBound > requiredBounds) {
+		octaveComment("[waiting to unzip] %e %d", time, correctlyBound);
+		if (correctlyBound > allowedBounds) {
 			/* It was a dud! */
 			hfd->status = WAITING_TO_UNZIP;
 			octaveComment("Could not confirm unzipping, waiting "
-					"to unzip again at %e\n", time);
+					"to unzip again at %e", time);
 			break;
 		}
 		if (time - hfd->confirmationStartTime
@@ -442,7 +448,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		/* We have unzipping confirmation! */
 		double timeTillUnzipping = time - hfd->unzippingPhaseStartTime
 						- hfc->confirmationTime;
-		octaveComment("Confirmed unzipping at %e\n", time);
+		octaveComment("Confirmed unzipping at %e", time);
 		octaveScalar("timeTillUnzipping", timeTillUnzipping);
 
 		octaveComment("Successful end! :-)");
@@ -511,6 +517,7 @@ static void* hairpinMeltingTempStart(SamplerData *sd, void *conf)
 	octaveScalar("measureTime",       hmtc->measureTime);
 	octaveScalar("numMonomers",       n);
 	octaveScalar("timestep",          config.timeStep);
+	octaveScalar("sampleInterval",    sd->sampleInterval);
 
 	octaveMatrixHeader("temperatures", hmtc->numSteps, 1);
 	for (int i = 0; i < hmtc->numSteps; i++)

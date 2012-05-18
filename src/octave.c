@@ -12,7 +12,6 @@ void octaveComment(const char *fmt, ...)
 	vprintf(fmt, args);
 	va_end(args);
 	printf("\n");
-
 }
 
 void octaveScalar(const char *name, double value)
