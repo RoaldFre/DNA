@@ -17,7 +17,8 @@
 #define NANOSECONDS	1e-9
 #define PICOSECONDS	1e-12
 #define FEMTOSECONDS	1e-15
-#define EPSILON		1.81e-21 	/* 0.26 kcal/mol = 1.81e-21 J/particle */
+#define KCAL_PER_MOL	6.947695e-21	/* kcal/mol in Joule(/particle) */
+#define EPSILON		(0.26 * KCAL_PER_MOL)
 #define ELECTRON_CHARGE	1.602177e-19
 #define ENERGY_FACTOR	(1/ELECTRON_CHARGE) /* Energies in electron volt */
 #define CELSIUS_TO_KELVIN 273.15
@@ -95,10 +96,12 @@
 #define DIHEDRAL_S3_P_5S_G	(  50.66 * DEGREE)
 
 /* BASE PAIR INTERACTION */
-#define BASE_PAIR_COUPLING_A_T 	1.928e-20
-#define BASE_PAIR_COUPLING_G_C	2.896e-20
-#define BASE_PAIR_DISTANCE_A_T	(2.9002*A)
-#define BASE_PAIR_DISTANCE_G_C	(2.8694*A)
+#define BASE_PAIR_COUPLING_A_T (2.77 * KCAL_PER_MOL) /* Knotts */
+#define BASE_PAIR_COUPLING_A_T (4.16 * KCAL_PER_MOL) /* Knotts */
+//#define BASE_PAIR_COUPLING_A_T (3.90 * KCAL_PER_MOL) /* Florescu & Joyeux */
+//#define BASE_PAIR_COUPLING_A_T (4.37 * KCAL_PER_MOL) /* Florescu & Joyeux */
+#define BASE_PAIR_DISTANCE_A_T (2.9002*A)
+#define BASE_PAIR_DISTANCE_G_C (2.8694*A)
 
 /* STACKING INTERACTION */
 #define STACK_COUPLING	EPSILON
