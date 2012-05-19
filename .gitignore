@@ -2,6 +2,5 @@
 octave-core
 core
 tags
-*.aux
 latex/images
 data.txt

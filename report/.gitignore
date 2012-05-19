@@ -1,1 +1,7 @@
 report.pdf
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.aux
