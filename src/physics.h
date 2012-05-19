@@ -9,7 +9,7 @@
 
 
 /* Units */
-#define RAD		(M_PI / 180)	/* Radian */
+#define DEGREE		(M_PI / 180)	/* Convert to radians */
 #define A		(1e-10)		/* Angstrom */
 #define AU		(1.660539e-27)	/* Atomic unit */
 #define MILLISECONDS	1e-3
@@ -28,14 +28,14 @@
 /* Vertical spacing between layers */
 #define HELIX_DELTA_Z   (3.38 * A)
 /* Twist at each consecutive layer */
-#define HELIX_DELTA_PHI (36 * RAD)
+#define HELIX_DELTA_PHI (36 * DEGREE)
 /* Angles */
-#define P_PHI (94.038 * RAD)
-#define S_PHI (70.197 * RAD)
-#define A_PHI (41.905 * RAD)
-#define T_PHI (86.119 * RAD)
-#define C_PHI (85.027 * RAD)
-#define G_PHI (40.691 * RAD)
+#define P_PHI (94.038 * DEGREE)
+#define S_PHI (70.197 * DEGREE)
+#define A_PHI (41.905 * DEGREE)
+#define T_PHI (86.119 * DEGREE)
+#define C_PHI (85.027 * DEGREE)
+#define G_PHI (40.691 * DEGREE)
 /* Radial distance */
 #define P_R (8.916 * A)
 #define S_R (6.981 * A)
@@ -59,7 +59,7 @@
 #define G_M (150.1 * AU)
 
 /* BOND INTERACTION */
-#define BOND_K1   ( 10e20 * EPSILON) /* in J/A^2 */
+#define BOND_K1   (  1e20 * EPSILON) /* in J/A^2 */
 #define BOND_K2   (100e20 * EPSILON) /* in J/A^4 */
 #define BOND_S5_P (3.899*A)
 #define BOND_S3_P (3.559*A)
@@ -70,23 +70,29 @@
 
 /* ANGLE INTERACTION */
 #define ANGLE_COUPLING	(400 * EPSILON) /* per radian^2 */
-#define ANGLE_S5_P_3S	( 94.49 * RAD)
-#define ANGLE_P_5S3_P	(120.15 * RAD)
-#define ANGLE_P_5S_A	(113.13 * RAD)
-#define ANGLE_P_3S_A	(108.38 * RAD)
+#define ANGLE_S5_P_3S	( 94.49 * DEGREE)
+#define ANGLE_P_5S3_P	(120.15 * DEGREE)
+#define ANGLE_P_5S_A	(113.13 * DEGREE)
+#define ANGLE_P_3S_A	(108.38 * DEGREE)
+#define ANGLE_P_5S_T	(102.79 * DEGREE)
+#define ANGLE_P_3S_T	(112.72 * DEGREE)
+#define ANGLE_P_5S_C	(103.49 * DEGREE)
+#define ANGLE_P_3S_C	(112.39 * DEGREE)
+#define ANGLE_P_5S_G	(113.52 * DEGREE)
+#define ANGLE_P_3S_G	(108.12 * DEGREE)
 
 /* DIHEDRAL INTERACTION */
 #define DIHEDRAL_COUPLING	(4 * EPSILON)
-#define DIHEDRAL_P_5S3_P_5S	(-154.80 * RAD)
-#define DIHEDRAL_S3_P_5S3_P	(-179.17 * RAD)
-#define DIHEDRAL_A_S3_P_5S	( -22.60 * RAD)
-#define DIHEDRAL_S3_P_5S_A	(  50.69 * RAD)
-#define DIHEDRAL_T_S3_P_5S	( -33.42 * RAD)
-#define DIHEDRAL_S3_P_5S_T	(  54.69 * RAD)
-#define DIHEDRAL_C_S3_P_5S	( -32.72 * RAD)
-#define DIHEDRAL_S3_P_5S_C	(  54.50 * RAD)
-#define DIHEDRAL_G_S3_P_5S	( -22.30 * RAD)
-#define DIHEDRAL_S3_P_5S_G	(  50.66 * RAD)
+#define DIHEDRAL_P_5S3_P_5S	(-154.80 * DEGREE)
+#define DIHEDRAL_S3_P_5S3_P	(-179.17 * DEGREE)
+#define DIHEDRAL_A_S3_P_5S	( -22.60 * DEGREE)
+#define DIHEDRAL_S3_P_5S_A	(  50.69 * DEGREE)
+#define DIHEDRAL_T_S3_P_5S	( -33.42 * DEGREE)
+#define DIHEDRAL_S3_P_5S_T	(  54.69 * DEGREE)
+#define DIHEDRAL_C_S3_P_5S	( -32.72 * DEGREE)
+#define DIHEDRAL_S3_P_5S_C	(  54.50 * DEGREE)
+#define DIHEDRAL_G_S3_P_5S	( -22.30 * DEGREE)
+#define DIHEDRAL_S3_P_5S_G	(  50.66 * DEGREE)
 
 /* BASE PAIR INTERACTION */
 #define BASE_PAIR_COUPLING_A_T 	1.928e-20
