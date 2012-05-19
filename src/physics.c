@@ -788,7 +788,10 @@ static void mutiallyExclusivePairForces(Particle *p1, Particle *p2)
 	/* Nonbonded pair interactions are mutually exclusive. See Knotts.
 	 * Note that this screws up energy conservation!! */
 	if (interactions.enableBond && isBondedBasePair(p1, p2))
-		FbasePair(p1, p2);
+		FbasePair(p1, p2); /* TODO MUST BE MUTUALLY EXCLUSIVE WITH 
+				      STACKING, that is: two base pairs 
+				      cannot form a bp bond if they are 
+				      adjacent on the same strand! */
 	else if (interactions.enableCoulomb && isChargedPair(p1->type, p2->type))
 		FCoulomb(p1, p2);
 	else
