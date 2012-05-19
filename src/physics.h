@@ -59,7 +59,7 @@
 #define G_M (150.1 * AU)
 
 /* BOND INTERACTION */
-#define BOND_K1   ( 10e20 * EPSILON) /* in J/A^2 */
+#define BOND_K1   (  1e20 * EPSILON) /* in J/A^2 */
 #define BOND_K2   (100e20 * EPSILON) /* in J/A^4 */
 #define BOND_S5_P (3.899*A)
 #define BOND_S3_P (3.559*A)
