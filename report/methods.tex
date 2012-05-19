@@ -59,17 +59,21 @@ V_\text{total} = V_\text{bond} + V_\text{angle} + V_\text{dihedral} + V_\text{st
 \end{equation}
 The strengths of the individual iteractions will be expressed in terms of the energy unit $\varepsilon$, taken to be $0.26$\,kcal/mol. The potential energies are taken mainly from the potential terms as defined by Florescu \& Joyeux \cite{florescu2011thermal}, and are an improvement over the original terms by Knotts \etal \cite{knotts2007coarse}. However, in the end they are very much alike and interchangeable; and we opt for the conventions of the Florescu paper primarily because they are more clearly formulated. We will now sketch the specific potential energy terms one by one, but first we define a few constants regularly used in the potentials.
 
-\begin{table}[hbt]\begin{center}
-\begin{tabular}{llll}
-Parameter & Value \qquad \qquad \qquad \qquad & Parameter & Value\\
-\hline
-$\varepsilon$ & $1.81\times10^{-21}$ Joule/particle\qquad\qquad & $k_\phi$ & $4\varepsilon$ \\
-$k_1$ & $10^{20}\varepsilon$ in Joule/(\AA)$^2$ & $\varepsilon_\text{GC}$ & $16\varepsilon$\\
+\begin{table}[hbt]
+\begin{center}
+\label{couplingConstants}
+\caption{Coupling constants for the various potentials. The basic energy unit $\varepsilon$ is equal to $0.26$\,kcal/mol, or $1.81 \times 10^{-21}$\,J.}
 
-$k_2$ & $100\times10^{20}\varepsilon$ in Joule/(\AA)$^2$ & $\varepsilon_\text{AT}$ & $4\frac{2}{3} \varepsilon_\text{GC}$ \\
-$k_\theta$ & $400\varepsilon$ per radian$^2$ & & \\
+\begin{tabular}{cc||cc}
+Parameter & Value & Parameter & Value\\\hline
+$k_1$ & $\varepsilon$ per $\Angstrom^2$ &
+	$k_\phi$ & $4\varepsilon$ \\
+$k_2$ & $100\varepsilon$ per $\Angstrom^2$ &
+	$\varepsilon_\text{GC}$ & $4\varepsilon$\\
+$k_\theta$ & $400\varepsilon$ per (radian)$^2$ &
+	$\varepsilon_\text{AT}$ & $\frac{2}{3} \varepsilon_\text{GC}$ \\
 \end{tabular}
-\caption{Regularly used energy constants for the potential energies, used by Knotts \etal \cite{knotts2007coarse}.}\end{center}
+\end{center}
 \end{table}
 
 \paragraph{Bond potential} The typical expression for the intramolecular bonds between molecules in the same DNA strand is a sum over all bonds of a quadratic and a quartic potential term
@@ -90,19 +94,28 @@ V_\text{dihedral} =  \sum_i^{N_\text{dihedral}} k_\phi \left[ 1 - \cos (\phi_i -
 \end{equation}
 with $\phi_{0_i}$ the equilibrium dihedral angle from the DNA B-form definitions, and constant $k_\phi = 4\varepsilon$.
 
-\paragraph{Stacking potential} The stacking potential is a Leonard-Jones type potential describing the base stacking phenomena and regulates the rigidity of the DNA backbone,
+\paragraph{Stacking potential} The stacking potential is a Leonard-Jones type potential describing the intra-strand base stacking phenomena. It helps regulate the rigidity of the DNA backbone:
 \begin{equation}
-V_\text{stack} =  \sum_{i<j}^{N_\text{stack}} \varepsilon \left[ \left(\frac{r^0_{ij}}{r_{ij}} \right)^{12} - 2\left(\frac{r^0_{ij}}{r_{ij}} \right)^{6} + 1\right]
+V_\text{stack}
+=  \sum_{\substack{\text{stack pairs}\\ij}}
+\varepsilon \left[ \left(\frac{d^\text{stck}_{ij}}{r_{ij}} \right)^{12} - 2\left(\frac{d_{ij}^\text{stck}}{r_{ij}} \right)^{6} \right]
 \end{equation}
-modeled with an effective cut-off distance of $9$\,\Angstrom because of over which . It is important to observe that this induces not only a stacking interaction between the $i$th and $(i+1)$th base, but also between the $i$th and $(i+2)$th base. (Hence the sum over all stackings $i$ and $j$, with $i < j$ to avoid double counting). $\sigma_{ij}$ depends on the type of bases for which the stacking is calculated.
+The sum over stack pairs runs between the $i$th and $(i+1)$th base, but also between the $i$th and $(i+2)$th base of the same strand.
+This corresponds to an (off latice) G$\bar{\text o}$-type native contact scheme\cite{hoangcieplak, cieplak2003folding} with a cut-off distance of $9$\,\Angstrom.
+
+The equilibrium distances $d_{ij}^\text{stck}$ are determined from the B isoform data in table \ref{dnaStructureData}.
+
 
 \paragraph{Basepairing potential} A hydrogen bonding interaction between two complimentary bases (zero if not complementary) is written as
 \begin{equation}
-V_\text{bp} =  \sum_{\text{base pairs}}^{N_\text{bp}} \varepsilon_{\text{bp}_i} \left[ 5\left(\frac{r^0_{\text{bp}_i}}{r_{ij}} \right)^{12} - 6\left(\frac{r^0_{\text{bp}_i}}{r_{ij}} \right)^{10} + 1\right]
+V_\text{bp}
+= \sum_{\substack{\text{base pairs}\\ ij}} \varepsilon^\text{bp}_{ij} \left[
+	5\left(\frac{d_{ij}^\text{bp}}{r_{ij}} \right)^{12}
+	- 6\left(\frac{d_{ij}^\text{bp}}{r_{ij}} \right)^{10} \right]
 \end{equation}
-where we have $r^0_{bp}$ depending on the type of complimentary basepair and coupling constants $\varepsilon_\text{GC}$ and $\varepsilon_\text{AT}$.
+where the equilibrium distances $d^\text{bp}_{ij}$ and coupling constants $\varepsilon^\text{bp}_{ij}$ depend on the type of complementary base pair. The explicit values are given in table \ref{couplingConstants}.
 
-\paragraph{Exclusion potential} In the original and follow-up versions of the 3SPN model (Knotts \etal \cite{knotts2007coarse}, Sambriski \etal \cite{sambriski2009mesoscale}) a Leonard-Jones type potential was used to describe excluded volume interactions between mismatched bases (yielding $\sigma_0 = 1.0 \times 2^{-1/6}$\,\Angstrom) and other molecules (even on other strands) that do not interact via the Coulomb or basepairing potential (yielding $r_0 = 6.86 \times 2^{-1/6}$\,\Angstrom):
+\paragraph{Exclusion potential} In the original and follow-up versions of the 3SPN model (Knotts \etal \cite{knotts2007coarse}, Sambriski \etal \cite{sambriski2009mesoscale}) a Leonard-Jones type potential was used to describe excluded volume interactions between mismatched bases (yielding $\sigma_0 = 1.0 \times 2^{-1/6}$\,\Angstrom) and other molecules (even on other strands) that do not interact via the Coulomb or base pairing potential (yielding $r_0 = 6.86 \times 2^{-1/6}$\,\Angstrom):
 \begin{equation}
 V_\text{excl} =  \sum_{i<j}^{N_\text{ex}}\begin{cases} 4\varepsilon \left[ \left(\frac{r_{0}}{r_{ij}} \right)^{12} - \left(\frac{r_{0}}{r_{ij}} \right)^{6} \right] + \varepsilon \qquad &\text{if }r_{ij} < d_\text{cut}, \\ 0 \qquad &\text{if }r_{ij} \geq d_\text{cut} \end{cases} \end{equation}
 where a cut-off value of $d_\text{cut} = 5.86$\,\Angstrom\ is imposed. This will make sure two strands do not cross each other when simulating DNA hybridisation, and also that a single strand does not cross itself during a hairpin formation simulation. Florescu \& Joyeux \cite{florescu2011thermal} report that the exclusion potential is not necessary when simulating long double stranded DNA helices; we decided however to keep this potential for the above reasons. The cut-off value of $5.86$ \Angstrom\ we use, however, is a little bit smaller than the original value in Knotts and Sambriski \cite{knotts2007coarse, sambriski2009mesoscale} where $6.86$ \Angstrom\ is used; we find that by decreasing the cut-off value slightly we massively improve the (local) stability of the system without losing the crucial advantages of the exclusion potential.
@@ -122,7 +135,7 @@ The interactions are defined so that two molecules are excluded from the nonbond
 \begin{table}[htb]
 \begin{tabular}{lccc}
 \hline
-Bond&$d_0$ (\AA)&Bond Angle& $\theta_0$ (degree) \\
+Bond&$d_0$ (\Angstrom)&Bond Angle& $\theta_0$ (degree) \\
 \hline
 S(5')-P & 3.899 & S(5')-P-(3')S & 94.49\\
 S(3')-P & 3.559 & P-(5')S(3')-P & 120.15 \\
@@ -136,7 +149,7 @@ S-Gb & 6.392 & P-(3')S-Tb & 112.72\\
 && P-(3')S-Gb & 108.12\\
 & & & \\
 \hline
-Dihedral Angle & $\phi_0$ (degree) & Nonbonded & Length (\AA) \\
+Dihedral Angle & $\phi_0$ (degree) & Nonbonded & Length (\Angstrom) \\
 \hline
 P-(5')S(3')-P-(5')S & -154.80 & $r^0_{ij}$ & Interaction specific \\
 S(3')-P-(5')S(3')-P & -179.17 & $r^0_{\text{bp}_\text{AT}}$ & 2.9002 \\
