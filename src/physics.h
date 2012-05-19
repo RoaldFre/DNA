@@ -97,9 +97,9 @@
 
 /* BASE PAIR INTERACTION */
 #define BASE_PAIR_COUPLING_A_T (2.77 * KCAL_PER_MOL) /* Knotts */
-#define BASE_PAIR_COUPLING_A_T (4.16 * KCAL_PER_MOL) /* Knotts */
+#define BASE_PAIR_COUPLING_G_C (4.16 * KCAL_PER_MOL) /* Knotts */
 //#define BASE_PAIR_COUPLING_A_T (3.90 * KCAL_PER_MOL) /* Florescu & Joyeux */
-//#define BASE_PAIR_COUPLING_A_T (4.37 * KCAL_PER_MOL) /* Florescu & Joyeux */
+//#define BASE_PAIR_COUPLING_G_C (4.37 * KCAL_PER_MOL) /* Florescu & Joyeux */
 #define BASE_PAIR_DISTANCE_A_T (2.9002*A)
 #define BASE_PAIR_DISTANCE_G_C (2.8694*A)
 
