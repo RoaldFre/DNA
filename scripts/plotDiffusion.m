@@ -18,7 +18,7 @@ end
 data = load(datafilename);
 data = data.data;
 
-nRuns = size(data)(3);
+nRuns = size(data)(3)
 
 time = data(:,1,1);
 dt = time(3) - time(2); %XXX HARDCODED FOR SAMPLING AT CONSTANT INTERVAL!
@@ -53,10 +53,34 @@ else
 	Derr = norm([statisticalErrBecauseOfStdsInD, statisticalErrBecauseOfIndividualStds]);
 end
 
-fit = 6*D*ts;
+tsFit = [min(ts), max(ts)]
+fit = 6*D*tsFit;
+
+
+stride = 200;
+for i = 1 : numel(ts)/stride
+	tsCompressed(i) = ts(i * stride);
+	sqDisplacementCompressed(i, :) = sqDisplacement(i * stride, :);
+end
 
 clf; hold on;
-plot(ts, sqDisplacement)
-plot(ts, fit, "k", "linewidth", 4);
-plot(ts, meanSqDisplacement, "g", "linewidth", 4)
+plot(tsCompressed * 1e6, sqDisplacementCompressed * 1e15)
+%plot(ts * 1e6, meanSqDisplacement * 1e15, "g", "linewidth", 4)
+plot(tsFit * 1e6, fit * 1e15, "k", "linewidth", 4);
 hold off;
+
+
+
+filename  = 'diffusion'
+caption   = 'Diffusion of a 12 monomer single strand of Adenine. Shown are the squared displacements of 45 individual simulations at 300\,K and with friction $\gamma = 5 \times 10^{12}$. The black line is the $6Dt$ mean squared displacement curve for the fitted value of $D = 1.3 \times 10^{-10}$.';
+% XXX caption hardcoded for data/strand_dt10_wait50_time1000_N12_g5e12 dataset! XXX
+
+destdir   = '../report/images';
+relImgDir = 'images'; %relative to where your latex project root directory is
+ylabrule  = '-1.5cm';
+xlab      = 'time ($\mu$s)';
+ylab      = 'squared displacement ($10^{15}$\,m$^2$)';
+width     = '1000';
+height    = '800';
+
+makeGraph(filename,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
