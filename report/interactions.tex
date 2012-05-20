@@ -85,6 +85,8 @@ A hydrogen bonding interaction between two complimentary bases is modelled by
 \end{equation}
 where the equilibrium distances $d^\text{bp}_i$ and coupling constants $\varepsilon^\text{bp}_i$ depend on the type base pair. The explicit values are given in table \ref{couplingConstants}. No interaction is assumed between non-complementary base pairs.
 
+Following Florescu \& Joyeux \cite{florescu2011thermal}, we only allow base pairing between the corresponding base on the other strand when simulating dsDNA. Likewise, when simulating hairpins, only interactions between the matching `mirrorred' bases are allowed. This facilitates renaturation and hairpin zipping when we want to simulate the scaling laws thereof. It also avoids the unphysical situation where a single base forms hydrogen bonds with multiple other bases. However, because there are now less potential bindings, the interaction strenghts will need to be increased in order to retain the correct critical temperatures. We used the ajusted strenghts determined in \cite{florescu2011thermal}.
+
 
 \paragraph{Coulombic potential}
 The final potential in our model is the screened electrostatic Coulomb interaction between the charged phosphate groups situated on the backbone of the DNA strands. It is modeled using a Debye-H\"uckel approximation with a Debye length $\kappa_D$ depending on the salt concentration of the environment,
@@ -143,7 +145,7 @@ We chose to truncate the potentials at a distance of $20\,\Angstrom$. After trun
 
 
 \begin{table}[htb]
-\caption{Geometric constants for the potential energy functions as defined above. Important to note is that a phosphate can bind to a sugar at the 5' or the 3' carbon. The table is reproduced from Knotts \etal \cite{knotts2007coarse}, with our own value for \dexcl.}
+\caption{Geometric constants for the potential energy functions as defined above. Important to note is that a phosphate can bind to a sugar at the 5' or the 3' carbon. The table is reproduced from Knotts \etal \cite{knotts2007coarse}, with our own value for \dexcl and following Florescu \& Joyeux for the base pairing strengths \cite{florescu2011thermal}.}
 \begin{center}
 \begin{tabular}{cc@{\qquad}cc}
 \hline
@@ -160,15 +162,15 @@ S--Gb    & 6.392 &        P--(3')S--Tb    & 112.72\\
 &&                        P--(3')S--Gb    & 108.12\\
 & & & \\
 \hline
-Dihedral Angle & $\phi_0$ (degree) & Nonbonded & Length (\Angstrom) \\
+Dihedral Angle & $\phi_0$ (degree) & Nonbonded &\\
 \hline
 P-(5')S(3')-P-(5')S & $-154.80$&   $\dstck$ & Derived from table \ref{geometricConstants} \\
-S(3')-P-(5')S(3')-P & $-179.17$&   & \\  
-Ab-S(3')-P-(5')S &    $ -22.60$&   $\dbp_\text{AT}$ & $2.9002$ \\
-S(3')-P-(5')S-Ab &    $  50.69$&   $\dbp_\text{GC}$ & $2.8694$ \\ 
+S(3')-P-(5')S(3')-P & $-179.17$&   & \\
+Ab-S(3')-P-(5')S &    $ -22.60$&   $\dbp_\text{AT}$ & $3.90$\,kcal/mol \\
+S(3')-P-(5')S-Ab &    $  50.69$&   $\dbp_\text{GC}$ & $4.37$\,kcal/mol \\
 Tb-S(3')-P-(5')S &    $ -33.42$&   & \\
-S(3')-P-(5')S-Tb &    $  54.69$&   $\dexcl$         & $1.0$ (mismatched bases) \\
-Cb-S(3')-P-(5')S &    $ -32.72$&   $\dexcl$         & $5.5$ (otherwise) \\
+S(3')-P-(5')S-Tb &    $  54.69$&   $\dexcl$         & $1.0\,\Angstrom$ (mismatched bases) \\
+Cb-S(3')-P-(5')S &    $ -32.72$&   $\dexcl$         & $5.5\,\Angstrom$ (otherwise) \\
 S(3')-P-(5')S-Cb &    $  54.50$&   & \\
 Gb-S(3')-P-(5')S &    $ -22.30$&   & \\
 S(3')-P-(5')S-Gb &    $  50.66$&   & \\
