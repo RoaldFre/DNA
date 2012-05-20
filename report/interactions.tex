@@ -5,6 +5,41 @@ These potentials are taken taken mainly from the potential terms as defined by F
 
 We will now sketch the specific potential energy terms, one by one.
 
+
+
+\begin{table}[htb]
+\caption{Geometric constants for the potential energy functions as defined above. Important to note is that a phosphate can bind to a sugar at the 5' or the 3' carbon. The table is reproduced from Knotts \etal \cite{knotts2007coarse}, with our own value for \dexcl\ and following Florescu \& Joyeux for the base pairing strengths \cite{florescu2011thermal}.}
+\begin{center}
+\begin{tabular}{cc@{\qquad}cc}
+Bond& $d_0$ (\Angstrom) & Bond Angle&     $\theta_0$ (degree) \\\hline
+S(5')--P & 3.899 &        S(5')--P--(3')S & 94.49\\
+S(3')--P & 3.559 &        P--(5')S(3')--P & 120.15 \\
+S--Ab    & 6.430 &        P--(5')S--Ab    & 113.13\\
+S--Tb    & 4.880 &        P--(3')S--Ab    & 108.38\\
+S--Cb    & 4.921 &        P--(5')S--Tb    & 102.79\\
+S--Gb    & 6.392 &        P--(3')S--Tb    & 112.72\\
+&&                        P--(5')S--Cb    & 103.49\\
+&&                        P--(3')S--Cb    & 112.39\\
+&&                        P--(5')S--Gb    & 113.52\\
+&&                        P--(3')S--Gb    & 108.12\\
+& & & \\
+Dihedral Angle & $\phi_0$ (degree) & Nonbonded & Length (\Angstrom) \\
+\hline
+P-(5')S(3')-P-(5')S & $-154.80$&   $\dstck$ & Derived from table \ref{geometricConstants} \\
+S(3')-P-(5')S(3')-P & $-179.17$&   & \\  
+Ab-S(3')-P-(5')S &    $ -22.60$&   $\dbp_\text{AT}$ & $2.9002$ \\
+S(3')-P-(5')S-Ab &    $  50.69$&   $\dbp_\text{GC}$ & $2.8694$ \\ 
+Tb-S(3')-P-(5')S &    $ -33.42$&   & \\
+S(3')-P-(5')S-Tb &    $  54.69$&   $\dexcl$         & $1.0$ (mismatched bases) \\
+Cb-S(3')-P-(5')S &    $ -32.72$&   $\dexcl$         & $5.5$ (otherwise) \\
+S(3')-P-(5')S-Cb &    $  54.50$&   & \\
+Gb-S(3')-P-(5')S &    $ -22.30$&   & \\
+S(3')-P-(5')S-Gb &    $  50.66$&   & 
+\end{tabular}\label{geometricConstants}
+\end{center}
+\end{table}
+
+
 \begin{table}[hbt]
 \begin{center}
 \caption{Coupling constants for the various potentials. The basic energy unit $\varepsilon$ is equal to $0.26$\,kcal/mol, or $1.81 \times 10^{-21}$\,J.
@@ -22,6 +57,7 @@ $k_\theta$ & $400\varepsilon$ per (radian)$^2$ &
 \end{table}
 
 
+
 \paragraph{Bond potential}
 The intramolecular bonds between connected sites in the same DNA strand is modelled by the potential
 \begin{equation}
@@ -31,7 +67,7 @@ The intramolecular bonds between connected sites in the same DNA strand is model
 	+ k_2 \left(d_i - d_{0_i}\right)^4
 \right],
 \end{equation}
-where $d_i$ is the distance between the sites that constitute the $i$th bond and $d_{0_i}$ is the equilibrium distances for that bonds, as determined by the standard B-form structure of double strand DNA. The explicit values of these equilibrium distances and of the coupling constants $k_1$ and $k_2$ can be found it table \ref{geometricConstants} and \ref{couplingConstants}, respectively.
+where $d_i$ is the distance between the sites that constitute the $i$th bond and $d_{0_i}$ is the equilibrium distances for that bond, as determined by the standard B-form structure of double strand DNA. The explicit values of these equilibrium distances and of the coupling constants $k_1$ and $k_2$ can be found in table \ref{geometricConstants} and \ref{couplingConstants}, respectively.
 
 
 \paragraph{Bond angle potential}
@@ -67,7 +103,7 @@ The stacking potential is a Lennard-Jones type potential describing the intra-st
        	\right],
 \end{equation}
 where $r_i$ is the distance between the bases of the stacking pair. The sum over stack pairs runs between the $i$th and $(i+1)$th base, but also between the $i$th and $(i+2)$th base of the same strand.
-This corresponds to an (off latice) G$\bar{\text o}$-type native contact scheme\cite{hoangcieplak, cieplak2003folding} with a cut-off distance of $9$\,\Angstrom.
+This corresponds to an (off latice) G$\bar{\text o}$-type native contact scheme\cite{hoangcieplak, cieplak2003folding} with a cut-off distance of $9$\,\Angstrom, and is consistent with the previous 3SPN models.
 
 The equilibrium distances $d_{ij}^\text{stck}$ are determined from the B isoform data in table \ref{dnaStructureData}.
 
@@ -88,7 +124,7 @@ Following Florescu \& Joyeux \cite{florescu2011thermal}, we only allow base pair
 
 
 \paragraph{Coulombic potential}
-The final potential in our model is the screened electrostatic Coulomb interaction between the charged phosphate groups situated on the backbone of the DNA strands. It is modeled using a Debye-H\"uckel approximation with a Debye length $\kappa_D$ depending on the salt concentration of the environment,
+The final potential in our model is the screened electrostatic Coulomb interaction between the charged phosphate groups situated on the backbone of the DNA strands. It is modelled using a Debye-H\"uckel approximation with a Debye length $\kappa_D$ depending on the salt concentration of the environment,
 \begin{equation}
 \Vqq
 = \sum_{\substack{\text{phosphate pairs}\\i}}
@@ -134,44 +170,10 @@ In this spirit, we held on to the exclusion interaction. Note that we verified t
 The total interaction is not merely a sum of the individual terms.
 Following Knotts \etal\ \cite{knotts2007coarse}, two sites are excluded from non-bonded interactions (\Vstck, \Vbp, \Vqq, \Vexcl) if they constitute a bond (as per \Vbond).
 
-On top of that, \Vbp, \Vqq\ and \Vexcl\ are modeled as mutually exclusive, where the exclusion force has the lowest precedence (note that base pairing and Coulomb repulsion cannot happen simultaneously between the same two sites).
+On top of that, \Vbp, \Vqq\ and \Vexcl\ are modelled as mutually exclusive, where the exclusion force has the lowest precedence (note that base pairing and Coulomb repulsion cannot happen simultaneously between the same two sites).
 Indeed, the exclusion force merely acts to keep two sites from passing through each other, something that is already achieved by the base pairing and Coulomb repulsion.
 
 Because non-bonded potentials are short ranged, we can truncate them at a sufficiently large distance.
 This enables us to work with a space partitioning acceleration scheme discussed below.
 We chose to truncate the potentials at a distance of $20\,\Angstrom$. After truncation, the potentials are shifted so they yield a potential energy of zero when calculated at (and beyond) the truncation distance.
-
-
-
-\begin{table}[htb]
-\caption{Geometric constants for the potential energy functions as defined above. Important to note is that a phosphate can bind to a sugar at the 5' or the 3' carbon. The table is reproduced from Knotts \etal \cite{knotts2007coarse}, with our own value for \dexcl\ and following Florescu \& Joyeux for the base pairing strengths \cite{florescu2011thermal}.}
-\begin{center}
-\begin{tabular}{cc@{\qquad}cc}
-Bond& $d_0$ (\Angstrom) & Bond Angle&     $\theta_0$ (degree) \\\hline
-S(5')--P & 3.899 &        S(5')--P--(3')S & 94.49\\
-S(3')--P & 3.559 &        P--(5')S(3')--P & 120.15 \\
-S--Ab    & 6.430 &        P--(5')S--Ab    & 113.13\\
-S--Tb    & 4.880 &        P--(3')S--Ab    & 108.38\\
-S--Cb    & 4.921 &        P--(5')S--Tb    & 102.79\\
-S--Gb    & 6.392 &        P--(3')S--Tb    & 112.72\\
-&&                        P--(5')S--Cb    & 103.49\\
-&&                        P--(3')S--Cb    & 112.39\\
-&&                        P--(5')S--Gb    & 113.52\\
-&&                        P--(3')S--Gb    & 108.12\\
-& & & \\
-Dihedral Angle & $\phi_0$ (degree) & Nonbonded & Length (\Angstrom) \\
-\hline
-P-(5')S(3')-P-(5')S & $-154.80$&   $\dstck$ & Derived from table \ref{geometricConstants} \\
-S(3')-P-(5')S(3')-P & $-179.17$&   & \\  
-Ab-S(3')-P-(5')S &    $ -22.60$&   $\dbp_\text{AT}$ & $2.9002$ \\
-S(3')-P-(5')S-Ab &    $  50.69$&   $\dbp_\text{GC}$ & $2.8694$ \\ 
-Tb-S(3')-P-(5')S &    $ -33.42$&   & \\
-S(3')-P-(5')S-Tb &    $  54.69$&   $\dexcl$         & $1.0$ (mismatched bases) \\
-Cb-S(3')-P-(5')S &    $ -32.72$&   $\dexcl$         & $5.5$ (otherwise) \\
-S(3')-P-(5')S-Cb &    $  54.50$&   & \\
-Gb-S(3')-P-(5')S &    $ -22.30$&   & \\
-S(3')-P-(5')S-Gb &    $  50.66$&   & 
-\end{tabular}\label{geometricConstants}
-\end{center}
-\end{table}
 
