@@ -1,0 +1,21 @@
+\subsection{Space Partitioning}
+
+\subsubsection{General idea}
+A naive implementation of non-bonded forces would test every possible pair of particles, for a total of $n(n-1)/2$ possibilities, with $n$ the number of interacting particles (for our coarse grained DNA model, $n$ would be the number of sites, which is three times the number of monomers).
+However, most of these considered pairs are superfluous because the particles are separated too far apart and their interaction is negligible. This $O\left(\frac{n(n-1)}{2}\right) = O(n^2)$ complexity is undesirable for performance reasons.
+A known technique to improve this algorithmic complexity is called \emph{spatial partitioning}. An explanation (and application to multiprocessor scaling) can, for instance, be found in \ref{plimpton1995fast}.
+
+By splitting the world into smaller partitions, or \emph{boxes}, one only has to check for interactions between particles in nearby partitions.
+In the ideal case, if the number of interacting particles contained per box is a constant $x$, the amount of boxes becomes $n/x$. Interactions need only be checked between particles in the same box for $x(x-1)/2$ pairs, and between particles in a given box and particles in the adjacent boxes. If each box has $z$ neighbouring boxes, then there are $zx^2/2$ such pairs. The total complexity of this problem thus reduces to 
+$O\left(
+	\left[ \frac{x(x-1)}{2} + \frac{zx^2}{2} \right]
+		\cdot \frac{n}{x}
+\right) = O(n)$,
+linear in the number of interacting particles.
+
+It is easy to show that we cannot do any better than $O(n)$ via this partitioning trick, and that choosing the number of boxes $b$ to be proportional to $n$ is the ideal case.
+Indeed, assume that we would instead take the number of boxes $b \sim n^\alpha$. Then the average number of particles per box $x$ would be proportional to $n^{1 - \alpha}$. Using the reasoning above, we find that the average number of interaction pairs that would be considered is proportional to $x^2 b = n^{2(1 - \alpha)} n^\alpha = n^{2 -\alpha}$. It seems that we can make the algorithmic complexity sub-linear by choosing $\alpha > 1$, however, we also have to iterate over all the boxes, and their number is proportional to $n^\alpha$. In other words, the total algorithmic time complexity is $O(n^{2 - \alpha} + n^\alpha)$, with the optimal value of $\alpha$ equal to one.
+
+
+\subsubsection{Applied to DNA}
+
