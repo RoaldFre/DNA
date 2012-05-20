@@ -1,4 +1,24 @@
-\subsection{Melting temperature of short hairins}
+\subsection{Melting temperature of short hairpins}
+
+Another test of the model with regard to hairpin formation is to see if it can reproduce the correct critical temperatures for short hairpins. We consider a small class of hairpins that have received extensive experimental attention by Vallone \etal \cite{vallone1999melting}.
+
+This class of hairpin sequences are composed of of a loop part consisting of four monomers with the same base type, this loop part is then flanked on either side by two monomers that form complementary pairs. At the end of each strand, there is a fixed sequence of four complementary monomers (CCTA and TAGG), which brings the total number of monomers to sixteen.
+
+We selected two specific sequences, comprised of an adenine loop and with variable base sequences equal to TT/AA and TG/CA. The ionic strength of the world was set to 115\,mM, mimicking the experimental setup in \cite{vallone1999melting}.
+
+We allowed the strand to fully equilibrate for 0.5\,$\mu$s, after which we tracked and averaged the number of base pair bonds in time. A before, a base pair is considered `bound' if its base pairing potential is less than $-\varepsilon / 10$.
+
 
 \input{images/meltingTemperature}
+
+
+The resulting curves are shown in figure \ref{meltingTemperature}. We find critical temperatures (defined as the temperature where the average fraction of bound base pairs in the stem equals 50\%) of $(55.3 \pm 0.3)\degree$C for the TG/CA sequence, and $(50.3 \pm 0.8)\degree$C for the TT/AA sequence. A lower critical temperature for this latter sequence is to be expected, as the base pairing interaction between A/T pairs is less than that between G/C pairs.
+
+The experimental values reported by Vallone \etal are $(35 \pm 1)\degree$C for the TT/AA sequence and $(55.5 \pm 0.3)\degree$C for the TG/CA sequence.\cite(vallone1999melting}. The simulated value for the TG/CA sequence is spot on, but the value for the TT/AA sequence is off by quite a bit.
+
+The reason for this discrepancy could be because the model was initially fitted to reproduce experimental values for long base pair sequences. It also ignores hydrodynamic interactions, which are shown to be of significant importance in small strands and loops \{kuznetsov2001semiflexible}.
+
+Lastly we remark that the rescaling of the base pairing interaction by Florescu and Joyeux is essential to get the correct order of magnitude.
+Indeed, using the interaction constants of the original Knotts model ($\epsAT = 2.77$\,kcal/mol and $\epsGC = 4.16$\,kcal/mol), but keeping the base pairing interaction between the `correctly matching' base pairs on the hairpin only (as per \cite{florescu2011thermal}) leads to unphysical results. This is shown in figure \ref{meltingTemperatureKnotts}
+\todo{that plot!!}
 
