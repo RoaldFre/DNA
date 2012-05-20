@@ -25,11 +25,12 @@ We want to use this 3SPN model to research the effects of different loop structu
 
 The model will be used to investigate the scaling dynamics of the zipping and unzipping times of DNA hairpins with varying stem length. The formation of such hairpins in single stranded DNA has been shown to be very relevant for gene expression \cite{oettinger2000hairpins}. It has also been shown that hairpin formation is closely linked to translocation of DNA through nanopores \cite{carlon2011anomalous}. Hence, it is certainly relevant to have a better understanding of hairpin formation.
 
-Previous simulations with a highly simplified Monte Carlo `zipper' model (Ferrantini \& Carlon \cite{carlon2011anomalous}) show a behaviour of the characteristic zipping time $\tau \sim S^{1.4}$ and an unzipping time $\tau \sim S$ with $S$ the stem length of the hairpin. However, that model did not take into account the inherent twisting of the stem that has to occur due to the helical nature of double stranded DNA.
+Previous simulations with a highly simplified Monte Carlo `zipper' model (Ferrantini \& Carlon \cite{carlon2011anomalous}) show a behaviour of the characteristic zipping time $\tau \sim S^{1.37(2)}$ and an unzipping time $\tau \sim S$ with $S$ the stem length of the hairpin. At the equilibrium temperature, the characteristic timescale scales as $\tau \sim S^{2.26(2)}$. However, that model did not take into account the inherent twisting of the stem that has to occur due to the helical nature of double stranded DNA.
 
 The 3SPN model, however, will correctly represent these structural properties of a DNA hairpin and we will examine whether this changes the scaling behaviour. 
 
-Simple models of DNA denaturation that take into account the helicity, predict scaling behaviour of the denaturation time of $\tau \sim N^{(2.2-2.6)}$ with $N$ the number of base pairs \cite{carlon2010unwinding, walter2011fractional}. \todo{why cite walter2011fractional?}
+Simplified Poland Scheranga models that have added constraints to the moves to locally preserve the DNA helicity predict scaling laws of $\tau \sim N^{\beta}$ for $\beta \approx 3$ and $N$ the number of base pairs \cite{baiesi2009multiple}.
+Slightly more complicated models of DNA denaturation that involve Monte Carlo moves on a grid and also preserve helicity, predict scaling exponents of $\beta = 2.57(3)$  \cite{carlon2010unwinding}.
 
 Furthermore, because we will use a molecular dynamics simulation instead of a Monte Carlo algorithm, it will be possible to extract not only the scaling law, but also the actual pre-factors. These can be used to compare with experimental values to verify the correctness of the model. To the best of our knowledge, however, there is no experimental evidence to date that describes this scaling behaviour with varying stem length. Hence, the result of the model is a prediction.
 
