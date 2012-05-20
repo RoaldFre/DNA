@@ -9,12 +9,14 @@ This `unwinding' of double stranded DNA is a very complex process due to the inh
 Simple `zipper' mechanisms are not enough to simulate this behavior because local changes to the system (i.e. the unzipping of one complementary base pair) have a global effect (twisting the rest of the strand) (see Baiesi \etal, \cite{carlon2010unwinding}).
 Before we discuss more quantitative elements of this behavior, we first reproduce some basic predictions of the original Knotts \etal\ model \cite{knotts2007coarse} to illustrate this unwinding effect.
 
-\begin{figure}[hbt] \begin{minipage}{7cm}
-\input{images/data_knotts1/knotts1_T330} \end{minipage} \begin{minipage}{7cm} \input{images/data_knotts1/knotts1_T335} \end{minipage}
-\begin{minipage}{7cm}
-\input{images/data_knotts1/knotts1_T350} \end{minipage} \begin{minipage}{7cm}\input{images/data_knotts1/knotts1_T360}\end{minipage}\begin{center}
-\input{images/data_knotts1/knotts1_lines}
-\caption{Base pair configuration (black: open, white: closed) for the 5'-GCGTCATACAGTGC-3' configuration of a B-DNA double helix (Knotts III.A.1, \cite{knotts2007coarse}) for different temperatures. Top-left: 330K; top-right: 335K; middle-left: 350K; middle-right:360K. Bottom: plot of number of closed base pairs for the time-evolution. The timescale on the x-axis is always in seconds (about 80 nanoseconds simulated).  } \label{knotts1_configs}\end{center}
+\begin{figure}[hbt] \begin{minipage}{4.5cm}
+\input{images/data_knotts1/knotts1_T330} \end{minipage} \begin{minipage}{4.5cm} \input{images/data_knotts1/knotts1_T335} \end{minipage}
+\begin{minipage}{4cm}
+\input{images/data_knotts1/knotts1_T350} \end{minipage}
+\begin{center}
+\begin{minipage}{6cm}\input{images/data_knotts1/knotts1_T360}\end{minipage}
+\begin{minipage}{6cm}\input{images/data_knotts1/knotts1_lines}\end{minipage}
+\caption{Base pair configuration (black: open, white: closed) for the 5'-GCGTCATACAGTGC-3' configuration of a B-DNA double helix (Knotts III.A.1, \cite{knotts2007coarse}) for different temperatures. Top-left: 330K; top-center: 340K; top-right: 350K; bottom-left:360K. Bottom-right: plot of number of closed base pairs for the time-evolution. It is clear that the critical temperature for this configuration lies between 340K and 350K. The timescale on the x-axis is always in nanoseconds (80 nanoseconds simulated).  } \label{knotts1_configs}\end{center}
 \end{figure}
 
 \paragraph{Knotts III.A.1: 5'-GCGTCATACAGTGC-3'} To demonstrate the simple denaturation of a short strand of dsDNA, we simulated the behaviour of a double helix configuration 5'-GCGTCATACAGTGC-3' (14 base pairs) to check if the time-evolution is as expected from the same simulation in the paper of Knotts \etal \cite{knotts2007coarse}.
