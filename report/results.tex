@@ -40,21 +40,27 @@ From the illustrations in Figure \ref{L60B36_configs} it is clear that the bubbl
 
 
 \subsection{Scaling of hairpin (un)zipping time}
-The characteristic time of the unwinding process of double stranded DNA in function of the polymer length has been predicted numerous times with numerous simulation techniques.
+The characteristic time of the unwinding process of double stranded DNA in function of the polymer length has been predicted numerous times with numerous simulation techniques. \todo{Explain why we can use the zipping/unzipping results from Carlon \etal Anomalous zipping dynamics.}
 Baiesi, Barkema, Carlon \& Panja \cite{carlon2010unwinding} used Monte Carlo methods to determine that the time needed to unwind a double stranded polymer of length $N$ in a wound structure (yielding a basic simulation of the global dynamics of the unwinding process) scales like
 \begin{equation}
 \tau \sim N^{2.57\pm 0.03}.
 \end{equation}
-
 Later work by Walter, Ferrantini, Carlon \& Vanderzande \cite{walter2011fractional} pushed this coeffici\"ent down to 
 \begin{equation}
 \tau \sim N^{2.26 \pm 0.02}
 \end{equation}
-when incorporating a slightly more complicated dynamics.
-Both papers also point out that modeling DNA denaturation as an equilibrium process yields time scaling laws much closer to the linear case.
+when incorporating a slightly more complicated dynamics in a model around equilibrium. Both papers also point out that modeling DNA denaturation as an equilibrium process yields time scaling laws much closer to the linear case.
 
+For zipping dynamics in an anomalous DNA structure, Ferrantini \& Carlon \cite{carlon2011anomalous} found that when simulating with a Monte Carlo method (not taking the helicity of the strands into account) the timescale needed for zipping the strands behaves like
+\begin{equation}
+\tau \sim N^{1.37\pm0.02}
+\end{equation}
+when quenching the polymers from a high temperature equilibrium configuration to a low temperature state. Not taking the helical winded structure into account, however, yielded an unzipping timescale $\tau \sim N$.
 
-The scaling of the hairpin zipping and unzipping time is examined.
+Scaling of the hairpin zipping and unzipping time is examined in our model with a more physical set-up incorporating the helicity structure of DNA, and yielding scaling laws for zipping and unzipping dynamics of respectively
+\begin{equation}
+\tau_\text{zipping} \sim N^{1.2} \qquad \qquad \text{and} \qquad \qquad \tau_\text{unzipping} \sim N^{2.6}\end{equation}
+as a function of the number of monomers $N$.
 Simulations are performed on ssDNA sequences of the form (A)$_N$(T)$_N$ in an environment with $[\text{Na}^+] = 200$\,mM.
 We opted to leave out an `inert' loop as to not slow the simulation down and delay the hairpin formation\footnote{We did not have sufficient time to measure the influence of loops and lengths thereof in hairins, as most of our time was spent writing, debugging and verifying the implementation.
 However, now that that part is finished, it is very straightforward to perform these simulations. The only necessity is sufficient CPU time.}. 
