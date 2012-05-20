@@ -2,11 +2,11 @@
 
 \subsection{Denaturation of dsDNA}
 
-It has long been known that double stranded DNA (in our case, the characteristic double helix of B-DNA) exists in circumstances with temperatures below 330 to 360 Kelvin, with the precise `melting' point (where dsDNA denaturates to single stranded DNA) depending on the basepair configuration, the length of the strand and the salt concentration in the environment.
-When the temperature is raised to or above this critical point, the basepair bonding potential no longer dominates the increasing kinetic energy of the system and the two strands separate. 
+It has long been known that double stranded DNA (in our case, the characteristic double helix of B-DNA) exists in circumstances with temperatures below 330 to 360 Kelvin, with the precise `melting' point (where dsDNA denaturates to single stranded DNA) depending on the base pair configuration, the length of the strand and the salt concentration in the environment.
+When the temperature is raised to or above this critical point, the base pair bonding potential no longer dominates the increasing kinetic energy of the system and the two strands separate. 
 
 This `unwinding' of double stranded DNA is a very complex process due to the inherent helical structure of a DNA double helix.
-Simple `zipper' mechanisms are not enough to simulate this behavior because local changes to the system (i.e. the unzipping of one complementary basepair) have a global effect (twisting the rest of the strand) (see Baiesi \etal, \cite{carlon2010unwinding}).
+Simple `zipper' mechanisms are not enough to simulate this behavior because local changes to the system (i.e. the unzipping of one complementary base pair) have a global effect (twisting the rest of the strand) (see Baiesi \etal, \cite{carlon2010unwinding}).
 Before we discuss more quantitative elements of this behavior, we first reproduce some basic predictions of the original Knotts \etal\ model \cite{knotts2007coarse} to illustrate this unwinding effect.
 
 \begin{figure}[hbt] \begin{minipage}{7cm}
@@ -14,18 +14,18 @@ Before we discuss more quantitative elements of this behavior, we first reproduc
 \begin{minipage}{7cm}
 \input{images/data_knotts1/knotts1_T350} \end{minipage} \begin{minipage}{7cm}\input{images/data_knotts1/knotts1_T360}\end{minipage}\begin{center}
 \input{images/data_knotts1/knotts1_lines}
-\caption{Basepair configuration (black: open, white: closed) for the 5'-GCGTCATACAGTGC-3' configuration of a B-DNA double helix (Knotts III.A.1, \cite{knotts2007coarse}) for different temperatures. Top-left: 330K; top-right: 335K; middle-left: 350K; middle-right:360K. Bottom: plot of number of closed basepairs for the time-evolution. The timescale on the x-axis is always in seconds (about 80 nanoseconds simulated).  } \label{knotts1_configs}\end{center}
+\caption{Base pair configuration (black: open, white: closed) for the 5'-GCGTCATACAGTGC-3' configuration of a B-DNA double helix (Knotts III.A.1, \cite{knotts2007coarse}) for different temperatures. Top-left: 330K; top-right: 335K; middle-left: 350K; middle-right:360K. Bottom: plot of number of closed base pairs for the time-evolution. The timescale on the x-axis is always in seconds (about 80 nanoseconds simulated).  } \label{knotts1_configs}\end{center}
 \end{figure}
 
-\paragraph{Knotts III.A.1: 5'-GCGTCATACAGTGC-3'} To demonstrate the simple denaturation of a short strand of dsDNA, we simulated the behaviour of a double helix configuration 5'-GCGTCATACAGTGC-3' (14 basepairs) to check if the time-evolution is as expected from the same simulation in the paper of Knotts \etal \cite{knotts2007coarse}.
+\paragraph{Knotts III.A.1: 5'-GCGTCATACAGTGC-3'} To demonstrate the simple denaturation of a short strand of dsDNA, we simulated the behaviour of a double helix configuration 5'-GCGTCATACAGTGC-3' (14 base pairs) to check if the time-evolution is as expected from the same simulation in the paper of Knotts \etal \cite{knotts2007coarse}.
 We find that the melting temperature of this configuration lies around 335--340K; with a salt concentration of 50 mM.
-These results agree with the simulations of Knotts. In Figure \ref{knotts1_configs} the basepair configurations are illustrated.
+These results agree with the simulations of Knotts. In Figure \ref{knotts1_configs} the base pair configurations are illustrated.
 
 \begin{figure}[hbt] \begin{minipage}{4.5cm}\input{images/data_L60B36_70ns/L60B36_70ns_T340} \end{minipage} \begin{minipage}{4.5cm} \input{images/data_L60B36_70ns/L60B36_70ns_T350} \end{minipage}
 \begin{minipage}{4cm} \input{images/data_L60B36_70ns/L60B36_70ns_T360} \end{minipage} 
 \begin{center}
 \includegraphics[width=6.5cm]{images/L60B36_bubble2.png} \includegraphics[width=6.5cm]{images/L60B36_bubble1.png}
-\caption{Basepairing configuration (y-axis) for bubble formation in the L60B36 dsDNA configuration (white: closed basepairs, black: open basepairs) for a time-evolution of 80 nanoseconds (x-axis) at 340K (top-left), 350K (top-center) and 360K (top-right). The process of bubble formation is illustrated in two bubble configurations at 340K (bottom-left) and at 350K (bottom right). }\label{L60B36_configs}
+\caption{Base pairing configuration (y-axis) for bubble formation in the L60B36 dsDNA configuration (white: closed base pairs, black: open base pairs) for a time-evolution of 80 nanoseconds (x-axis) at 340K (top-left), 350K (top-center) and 360K (top-right). The process of bubble formation is illustrated in two bubble configurations at 340K (bottom-left) and at 350K (bottom right). }\label{L60B36_configs}
 \end{center}
 \end{figure}
 
@@ -37,30 +37,32 @@ From the illustrations in Figure \ref{L60B36_configs} it is clear that the bubbl
 
 
 \subsection{Scaling of hairpin (un)zipping time}
-The characteristic time of the unwinding process of double stranded DNA in function of the polymer length has been predicted numerous times with numerous simulation techniques. While most models indirectly take into account the twisted helicity structure of dsDNA, few models actually simulate the real physical structure. The topological structure of dsDNA however has a significant effect on the time scaling laws describing the mechanical zipping or unzipping.
+The characteristic time of the unwinding process of double stranded DNA in function of the polymer length has been predicted numerous times with numerous simulation techniques. While most models indirectly take into account the helical structure of dsDNA, few models actually simulate the real physical structure. The topological structure of dsDNA however has a significant effect on the time scaling laws describing the mechanical zipping or unzipping \cite{carlon2010unwinding}.
 
-We are interested in anomalies of the topological structure of dsDNA and the influence they have on the time scaling laws. To be specific, we will look at the time scaling laws governing the formation and deformation of hairpin structures in ssDNA, where a single strand has complementary basepairs at both ends of the strand separated by a region (of a certain length $T_n$) of non-complementary basepairs. In Figure \ref{results_hairpin} the formation of such a hairpin is simulated, using as strand configuration the sequence 5'-GCCTATTTTTTAATAGGC-3'. 
+We are interested in anomalies of the topological structure of dsDNA and the influence they have on the time scaling laws. To be specific, we will look at the time scaling laws governing the formation and deformation of hairpin structures in ssDNA, where a single strand has complementary base pairs at both ends of the strand separated by a region (of a certain length $T_n$) of non-complementary base pairs. In Figure \ref{results_hairpin} the formation of such a hairpin is simulated, using as strand configuration the sequence 5'-GCCTATTTTTTAATAGGC-3'. 
 
 Baiesi, Barkema, Carlon \& Panja \cite{carlon2010unwinding} used Monte Carlo methods to determine that the time needed to unwind a double stranded polymer of length $N$ in a wound structure (yielding a basic simulation of the global dynamics of the unwinding process) scales like
 \begin{equation}
 \tau \sim N^{2.57\pm 0.03}.
 \end{equation}
-An older simulation by Baiesi \& Livi \cite{baiesi2009multiple} extends the scheme developed by Poland \& Scherega (PS) \cite{poland1966phase} to also incorporate topological structures such as the helicity winding of double stranded DNA, yielding exponential behavior
+
+An older simulation by Baiesi \& Livi \cite{baiesi2009multiple} extends the scheme developed by Poland \& Scherega (PS) \cite{poland1966phase} to also incorporate topological structures such as the helicity winding of double stranded DNA, yielding unzipping behavior of
 \begin{equation}
 \tau \sim N^{3.0\pm 0.1}.
 \end{equation}
-For zipping dynamics in an anomalous DNA structure, Ferrantini \& Carlon \cite{carlon2011anomalous} found that when simulating with a Monte Carlo method (taking the helicity of the strands into account) the timescale needed for zipping two polymer strands behaves like
+
+For Monte Carlo zipping dynamics in a lattice DNA structure, Ferrantini \& Carlon \cite{carlon2011anomalous} found that the timescale needed for zipping two polymer strands scales anomalously as
 \begin{equation}
 \tau \sim N^{1.37\pm0.02}
 \end{equation}
-when quenching the polymers from a high temperature equilibrium configuration to a low temperature state. Not taking the helical winded structure into account, however, yielded an unzipping timescale $\tau \sim N$.
+when quenching the polymers from a high temperature equilibrium configuration to a low temperature state. The unzipping when the strand is brought to a high temperature remained non-anomalous, scaling as $\tau \sim N$. The same model produces characteristic timescales that scale as $\tau \sim N^{2.26 \pm 0.02}$ when the strand is held at the critical temperature.
 
 Scaling of the hairpin zipping and unzipping time is examined in our model with a more physical set-up incorporating the helicity structure of DNA, and yielding scaling laws for zipping and unzipping dynamics of respectively
 \begin{equation}
 \tau_\text{zipping} \sim N^{1.2} \qquad \qquad \text{and} \qquad \qquad \tau_\text{unzipping} \sim N^{2.6}\end{equation}
 as a function of the number of monomers $N$.
 Simulations are performed on ssDNA sequences of the form (A)$_N$(T)$_N$ in an environment with $[\text{Na}^+] = 200$\,mM.
-We opted to leave out an `inert' loop as to not slow the simulation down and delay the hairpin formation\footnote{We did not have sufficient time to measure the influence of loops and lengths thereof in hairins, as most of our time was spent writing, debugging and verifying the implementation.
+We opted to leave out an `inert' loop as to not slow the simulation down and delay the hairpin formation\footnote{We did not have sufficient time to measure the influence of loops and lengths thereof in hairpins, as most of our time was spent writing, debugging and verifying the implementation.
 However, now that that part is finished, it is very straightforward to perform these simulations. The only necessity is sufficient CPU time.}. 
 
 At the start of every measurement run, the world is initialized with the chosen sequence built according to the B isoform as explained in section \ref{secStructure}.
@@ -81,7 +83,7 @@ Note that the data shows large deviation from the fit for small $N$. This is to 
 \begin{center}
 \includegraphics[width=4cm]{images/results_hairpin1}\includegraphics[width=5cm]{images/results_hairpin2}\includegraphics[width=5cm]{images/results_hairpin3}
 \end{center}
-\caption{Stages of hairpin formation of a single strand with a stemlength of 7 basepairs and a loopsize of 4 monomers (5'-GCCTATTTTTTAATAGGC-3'). This hairpin was formed after $\sim$ 50ns simulation time at 290K and salt concentration 100 mM.}
+\caption{Stages of hairpin formation of a single strand with a stemlength of 7 base pairs and a loopsize of 4 monomers (5'-GCCTATTTTTTAATAGGC-3'). This hairpin was formed after $\sim$ 50ns simulation time at 290K and salt concentration 100 mM.}
 \label{results_hairpin}
 \end{figure}
 
