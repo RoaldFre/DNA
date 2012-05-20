@@ -1,0 +1,34 @@
+\subsection{Dynamics}
+We implemented the velocity Verlet algorithm and a Langevin integrator. The velocity Verlet algorithm was used to check the correctness of the potentials and interaction forces by means of energy conservation when not coupled to an external heat bath. All actual simulations were carried out using the Langevin integrator.
+
+The Langevin integrator is a variant of the BBK type integrator due to Br{\"u}nger, Brooks and Karplus \cite{brunger1984stochastic}. Using a velocity Verlet style algorithm, the Langevin equation
+\begin{equation}
+m a(t) = F(t) - \gamma m v(t) + R(t)
+\end{equation}
+is discretized and integrated. Here, $\gamma$ is a friction coefficient and $R(t)$ is a gaussian stochastic force with correlation function $\langle\gamma(t), \gamma(t')\rangle = 2 m k_\text{B} T \gamma \delta(t-t')$.
+
+At each iteration, the velocities $v$ first get updated by a half timestep
+\begin{equation}
+v\left(t + \frac{\Delta t}{2}\right)
+= \left(1 - \gamma\frac{\Delta t}{2}\right) v(t)
+	+ \frac{\Delta t}{2m} [F(t) + R(t)],
+\end{equation}
+after which the positions $r$ can be updated to
+\begin{equation}
+r(t + \Delta t)
+= r(t) + v\left(t + \frac{\Delta t}{2}\right) \Delta t.
+\end{equation}
+With the positions updated, the new forces $F$ can be calculated. With these forces, the velocities can once again be half stepped according to
+\begin{equation}
+v(t + \Delta t) = \left(1 + \gamma \frac{\Delta t}{2}\right)^{-1}
+\left\{
+	v\left(t + \frac{\Delta t}{2}\right)
+	+ \frac{\Delta t}{2m} \left[
+			F(t + \Delta t) + R(t + \Delta t)
+	\right]
+\right\}.
+\end{equation}
+The discretized random force $R$ is given by a gaussian random variable with variance $2 m k_\text{B} T \gamma / \Delta t$.
+
+
+
