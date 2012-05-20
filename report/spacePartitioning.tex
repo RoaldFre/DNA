@@ -3,7 +3,7 @@
 \subsubsection{General idea}
 A naive implementation of non-bonded forces would test every possible pair of particles, for a total of $n(n-1)/2$ possibilities, with $n$ the number of interacting particles (for our coarse grained DNA model, $n$ would be the number of sites, which is three times the number of monomers).
 However, most of these considered pairs are superfluous because the particles are separated too far apart and their interaction is negligible. This $O\left(\frac{n(n-1)}{2}\right) = O(n^2)$ complexity is undesirable for performance reasons.
-A known technique to improve this algorithmic complexity is called \emph{spatial partitioning}. An explanation (and application to multiprocessor scaling) can, for instance, be found in \ref{plimpton1995fast}.
+A known technique to improve this algorithmic complexity is called \emph{spatial partitioning}. An explanation (and application to multiprocessor scaling) can, for instance, be found in \cite{plimpton1995fast}.
 
 By splitting the world into smaller partitions, or \emph{boxes}, one only has to check for interactions between particles in nearby partitions.
 In the ideal case, if the number of interacting particles contained per box is a constant $x$, the amount of boxes becomes $n/x$. Interactions need only be checked between particles in the same box for $x(x-1)/2$ pairs, and between particles in a given box and particles in the adjacent boxes. If each box has $z$ neighbouring boxes, then there are $zx^2/2$ such pairs. The total complexity of this problem thus reduces to 
