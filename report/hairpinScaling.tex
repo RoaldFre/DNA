@@ -21,10 +21,10 @@ For Monte Carlo zipping dynamics in a lattice DNA structure, Ferrantini \& Carlo
 when quenching the polymers from a high temperature equilibrium configuration to a low temperature state. The unzipping when the strand is brought to a high temperature remained non-anomalous, scaling as $\tau \sim N$. The same model produces characteristic timescales that scale as $\tau \sim N^{2.26 \pm 0.02}$ when the strand is held at the critical temperature.
 
 Simulations are performed on ssDNA sequences of the form (A)$_N$(T)$_N$ in an environment with $[\text{Na}^+] = 200$\,mM.
-We opted to leave out an `inert' loop as to not slow the simulation down and delay the hairpin formation\footnote{We did not have sufficient time to measure the influence of loops and lengths thereof in hairpins, as most of our time was spent writing, debugging and verifying the implementation.
+We opted to leave out an `inert' loop (for instance a sequence of C's in the middle) as to not slow the simulation down and delay the hairpin formation\footnote{We did not have sufficient time to measure the influence of loops and lengths thereof in hairpins, as most of our time was spent writing, debugging and verifying the implementation.
 However, now that that part is finished, it is very straightforward to perform these simulations. The only necessity is sufficient CPU time.}.
 It should also be noted that we used the base pairing coupling of the original Knotts model \cite{knotts2007coarse}, where $\epsAT = 2.77$\,kcal/mol and $\epsGC = 4.16$\,kcal/mol, instead of the one given in table \ref{couplingConstants}.
-Due to time constraints, we could not compare the effect of this changed interaction strenght (nor of different quenching temperatures) on the asymptotic scaling behaviour, but it is highly unlikely that it makes a significant contribution, due to the universality of such scaling laws.
+Due to time constraints, we could not compare the effect of this changed interaction strength (nor of different quenching temperatures) on the asymptotic scaling behaviour, but it is highly unlikely that it makes a significant contribution, due to the universality of such scaling laws.
 
 
 
