@@ -2,12 +2,11 @@
 
 Interactions between the sites are modelled through several potential energies.
 These potentials are taken taken mainly from the potential terms as defined by Florescu \& Joyeux \cite{florescu2011thermal}, and are an improvement over the original terms by Knotts \etal \cite{knotts2007coarse}. Deviations from \cite{florescu2011thermal} will be explicitly mentioned.
-TODO CHECK THAT WE MENTION IT :P
+\todo{CHECK THAT WE MENTION IT :P} \cmt{changed: excluded volume (mentioned); base pairing constants (not changed for temperature sensitive stuff; but using the Knotts values when only simulating hairpin formation power law}.
 
 We will now sketch the specific potential energy terms, one by one.
 
 \begin{table}[hbt]
-\label{couplingConstants}
 \begin{center}
 \caption{Coupling constants for the various potentials. The basic energy unit $\varepsilon$ is equal to $0.26$\,kcal/mol, or $1.81 \times 10^{-21}$\,J.}
 
@@ -19,7 +18,7 @@ $k_2$ & $100\varepsilon$ per $\Angstrom^2$ &
 	$\varepsilon_\text{GC}$ & $4\varepsilon$\\
 $k_\theta$ & $400\varepsilon$ per (radian)$^2$ &
 	$\varepsilon_\text{AT}$ & $\frac{2}{3} \varepsilon_\text{GC}$ \\
-\end{tabular}
+\end{tabular}\label{couplingConstants}
 \end{center}
 \end{table}
 
@@ -144,7 +143,6 @@ We chose to truncate the potentials at a distance of $20\,\Angstrom$. After trun
 
 
 \begin{table}[htb]
-\label{geometricConstants}
 \caption{Geometric constants for the potential energy functions as defined above. Important to note is that a phosphate can bind to a sugar at the 5' or the 3' carbon. The table is reproduced from Knotts \etal \cite{knotts2007coarse}, with our own value for \dexcl.}
 \begin{center}
 \begin{tabular}{cc@{\qquad}cc}
@@ -175,7 +173,7 @@ S(3')-P-(5')S-Cb &    $  54.50$&   & \\
 Gb-S(3')-P-(5')S &    $ -22.30$&   & \\
 S(3')-P-(5')S-Gb &    $  50.66$&   & \\
 \hline
-\end{tabular}
+\end{tabular}\label{geometricConstants}
 \end{center}
 \end{table}
 
