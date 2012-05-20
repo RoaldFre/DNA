@@ -2,20 +2,21 @@
 
 Time scaling behavior of hairpin formation by single stranded DNA structures was simulated with a coarse grained model modeling the DNA structure with three sites (base, sugar, phosphate) per nucleotide.
 
-The melting temperatures of DNA hairpins we found seem to comply with experimental values by Vallone \etal\ \cite{vallone1999melting} except for shorter hairpin structures where we expect hydrophobic interactions (not included in the model) to play a significant role \cite{kuznetsov2001semiflexible}.
+The melting temperatures of DNA hairpins we found seem to comply reasonably with experimental values by Vallone \etal\ \cite{vallone1999melting}. The small deviations that were observed can potentiallly be attributed to the omission of hydrophobic interactions in the model, which are nonetheless shown to play a significant role for small hairpins \cite{kuznetsov2001semiflexible}.
 
 We found that the time scale of zipping of ssDNA hairpins behaves like
 \begin{equation}
-\tau_\text{zipping} \sim N^{\beta_z} \qquad \qquad \text{with}\ \beta_z = 1.26\pm0.14
+\tau_\text{zipping} \sim N^{\betazip} \qquad \qquad \text{with}\ \betazip = 1.26\pm0.14
 \end{equation}
-in function of the stem length $N$, where other authors using more simple Monte Carlo based methods found time scaling with exponent $\beta_z = 1.37 \pm 0.02$. The coarse grained molecular model we use confirms the earlier simulations of Ferrentini \& Carlon \cite{carlon2011anomalous} for an exponent $\beta_z \approx 1.3$ for hairpin zipping.
+in function of the stem length $N$. Other authors using more simple Monte Carlo methods found time scaling with exponent $\betazip = 1.37 \pm 0.02$, which is still within error bars of our result.\footnote{It would be interesting to see if we converge to this value, when gathering further statistics to improve the accuracy of our result. However, as mentioned below, we only had a very short time frame in which we were able to do actual simulations.}
 
 The unzipping of DNA hairpins is found in our model to have a timescale yielding
 \begin{equation}
-\tau_\text{unzipping} \sim N^{\beta_u} \qquad \qquad \text{with}\ \beta_u = 2.62\pm0.09,
+\tauunzip \sim N^{\betazip} \qquad \qquad \text{with}\ \betaunzip = 2.62\pm0.09,
 \end{equation}
-where previous simulations by Baiesi, Barkema, Carlon \& Panja \cite{carlon2010unwinding} and Baiesi \& Livi \cite{baiesi2009multiple} yielded ranges $\beta_u = 2.57(3) - 3$ with the first (and more recent) model having lower exponent values than the latter, more simple model. Our simulations thus confirm the scaling law with exponent $\beta_u \approx 2.6$ for hairpin unzipping.
+where previous simulations by Baiesi, Barkema, Carlon \& Panja \cite{carlon2010unwinding} and Baiesi \& Livi \cite{baiesi2009multiple} yielded ranges $\betaunzip = 2.57(3) - 3$ with the first (and more recent) model having lower exponent values than the latter, more simple model. Our simulations thus confirm the scaling law with exponent $\betaunzip \approx 2.6$ for hairpin unzipping.
 
 We conclude that in the study of denaturation and renaturation of anomalous DNA structures like hairpins of ssDNA the effect of the twisted helix structure must be taken into account. We also conclude that the time scaling behavior indicated that DNA renaturation and denaturation are processes far from equilibrium.
 
-Improvements to our methods certainly can be made. All simulations presented in this paper were done in the timeframe of less than one week -- it is inevitable that longer and more numerous simulations will yield better and more significant results (certainly concerning the error margins on the time scaling behavior that we found). Furthermore, we think that the model we implemented (although fast already) and the simulation scripts we used can be optimized further to attain more efficient CPU time.
+Improvements to our methods certainly can be made. All simulations presented in this paper were done in the time frame of less than one week\footnote{As was mentioned, the majority of the time was spent implementing the algorithms and verifying the absolute correctness of the code before any meaningful simulation could be run.}
+--- it is inevitable that longer and more numerous simulations will yield better and more significant results (certainly concerning the error margins on the time scaling behavior that we found). Furthermore, we think that the model we implemented (although fast already) and the simulation scripts we used can be optimized further to attain more efficient CPU time.
