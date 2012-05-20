@@ -20,7 +20,7 @@ We want to use this 3SPN model to research the effects of different loop structu
 \includegraphics{images/hairpin_example}
 \caption{Example of a hairpin formation. Base pairing bonds are formed between the complementary bases, denoted with red lines.}\label{hairpin_example}
 \end{figure}
-We wrote a custom implementation of the 3SPN model with emphasis on performance, using the technique of spacial partitioning \cite{plimpton1995fast} to improve the performance of the (short ranged) nonbonded interactions.
+We wrote a custom implementation of the 3SPN model with emphasis on performance, using the technique of spacial partitioning \cite{plimpton1995fast} to improve the computational complexity of the (short ranged) nonbonded interactions.
 
 The model will be used to investigate the scaling dynamics of the zipping and unzipping times of DNA hairpins with varying stem length. The formation of such hairpins in single stranded DNA has been shown to be very relevant for gene expression \cite{oettinger2000hairpins}. It has also been shown that hairpin formation is closely linked to translocation of DNA through nanopores \cite{carlon2011anomalous}. Hence, it is certainly relevant to have a better understanding of hairpin formation.
 
