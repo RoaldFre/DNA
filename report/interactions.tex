@@ -8,16 +8,16 @@ We will now sketch the specific potential energy terms, one by one.
 
 \begin{table}[hbt]
 \begin{center}
-\caption{Coupling constants for the various potentials. The basic energy unit $\varepsilon$ is equal to $0.26$\,kcal/mol, or $1.81 \times 10^{-21}$\,J.}
-
+\caption{Coupling constants for the various potentials. The basic energy unit $\varepsilon$ is equal to $0.26$\,kcal/mol, or $1.81 \times 10^{-21}$\,J.
+We adopted the updated base pairing strenghts of Florescu \& Joyeux \cite{florescu2011thermal}.}
 \begin{tabular}{cc||cc}
 Parameter & Value & Parameter & Value\\\hline
 $k_1$ & $\varepsilon$ per $\Angstrom^2$ &
 	$k_\phi$ & $4\varepsilon$ \\
 $k_2$ & $100\varepsilon$ per $\Angstrom^2$ &
-	$\varepsilon_\text{GC}$ & $4\varepsilon$\\
+	$\varepsilon_\text{AT}$ & 3.90\,kcal/mol\\
 $k_\theta$ & $400\varepsilon$ per (radian)$^2$ &
-	$\varepsilon_\text{AT}$ & $\frac{2}{3} \varepsilon_\text{GC}$ \\
+	$\varepsilon_\text{GC}$ & 4.37\,kcal/mol\\
 \end{tabular}\label{couplingConstants}
 \end{center}
 \end{table}
@@ -162,15 +162,15 @@ S--Gb    & 6.392 &        P--(3')S--Tb    & 112.72\\
 &&                        P--(3')S--Gb    & 108.12\\
 & & & \\
 \hline
-Dihedral Angle & $\phi_0$ (degree) & Nonbonded &\\
+Dihedral Angle & $\phi_0$ (degree) & Nonbonded & Length (\Angstrom) \\
 \hline
 P-(5')S(3')-P-(5')S & $-154.80$&   $\dstck$ & Derived from table \ref{geometricConstants} \\
-S(3')-P-(5')S(3')-P & $-179.17$&   & \\
-Ab-S(3')-P-(5')S &    $ -22.60$&   $\dbp_\text{AT}$ & $3.90$\,kcal/mol \\
-S(3')-P-(5')S-Ab &    $  50.69$&   $\dbp_\text{GC}$ & $4.37$\,kcal/mol \\
+S(3')-P-(5')S(3')-P & $-179.17$&   & \\  
+Ab-S(3')-P-(5')S &    $ -22.60$&   $\dbp_\text{AT}$ & $2.9002$ \\
+S(3')-P-(5')S-Ab &    $  50.69$&   $\dbp_\text{GC}$ & $2.8694$ \\ 
 Tb-S(3')-P-(5')S &    $ -33.42$&   & \\
-S(3')-P-(5')S-Tb &    $  54.69$&   $\dexcl$         & $1.0\,\Angstrom$ (mismatched bases) \\
-Cb-S(3')-P-(5')S &    $ -32.72$&   $\dexcl$         & $5.5\,\Angstrom$ (otherwise) \\
+S(3')-P-(5')S-Tb &    $  54.69$&   $\dexcl$         & $1.0$ (mismatched bases) \\
+Cb-S(3')-P-(5')S &    $ -32.72$&   $\dexcl$         & $5.5$ (otherwise) \\
 S(3')-P-(5')S-Cb &    $  54.50$&   & \\
 Gb-S(3')-P-(5')S &    $ -22.30$&   & \\
 S(3')-P-(5')S-Gb &    $  50.66$&   & \\
