@@ -7,12 +7,10 @@ We will now sketch the specific potential energy terms, one by one.
 
 
 
-
 \begin{table}[htb]
-\caption{Geometric constants for the potential energy functions as defined above. Important to note is that a phosphate can bind to a sugar at the 5' or the 3' carbon. The table is reproduced from Knotts \etal \cite{knotts2007coarse}, with our own value for \dexcl\ and following Florescu \& Joyeux for the base pairing strengths \cite{florescu2011thermal}. Note that the last dihedral was unintentionally omitted in \cite{knotts2007coarse}}
+\caption{Geometric constants for the potential energy functions as defined above. Important to note is that a phosphate can bind to a sugar at the 5' or the 3' carbon. The table is reproduced from Knotts \etal \cite{knotts2007coarse}, with our own value for \dexcl\ and following Florescu \& Joyeux for the base pairing strengths \cite{florescu2011thermal}.}
 \begin{center}
 \begin{tabular}{cc@{\qquad}cc}
-\hline
 Bond& $d_0$ (\Angstrom) & Bond Angle&     $\theta_0$ (degree) \\\hline
 S(5')--P & 3.899 &        S(5')--P--(3')S & 94.49\\
 S(3')--P & 3.559 &        P--(5')S(3')--P & 120.15 \\
@@ -25,10 +23,9 @@ S--Gb    & 6.392 &        P--(3')S--Tb    & 112.72\\
 &&                        P--(5')S--Gb    & 113.52\\
 &&                        P--(3')S--Gb    & 108.12\\
 & & & \\
-\hline
 Dihedral Angle & $\phi_0$ (degree) & Nonbonded & Length (\Angstrom) \\
 \hline
-P-(5')S(3')-P-(5')S & $-154.80$&   $\dstck$ & Derived from table \ref{dnaStructureData} \\
+P-(5')S(3')-P-(5')S & $-154.80$&   $\dstck$ & Derived from table \ref{geometricConstants} \\
 S(3')-P-(5')S(3')-P & $-179.17$&   & \\  
 Ab-S(3')-P-(5')S &    $ -22.60$&   $\dbp_\text{AT}$ & $2.9002$ \\
 S(3')-P-(5')S-Ab &    $  50.69$&   $\dbp_\text{GC}$ & $2.8694$ \\ 
@@ -37,12 +34,10 @@ S(3')-P-(5')S-Tb &    $  54.69$&   $\dexcl$         & $1.0$ (mismatched bases) \
 Cb-S(3')-P-(5')S &    $ -32.72$&   $\dexcl$         & $5.5$ (otherwise) \\
 S(3')-P-(5')S-Cb &    $  54.50$&   & \\
 Gb-S(3')-P-(5')S &    $ -22.30$&   & \\
-S(3')-P-(5')S-Gb &    $  50.66$&   & \\
-\hline
+S(3')-P-(5')S-Gb &    $  50.66$&   & 
 \end{tabular}\label{geometricConstants}
 \end{center}
 \end{table}
-
 
 
 \begin{table}[hbt]
@@ -60,12 +55,6 @@ $k_\theta$ & $400\varepsilon$ per (radian)$^2$ &
 \end{tabular}\label{couplingConstants}
 \end{center}
 \end{table}
-
-
-
-
-
-
 
 
 
@@ -187,6 +176,4 @@ Indeed, the exclusion force merely acts to keep two sites from passing through e
 Because non-bonded potentials are short ranged, we can truncate them at a sufficiently large distance.
 This enables us to work with a space partitioning acceleration scheme discussed below.
 We chose to truncate the potentials at a distance of $20\,\Angstrom$. After truncation, the potentials are shifted so they yield a potential energy of zero when calculated at (and beyond) the truncation distance.
-
-
 
