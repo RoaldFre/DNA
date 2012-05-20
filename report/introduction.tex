@@ -7,7 +7,7 @@ Depending on the behaviour that one tries to simulate, different levels of detai
 
 To investigate macroscopical quantities, it often suffices to use a very coarse model of the actual DNA where lots of monomers are combined into a single entity. For instance, a popular model is that of a (self avoiding) random walk. Simulating such coarse-grained models is computationally cheap and can be done for very long timescales \cite{elber2005long}.
 
-Concerning `coarseness', the model we use will be somewhere in between. It uses the three-sites-per-nucleotide approach due to Knotts, Rathore, Schwartz \& De Pablo \cite{knotts2007coarse} (called the 3SPN.0 model). It reduces the complexity of a nucleotide to three interaction sites (sugar, base, phosphate). The parametrization of that model was done by fitting it to experimental data of DNA-melting behaviour between 260--400\,K. An update to this model by the same group (Sambriski, Schwartz \& De Pablo \cite{sambriski2009mesoscale}) extends this model to also take into account the properties of the solvent (3SPN.1 model).
+Concerning `coarseness', the model we use will be somewhere in between. It uses the three-sites-per-nucleotide (3SPN) approach due to Knotts, Rathore, Schwartz \& De Pablo \cite{knotts2007coarse} (called the 3SPN.0 model). It reduces the complexity of a nucleotide to three interaction sites (sugar, base, phosphate). The parametrization of that model was done by fitting it to experimental data of DNA-melting behaviour between 260--400\,K. An update to this model by the same group (Sambriski, Schwartz \& De Pablo \cite{sambriski2009mesoscale}) extends this model to also take into account the properties of the solvent (3SPN.1 model).
 
 In 2011, Florescu \& Joyeux \cite{florescu2011thermal} further extended this model by slightly adjusting the interactions and contribution of the base pairing which gives better and more precise results for the denaturation of long DNA strands. This model (called the 3SPN.2 model from now on) thus gives a computationally cheap way of simulating the double helix structure of a DNA molecule, with experimentally fitted parameters that are available in the literature.
 
@@ -15,13 +15,12 @@ In 2011, Florescu \& Joyeux \cite{florescu2011thermal} further extended this mod
 
 \subsubsection*{Goal}
 
-We want to use this 3SPN model to research the effects of different loop structures (loop size, length of the complementary stem, \ldots) on interesting DNA behaviour, namely re/denaturation (`zipping/unzipping') and hairpin formation (the zipping of a single DNA strand with complementary base pairs, separated by a loop of non-complementary base pairs, as illustrated below).
-\begin{verbatim}
-                                                         X X
-                                               --- CCTGCX   X
-    ---CCTGCXXXXXXXXGCAGG---	      to           --- GGACGX   X
-                                                         X X
-\end{verbatim}We wrote a custom implementation of the 3SPN model with emphasis on performance, using the technique of spacial partitioning \cite{plimpton1995fast} to improve the performance of the (short ranged) nonbonded interactions.
+We want to use this 3SPN model to research the effects of different loop structures (loop size, length of the complementary stem, \ldots) on interesting DNA behaviour, namely re/denaturation (`zipping/unzipping') and hairpin formation (the zipping of a single DNA strand with complementary base pairs, separated by a loop of non-complementary base pairs, as illustrated in Figure \ref{hairpin_example}).
+\begin{figure}[h]
+\includegraphics{images/hairpin_example}
+\caption{Example of a hairpin formation.}\label{hairpin_example}
+\end{figure}
+We wrote a custom implementation of the 3SPN model with emphasis on performance, using the technique of spacial partitioning \cite{plimpton1995fast} to improve the performance of the (short ranged) nonbonded interactions.
 
 The model will be used to investigate the scaling dynamics of the zipping and unzipping times of DNA hairpins with varying stem length. The formation of such hairpins in single stranded DNA has been shown to be very relevant for gene expression \cite{oettinger2000hairpins}. It has also been shown that hairpin formation is closely linked to translocation of DNA through nanopores \cite{carlon2011anomalous}. Hence, it is certainly relevant to have a better understanding of hairpin formation.
 
