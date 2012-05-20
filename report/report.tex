@@ -47,9 +47,6 @@
 \newcommand{\Vexcl}{\ensuremath{V_\text{excl}}}
 \newcommand{\Vqq}{\ensuremath{V_\text{Coulomb}}}
 
-\newcommand{\epsAT}{\ensuremath{\varepsilon_\text{AT}}}
-\newcommand{\epsGC}{\ensuremath{\varepsilon_\text{GC}}}
-
 \newcommand{\dstck}{\ensuremath{d^\text{stck}}}
 \newcommand{\dbp}{\ensuremath{d^\text{bp}}}
 \newcommand{\dexcl}{\ensuremath{d^\text{excl}}}
@@ -64,6 +61,8 @@
 \newcommand{\cmt}[1]{\textcolor{green}{#1} }
 \newcommand{\comment}[1]{\textcolor{green}{#1} }
 \newcommand{\todo}[1]{\textcolor{red}{\textsc{Todo:} #1}}
+\newcommand{\epsAT}{\ensuremath{\varepsilon_\text{AT}}}
+\newcommand{\epsGC}{\ensuremath{\varepsilon_\text{GC}}}
 
 \setlength{\parskip}{1.2em}
 \setlength{\parindent}{0em}
@@ -81,7 +80,7 @@
 \maketitle
 
 \begin{abstract}
-We use a coarse-grained (three beads per nucleotide) molecular dynamics model of DNA to simulate the behaviour of DNA hairpin zipping and unzipping. In particular, we will examine the scaling of the zipping/unzipping time of a DNA hairpin with varying stem length $S$ and loop length $L$. Previous models that are based on a simple thermodynamic `zipper' predict a scaling of the unzipping time $\tau \sim S$ and an anomalous scaling of the zipping time of $\tau \sim S^{1.4}$. However, the model we will use also takes into account the inherent twisting of the stem that has to occur due to the helical nature of double stranded DNA (dsDNA). It has been shown via a simplified model that such twisting gives rise to a nontrivial scaling law for denaturation of dsDNA ($\tau \sim N^{2.6}$). We find that, at least for the hairpin unzipping, there is a deviation from the $\tau \sim S$ scaling law found with the simpler model. This finding is a valuable prediction for experimentalists as, to the best of our knowledge, there are no experimental results available to date concerning the stem length scaling law of DNA hairpin formation.
+We use a coarse-grained (three beads per nucleotide) molecular dynamics model of DNA to simulate the behaviour of DNA hairpin zipping and unzipping. In particular, examine the scaling behavior of the zipping/unzipping time of a DNA hairpin with varying stem length $N$ and loop length $L$. Previous models that are based on a simple thermodynamic `zipper' predict a scaling of the unzipping time $\tau \sim N$ and an anomalous scaling of the zipping time of $\tau \sim N^{1.4}$. However, the model we will use also takes into account the inherent twisting of the stem that has to occur due to the helical nature of double stranded DNA (dsDNA). It has been shown via a simplified model that such twisting gives rise to a nontrivial scaling law for denaturation of dsDNA ($\tau \sim N^{2.6}$). We find that for the hairpin unzipping there is a deviation from the $\tau \sim N$ scaling law found with the simpler model. This finding is a valuable prediction for experimentalists as, to the best of our knowledge, there are no experimental results available to date concerning the stem length scaling law of DNA hairpin formation.
 \end{abstract}
 \newpage
 \tableofcontents
