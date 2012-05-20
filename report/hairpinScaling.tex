@@ -2,7 +2,7 @@
 
 The characteristic time of the unwinding process of double stranded DNA in function of the polymer length has been predicted numerous times with numerous simulation techniques. While most models indirectly take into account the helical structure of dsDNA, few models actually simulate the real physical structure. The topological structure of dsDNA however has a significant effect on the time scaling laws describing the mechanical zipping or unzipping \cite{carlon2010unwinding}.
 
-We are interested in anomalies of the topological structure of dsDNA and the influence they have on the time scaling laws. To be specific, we will look at the time scaling laws governing the formation and deformation of hairpin structures in ssDNA, where a single strand has complementary base pairs at both ends of the strand separated by a region (of a certain length $T_n$) of non-complementary base pairs. In Figure \ref{results_hairpin} the formation of such a hairpin is simulated, using as strand configuration the sequence 5'-GCCTATTTTTTAATAGGC-3'. 
+We will look at the time scaling laws governing the formation and deformation of hairpin structures in ssDNA, where a single strand has complementary base pairs at both ends of the strand separated by a region (of a certain length $T_n$, eventually forming the loop of the hairpin) of non-complementary base pairs. In Figure \ref{results_hairpin} the formation of such a hairpin is simulated, using as strand configuration the sequence 5'-GCCTATTTTTTAATAGGC-3'. 
 
 Baiesi, Barkema, Carlon \& Panja \cite{carlon2010unwinding} used Monte Carlo methods to determine that the time needed to unwind a double stranded polymer of length $N$ in a wound structure (yielding a basic simulation of the global dynamics of the unwinding process) scales like
 \begin{equation}
@@ -19,13 +19,6 @@ For Monte Carlo zipping dynamics in a lattice DNA structure, Ferrantini \& Carlo
 \tau \sim N^{1.37\pm0.02}
 \end{equation}
 when quenching the polymers from a high temperature equilibrium configuration to a low temperature state. The unzipping when the strand is brought to a high temperature remained non-anomalous, scaling as $\tau \sim N$. The same model produces characteristic timescales that scale as $\tau \sim N^{2.26 \pm 0.02}$ when the strand is held at the critical temperature.
-
-
-
-Scaling of the hairpin zipping and unzipping time is examined in our model with a more physical set-up incorporating the helicity structure of DNA, and yielding scaling laws for zipping and unzipping dynamics of respectively
-\begin{equation}
-\tau_\text{zipping} \sim N^{1.2} \qquad \qquad \text{and} \qquad \qquad \tau_\text{unzipping} \sim N^{2.6}\end{equation}
-as a function of the number of monomers $N$.
 
 Simulations are performed on ssDNA sequences of the form (A)$_N$(T)$_N$ in an environment with $[\text{Na}^+] = 200$\,mM.
 We opted to leave out an `inert' loop as to not slow the simulation down and delay the hairpin formation\footnote{We did not have sufficient time to measure the influence of loops and lengths thereof in hairpins, as most of our time was spent writing, debugging and verifying the implementation.
@@ -48,7 +41,7 @@ Simulations were run on hairpins with stem lengths between 10 and 100 monomers. 
 
 The results are show in Figure \ref{hairpinScaling}. We obtain the relations $\tauzip \sim N^\betazip$ and $\tauunzip \sim N^\betaunzip$ where $\betazip = 1.26 \pm 0.14$ and $\betaunzip = 2.62 \pm 0.09$
 
-Note that the data shows large deviation from the fit for small $N$. This is to be expected, as uniform scaling behaviour only manifests itself in the limit of $N \to \infty$
+Note that the data shows large deviation from the fit for small $N$. This is to be expected, as uniform scaling behaviour only manifests itself in the limit of $N \to \infty$.
 
 
 \begin{figure}[hbt]
