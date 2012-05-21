@@ -318,7 +318,8 @@ static void parseArguments(int argc, char **argv)
 	}
 
 	if (integratorConf.numBoxes == -1) {
-		integratorConf.numBoxes = worldSize / config.truncationLen;
+		int ideal = pow(64 * strlen(baseSequence), 1.0/3.0); //TODO: determine prefactor
+		integratorConf.numBoxes = MIN(worldSize / config.truncationLen, ideal);
 		if (integratorConf.numBoxes  < 1)
 			integratorConf.numBoxes = 1;
 		printf("Number of boxes per dimension: %d\n",
