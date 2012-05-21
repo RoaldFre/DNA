@@ -1,6 +1,6 @@
 function [meanZip, errZip, meanUnzip, errUnzip] = averageZippingTime(filesglob)
 
-[timesTillZipping, timesTillUnzipping, temperature, temperatures, data, measureTime, timestep, allowedUnboundBPs, allowedBoundBps] = parseHairpins(filesglob, false);
+[timesTillZipping, timesTillUnzipping, temperature, temperatures, data, timestep, allowedUnboundBPs, allowedBoundBps] = parseHairpinFormation(filesglob, false);
 
 meanZip = mean(timesTillZipping);
 errZip = std(timesTillZipping)/sqrt(numel(timesTillZipping));
