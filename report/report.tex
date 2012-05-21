@@ -84,11 +84,13 @@
 \begin{abstract}
 We implement a coarse-grained (three beads per nucleotide) molecular dynamics model of DNA to simulate the behaviour of DNA hairpin zipping and unzipping. Special attention will be given to the computational complexity of the implementation, using the technique of spatial partitioning to compute nonbonded interactions efficiently.
 
-We use the finished model to examine the scaling behavior of the zipping/un\-zip\-ping time of a DNA hairpin with varying stem length $N$. Previous models that are based on a simple thermodynamic `zipper' predict a scaling of the unzipping time $\tau \sim N$ and an anomalous scaling of the zipping time of $\tau \sim N^{1.37}$. 
+We use the finished model to examine the scaling behavior of the zipping/un\-zip\-ping time of a DNA hairpin with varying stem length $N$. Previous models that are based on a simple thermodynamic `zipper' predict a scaling of the unzipping time $\tau \sim N$ and an anomalous scaling of the zipping time of $\tau \sim N^{1.37}$.
 
 However, the model we use also takes into account the inherent twisting of the stem that has to occur due to the helical nature of double stranded DNA (dsDNA). It has been shown via a simplified model that such twisting gives rise to a nontrivial scaling law for denaturation of dsDNA ($\tau \sim N^{2.6}$). 
 
-The more realistic model we use confirms the predictions of the simpler models with a fitted scaling law of $\tau \sim N^{1.26\pm0.14}$ for the zipping time and $\tau \sim N^{2.62\pm0.09}$ for the unzipping time in terms of the stem length of ssDNA hairpins. This finding is also a valuable prediction for experimentalists as, to the best of our knowledge, there are no experimental results available to date concerning the stem length scaling law of DNA hairpin formation.
+The more realistic model we use, confirms the predictions of the simpler models with a fitted scaling law of $\tau \sim N^{1.33\pm0.14}$ for the zipping time and $\tau \sim N^{2.57\pm0.10}$ for the unzipping time in terms of the stem length of ssDNA hairpins. This shows the importance of the helicity in the case of hairpin unzipping, as will be aruged.
+
+Because we use a molecular dynamics algorithm, we can exctract not only the scaling law, but also the actual (un)zipping times. Our finding is a valuable prediction for experimentalists as, to the best of our knowledge, there are no experimental results available to date concerning the stem length scaling law of DNA hairpin formation.
 \end{abstract}
 \newpage
 \tableofcontents
