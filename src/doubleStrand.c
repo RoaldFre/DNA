@@ -302,8 +302,9 @@ static void parseArguments(int argc, char **argv)
 						* config.timeStep;
 
 	if (config.truncationLen < 0) {
-		printf("Disabling space partitioning\n");
 		/* Disable truncation -> no space partitioning */
+		printf("Disabling space partitioning, "
+				"maximizing truncation length.\n");
 		integratorConf.numBoxes = 1;
 		config.truncationLen = worldSize / 2.0;
 		/* Due to (cubic) periodicity, we still need to truncate at 
@@ -311,15 +312,25 @@ static void parseArguments(int argc, char **argv)
 		 * make sure every particle 'sees' the same (spherical) 
 		 * potential, no matter where it is within the cube. */
 	} else if (config.truncationLen > worldSize / 2.0) {
-		printf("Truncation (%e) > worldSize/2 (%e)\n"
-				"   => Disabling space partitioning\n",
-				config.truncationLen, worldSize/2);
-		config.truncationLen = worldSize / 2.0; /* same reason */
-	}
-
-	if (integratorConf.numBoxes == -1) {
-		integratorConf.numBoxes = worldSize / config.truncationLen;
-		if (integratorConf.numBoxes  < 1)
+		/* World is too small, extend it so we correctly compute 
+		 * the potentials and forces up to the requested truncation 
+		 * length. We need twice the truncation length for the same 
+		 * reason as above. */
+		printf("Truncation (%e) > worldSize/2 (%e)\n   => "
+				"Extending worldSize to 2*Truncation (%e).\n",
+				config.truncationLen, worldSize/2.0,
+				2.0 * config.truncationLen);
+		worldSize = 2.0 * config.truncationLen;
+		integratorConf.numBoxes = 1; /* No space partitioning */
+	} else if (integratorConf.numBoxes == -1) {
+		/* Automatically determine ideal number of boxes.
+		 * Formula is fitted for N between 100 and 1000 on a Core2 
+		 * Duo E8500.
+		 * (+ 0.5 for correct rounding to int) */
+		int ideal = 0.5 + 2.73 * pow(strlen(baseSequence), 0.446);
+		integratorConf.numBoxes = MIN(ideal,
+					worldSize / config.truncationLen);
+		if (integratorConf.numBoxes < 1)
 			integratorConf.numBoxes = 1;
 		printf("Number of boxes per dimension: %d\n",
 				integratorConf.numBoxes);
