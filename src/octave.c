@@ -3,15 +3,25 @@
 #include <stdarg.h>
 #include "octave.h"
 
+void octaveStartComment(void)
+{
+	printf("## ");
+}
+
+void octaveEndComment(void)
+{
+	printf("\n");
+}
+
 void octaveComment(const char *fmt, ...)
 {
 	va_list args;
 
-	printf("## ");
+	octaveStartComment();
 	va_start(args, fmt);
 	vprintf(fmt, args);
 	va_end(args);
-	printf("\n");
+	octaveEndComment();
 }
 
 void octaveScalar(const char *name, double value)

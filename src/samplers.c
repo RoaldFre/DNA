@@ -286,6 +286,24 @@ Sampler basePairingSampler(BasePairingConfig *bpc)
 
 
 /* HAIR PIN FORMATION */
+/* Print (half of) the hairpin config and return  the number of correctly 
+ * bound base pairs. */
+static int dumpHairpinState(Strand *s, double energyThreshold)
+{
+	int correctlyBound = 0;
+	int n = s->numMonomers;
+	for (int i = 0; i < n/2; i++) {
+		int j = n - 1 - i;
+		double V = VbasePair(&s->Bs[i], &s->Bs[j]);
+		if (V < energyThreshold) {
+			correctlyBound++;
+			printf("1 ");
+		} else {
+			printf("0 ");
+		}
+	}
+	return correctlyBound;
+}
 static int getCorrectlyBoundHairpinBasePairs(Strand *s, double energyThreshold)
 {
 	int correctlyBound = 0;
@@ -364,7 +382,10 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 
 	switch (hfd->status) {
 	case WAITING_TO_ZIP:
-		octaveComment("[waiting to zip] %e %d", time, correctlyBound);
+		octaveStartComment();
+		printf("[waiting to zip] %e %d ", time, correctlyBound);
+		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
+		octaveEndComment();
 		if (correctlyBound < requiredBounds)
 			break; /* Keep waiting */
 		
@@ -376,7 +397,10 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 				time, time - hfd->zippingPhaseStartTime);
 		/* Intentional fall through */
 	case WAITING_FOR_ZIPPING_CONFIRMATION:
-		octaveComment("[waiting to zip] %e %d", time, correctlyBound);
+		octaveStartComment();
+		printf("[waiting to zip] %e %d ", time, correctlyBound);
+		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
+		octaveEndComment();
 		if (correctlyBound < requiredBounds) {
 			/* It was a dud! */
 			hfd->status = WAITING_TO_ZIP;
@@ -399,7 +423,10 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		hfd->status = RELAXATION_IN_ZIPPED_STATE;
 		/* Intentional fall through */
 	case RELAXATION_IN_ZIPPED_STATE:
-		octaveComment("[zipped relaxation] %e %d", time, correctlyBound);
+		octaveStartComment();
+		printf("[zipped relaxation] %e %d ", time, correctlyBound);
+		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
+		octaveEndComment();
 		if (time - hfd->timeOfConfirmation < hfc->zippedRelaxationTime)
 			break; /* Relax further */
 		/* End of relaxation phase. Go to WAITING_TO_UNZIP if we 
@@ -421,7 +448,10 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		hfd->status = WAITING_TO_UNZIP;
 		break;
 	case WAITING_TO_UNZIP:
-		octaveComment("[waiting to unzip] %e %d", time, correctlyBound);
+		octaveStartComment();
+		printf("[waiting to unzip] %e %d ", time, correctlyBound);
+		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
+		octaveEndComment();
 		if (correctlyBound > allowedBounds)
 			break;
 
@@ -433,7 +463,10 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 				time, time - hfd->unzippingPhaseStartTime);
 		/* Intentional fall through */
 	case WAITING_FOR_UNZIPPING_CONFIRMATION:
-		octaveComment("[waiting to unzip] %e %d", time, correctlyBound);
+		octaveStartComment();
+		printf("[waiting to unzip] %e %d ", time, correctlyBound);
+		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
+		octaveEndComment();
 		if (correctlyBound > allowedBounds) {
 			/* It was a dud! */
 			hfd->status = WAITING_TO_UNZIP;
@@ -600,22 +633,9 @@ static SamplerSignal hairpinMeltingTempSample(SamplerData *sd, void *state)
 
 		/* Not at the end of this step yet: just sample */
 		hmtd->accumulatedBoundBasePairs += correctlyBound;
-		if (hmtc->verbose) {
-			printf("%e %d\t", time, correctlyBound);
-			/* print (half of) the hairpin config */
-			int n = world.strands[0].numMonomers;
-			for (int i = 0; i < n/2; i++) {
-				int j = n - 1 - i;
-				double V = VbasePair(&world.strands[0].Bs[i],
-						     &world.strands[0].Bs[j]);
-				if (V < hmtc->energyThreshold) {
-					printf("1 ");
-				} else {
-					printf("0 ");
-				}
-			}
-			printf("\n");
-		}
+		if (hmtc->verbose)
+			dumpHairpinState(&world.strands[0], 
+					hmtc->energyThreshold);
 		break;
 	default:
 		fprintf(stderr, "Unknown status in hairpinMeltingTempSample!\n");
