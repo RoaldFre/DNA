@@ -185,103 +185,6 @@ Sampler strandCOMSquaredDisplacementSampler(Strand *s)
 
 
 
-/* BASE PAIRING */
-
-typedef struct
-{
-	int count;
-	double threshold;
-} BasePairingCounterData;
-static void basePairingCounter(Particle *p1, Particle *p2, void *data)
-{
-	BasePairingCounterData *bpcd = (BasePairingCounterData*) data;
-	double V = VbasePair(p1, p2);
-	if (V < bpcd->threshold)
-		bpcd->count++;
-}
-static void* basePairingStart(SamplerData *sd, void *conf)
-{
-	UNUSED(sd);
-	BasePairingConfig *bpc = (BasePairingConfig*) conf;
-	config.thermostatTemp = bpc->T;
-	return bpc;
-}
-static SamplerSignal basePairingSample(SamplerData *sd, void *state)
-{
-	BasePairingConfig *bpc = (BasePairingConfig*) state;
-
-	/* All base pairs */
-	BasePairingCounterData bpcd;
-	bpcd.count = 0;
-	bpcd.threshold = bpc->energyThreshold;
-	forEveryPairD(&basePairingCounter, &bpcd);
-	int n = world.strands[0].numMonomers;
-
-	/* Matching base pairs if two equal-length strands in the world 
-	 * (assumed to be complementary) */
-	int correctlyBound = -1; /* guard */
-	if (world.numStrands == 2  &&  (world.strands[0].numMonomers
-					== world.strands[1].numMonomers)) {
-		correctlyBound = 0;
-		for (int i = 0; i < n; i++) {
-			int j = n - 1 - i; //TODO
-			double V = VbasePair(&world.strands[0].Bs[i],
-					     &world.strands[1].Bs[j]);
-			if (V < bpc->energyThreshold) {
-				correctlyBound++;
-				printf("1 ");
-			} else {
-				printf("0 ");
-			}
-		}
-	}
-
-	/* Matching base pairs if one strands in the world (assumed to be a 
-	 * hairpin) */
-	if (world.numStrands == 1) {
-		correctlyBound = 0;
-		for (int i = 0; i < n/2; i++) {
-			int j = n - 1 - i;
-			double V = VbasePair(&world.strands[0].Bs[i],
-					     &world.strands[0].Bs[j]);
-			if (V < bpc->energyThreshold) {
-				correctlyBound++;
-				printf("1 ");
-			} else {
-				printf("0 ");
-			}
-		}
-	}
-
-	if (correctlyBound >= 0) {
-		printf("%e\t%d\t%d\n", getTime(), bpcd.count, correctlyBound);
-		if(sd->string != NULL)
-			snprintf(sd->string, sd->strBufSize,
-					"All BPs: %d, Correct BPs: %d",
-					bpcd.count, correctlyBound);
-	} else {
-		printf("%e\t%d\n", getTime(), bpcd.count);
-		if(sd->string != NULL)
-			snprintf(sd->string, sd->strBufSize,
-					"All BPs: %d", bpcd.count);
-	}
-
-	return SAMPLER_OK;
-}
-Sampler basePairingSampler(BasePairingConfig *bpc)
-{
-	Sampler sampler;
-	BasePairingConfig *bpcCopy = malloc(sizeof(*bpcCopy));
-	memcpy(bpcCopy, bpc, sizeof(*bpcCopy));
-
-	sampler.samplerConf = bpcCopy;
-	sampler.start  = &basePairingStart;
-	sampler.sample = &basePairingSample;
-	sampler.stop   = &freeState;
-	return sampler;
-}
-
-
 
 
 
@@ -655,4 +558,100 @@ Sampler hairpinMeltingTempSampler(HairpinMeltingTempSamplerConfig *hmtc)
 	sampler.stop   = &freeState;
 	return sampler;
 }
+
+
+
+
+/* BASE PAIRING */
+
+typedef struct
+{
+	int count;
+	double threshold;
+} BasePairingCounterData;
+static int dumpDualStrandState(Strand *s1, Strand *s2, double energyThreshold)
+{
+	assert(s1->numMonomers == s2->numMonomers);
+	int n = s1->numMonomers;
+	int correctlyBound = 0;
+	for (int i = 0; i < n; i++) {
+		int j = n - 1 - i; //TODO
+		double V = VbasePair(&s1->Bs[i],
+				     &s2->Bs[j]);
+		if (V < energyThreshold) {
+			correctlyBound++;
+			printf("1 ");
+		} else {
+			printf("0 ");
+		}
+	}
+	return correctlyBound;
+}
+static void basePairingCounter(Particle *p1, Particle *p2, void *data)
+{
+	BasePairingCounterData *bpcd = (BasePairingCounterData*) data;
+	double V = VbasePair(p1, p2);
+	if (V < bpcd->threshold)
+		bpcd->count++;
+}
+static void* basePairingStart(SamplerData *sd, void *conf)
+{
+	UNUSED(sd);
+	BasePairingConfig *bpc = (BasePairingConfig*) conf;
+	config.thermostatTemp = bpc->T;
+	return bpc;
+}
+static SamplerSignal basePairingSample(SamplerData *sd, void *state)
+{
+	BasePairingConfig *bpc = (BasePairingConfig*) state;
+
+	/* All base pairs */
+	BasePairingCounterData bpcd;
+	bpcd.count = 0;
+	bpcd.threshold = bpc->energyThreshold;
+	forEveryPairD(&basePairingCounter, &bpcd);
+
+	/* Matching base pairs if two equal-length strands in the world 
+	 * (assumed to be complementary) */
+	int correctlyBound = -1; /* guard */
+	if (world.numStrands == 2  &&  (world.strands[0].numMonomers
+					== world.strands[1].numMonomers)) {
+		correctlyBound = dumpDualStrandState(&world.strands[0], 
+				&world.strands[1], bpc->energyThreshold);
+	}
+	/* Matching base pairs if one strands in the world (assumed to be a 
+	 * hairpin) */
+	if (world.numStrands == 1) {
+		correctlyBound = dumpHairpinState(&world.strands[0], 
+				bpc->energyThreshold);
+	}
+
+	if (correctlyBound >= 0) {
+		printf("%e\t%d\t%d\n", getTime(), bpcd.count, correctlyBound);
+		if(sd->string != NULL)
+			snprintf(sd->string, sd->strBufSize,
+					"All BPs: %d, Correct BPs: %d",
+					bpcd.count, correctlyBound);
+	} else {
+		printf("%e\t%d\n", getTime(), bpcd.count);
+		if(sd->string != NULL)
+			snprintf(sd->string, sd->strBufSize,
+					"All BPs: %d", bpcd.count);
+	}
+
+	return SAMPLER_OK;
+}
+Sampler basePairingSampler(BasePairingConfig *bpc)
+{
+	Sampler sampler;
+	BasePairingConfig *bpcCopy = malloc(sizeof(*bpcCopy));
+	memcpy(bpcCopy, bpc, sizeof(*bpcCopy));
+
+	sampler.samplerConf = bpcCopy;
+	sampler.start  = &basePairingStart;
+	sampler.sample = &basePairingSample;
+	sampler.stop   = &freeState;
+	return sampler;
+}
+
 
