@@ -78,8 +78,8 @@ caption   = 'Diffusion of a 12 monomer single strand of Adenine. Shown are the s
 destdir   = '../report/images';
 relImgDir = 'images'; %relative to where your latex project root directory is
 ylabrule  = '-1.5cm';
-xlab      = 'time ($\mu$s)';
-ylab      = 'squared displacement ($10^{15}$\,m$^2$)';
+xlab      = 'Time ($\mu$s)';
+ylab      = 'Squared displacement ($10^{15}$\,m$^2$)';
 width     = '1000';
 height    = '800';
 

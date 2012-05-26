@@ -1,6 +1,13 @@
 %xs must be a column vector
 function [cte, exponent, cteStddev, exponentStddev] = loglogRegression(xs, ys, guessCte, guessExponent, yerr)
 
+if (nargin < 4)
+	error("Not enough required arguments!");
+end
+if (nargin == 4)
+	yerr = ones(size(ys));
+end
+
 
 logys = log(ys);
 logxs = log(xs);
