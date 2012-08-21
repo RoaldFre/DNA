@@ -8,6 +8,8 @@
 % first columns are pretty much redundant)
 function [D, Derr, meanSqDisplacement, sqDisplacement] = plotDiffusion(datafilename, fraction)
 
+% command used for plot in report: plotDiffusion("data/strand_dt10_wait50_time1000_N12_g5e12", 0.9999)
+
 if (nargin < 1)
 	error("Not enough required arguments!");
 end
@@ -83,4 +85,6 @@ ylab      = 'Squared displacement ($10^{15}$\,m$^2$)';
 width     = '1000';
 height    = '800';
 
-makeGraph(filename,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
+%makeGraph(filename,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
+presentationDir = '../presentation/images';
+makeGraphPresentation(filename,presentationDir,xlab,ylab,ylabrule,width,height);

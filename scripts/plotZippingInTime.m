@@ -1,18 +1,41 @@
-file="/home/other/roald/clusterdata/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12366.itf11";
+addpath('octave-forge');
+
+
+%stays one rather homogenous 'chunk'
+%file="/home/other/roald/clusterdata/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12355.itf11";
+
+%file="/home/other/roald/clusterdata/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12366.itf11";
 
 %this one 'gets stuck' again:
 %file="/home/other/roald/clusterdata/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12365.itf11";
 
-%file="/home/other/roald/clusterdata/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12366.itf11";
+%file="/home/other/roald/clusterdata/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12354.itf11";
+
+
+%NO EXCLUSION
+%file="/home/other/roald/clusterdata/hairpinFormationNoExcl/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12856.itf11";
+%Really funky and short:
+%file="/home/other/roald/clusterdata/hairpinFormationNoExcl/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12914.itf11";
+file="/home/other/roald/clusterdata/hairpinFormationNoExcl/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12712.itf11";
+
+%fileNameBase = "stateInTimeN100_1";
+fileNameBase = "stateInTimeN100_4_noExl";
+
 
 
 %[_, tmpfile] = system('mktemp'); %load breaks on this somehow below
 tmpfile = "plotZippingInTimeTemp";
 system(['sed -n "s/## \[waiting to zip\] //p" ',file,' > ',tmpfile]);
 zipping = load(tmpfile);
-zippingTimes = zipping(:,1) - zipping(1,1);
-zippingBound = zipping(:,2);
-zippingState = zipping(:,3:end);
+%XXX Decimate because otherwise gives errors when plotting (data set too large??)
+decimateFactor = 3;
+zippingTimes = decimate(zipping(:,1) - zipping(1,1), decimateFactor);
+zippingBound = decimate(zipping(:,2), decimateFactor);
+fullZippingState = zipping(:,3:end);
+clear('zippingState');
+for i = 1:numel(fullZippingState(1,:))
+	zippingState(:,i) = decimate(fullZippingState(:,i), decimateFactor);
+end
 
 system(['sed -n "s/## \[waiting to unzip\] //p" ',file,' > ',tmpfile]);
 unzipping = load(tmpfile);
@@ -24,18 +47,24 @@ system(['rm ',tmpfile]);
 
 N = numel(zippingState(1,:));
 
-colormap([1 1 1; 0 0 0]);
-imagesc(zippingTimes * 1e9, [1, N], zippingState');
-xlabel("time (ns)");
-ylabel("base pair");
-print("zipping.png")
+presentationDir = "../presentation/images/";
+xlab = "Time (ns)";
+ylab = "Base pair";
+ylabrule = "1.0cm";
+width = '1200';
+height = '400';
 
-figure
-colormap([1 1 1; 0 0 0]);
+
+colmap = [1 1 1; 0 0 0];
+%colmap = linspace(1,0,100)' * [1 1 1];
+
+colormap(colmap);
 imagesc(unzippingTimes * 1e9, [1, N], unzippingState');
-xlabel("time (ns)");
-ylabel("base pair");
-print("unzipping.png")
+axis([0,180,0,1], 'autoy');
+makeGraphPresentation([fileNameBase,'_unzipping'],presentationDir,xlab,ylab,ylabrule,width,height);
 
+%figure
 
-
+colormap(colmap);
+imagesc(zippingTimes * 1e9, [1, N], zippingState');
+makeGraphPresentation([fileNameBase,'_zipping'],presentationDir,xlab,ylab,ylabrule,width,height);

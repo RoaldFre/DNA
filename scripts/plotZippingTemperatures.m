@@ -22,11 +22,12 @@ caption   = 'Melting transition of two DNA hairpins: 3''CCTA\textbf{TT}AAAA\text
 destdir   = '../report/images';
 relImgDir = 'images'; %relative to where your latex project root directory is
 ylabrule  = '-1.5cm';
-xlab      = 'Temperature ($\degree$C)';
+xlab      = 'Temperature ($^\circ$C)';
 ylab      = 'Fraction of bound base pairs in the stem';
 width     = '700';
 height    = '500';
 
-makeGraph(filename,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
+%makeGraph(filename,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
 
-
+presentationDir = '../presentation/images';
+makeGraphPresentation(filename,presentationDir,xlab,ylab,ylabrule,width,height);

@@ -1,6 +1,12 @@
-Ns = [];
+%filename  = 'hairpinScaling_combined' %destination file
+filename  = 'hairpinScaling' %destination file
 
-dir="/home/other/roald/clusterdata/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time10000/";
+dir="/home/other/roald/clusterdata/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time10000*/";
+
+%NO EXCLUSION, 180C
+%dir="/home/other/roald/clusterdata/hairpinFormationNoExcl/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/";
+%NO EXCLUSION, 100C
+%dir="/home/other/roald/clusterdata/hairpinFormationNoExcl/formation_zipT20_unzipT100_allowUnb2_allowB2_zippedRel10/dt15_time100000/";
 Ns = [5 10 15 20 30 40 50 60 80 100];
 fitstart = 3; %start at this index for fitting
 %Ns = [15 20 30 40 50 60 80];
@@ -34,64 +40,46 @@ fitZipTimes = zipCte * fitNs.^zipExponent;
 fitUnzipTimes = unzipCte * fitNs.^unzipExponent;
 
 
-clf;hold on;
+clf;
+hold on;
 
+col='b'
+%col='c'
 h = loglogerr(Ns, zippingTimes, zippingTimeErrs);
 set(h, "marker", ".");
+set(h, "color", col);
 set(h, "linestyle", "none");
 set(h, "linewidth", 4);
 
-loglog(fitNs, fitZipTimes, "b", "linewidth", 4);
+loglog(fitNs, fitZipTimes, col, "linewidth", 4);
 
+col='r'
+%col='m'
 h = loglogerr(Ns, unzippingTimes, unzippingTimeErrs);
 set(h, "marker", ".");
-set(h, "color", "r");
+set(h, "color", col);
 set(h, "linestyle", "none");
 set(h, "linewidth", 4);
 
-loglog(fitNs, fitUnzipTimes, "r", "linewidth", 4);
+loglog(fitNs, fitUnzipTimes, col, "linewidth", 4);
 
 axis([4,100,0,1], 'autoy');
 
 hold off;
 
 
-filename  = 'hairpinScaling'
-caption   = 'Scaling of the hairpin zipping (blue) and unzipping (red) times for an (A)$_N$(T)$_N$ hairpin with the length $N$ varying between 5 and 100. The scaling exponent is fitted, with exclusion of the first two data points (at the short lenghts of $N = 5$ and $N = 10$), yielding a scaling behaviour $\tau \sim N^{1.33 \pm 0.14}$ for the zipping time and a scaling of $\tau \sim N^{2.57 \pm 0.10}$ for the unzipping time.'
+caption   = 'Scaling of the hairpin zipping (blue) and unzipping (red) times for an (A)$_N$(T)$_N$ hairpin with the length $N$ varying between 5 and 100. The scaling exponent is fitted, with exclusion of the first two data points (at the short lenghts of $N = 5$ and $N = 10$), yielding a scaling behaviour $\tau \sim N^{1.33 \pm 0.14}$ for the zipping time and a scaling of $\tau \sim N^{2.57 \pm 0.10}$ for the unzipping time.';
 
 destdir   = '../report/images';
 relImgDir = 'images'; %relative to where your latex project root directory is
-ylabrule  = '-1.5cm';
+ylabrule  = '2.0cm';
 xlab      = 'Number of base pairs, $N$';
 ylab      = 'Hairpin (un)zipping time (seconds)'
 width     = '700';
 height    = '500';
 
-makeGraph(filename,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
+%makeGraph(filename,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
 
-
-
-
-
-return
-
-
-
-
-figure;
-hold on;
-h = errorbar(Ns, zippingTimes, zippingTimeErrs);
-set(h, "marker", ".");
-set(h, "linestyle", "none");
-
-plot(fitNs, fitZipTimes);
-
-h = errorbar(Ns, unzippingTimes, unzippingTimeErrs);
-set(h, "marker", ".");
-set(h, "linestyle", "none");
-
-plot(fitNs, fitUnzipTimes, "r");
-
-hold off;
-
+presentationDir = '../presentation/images';
+makeGraphPresentation(filename,presentationDir,xlab,ylab,ylabrule,width,height);
 
