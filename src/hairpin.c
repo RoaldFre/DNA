@@ -74,7 +74,7 @@ static HairpinFormationSamplerConfig hfc =
 static HairpinMeltingTempSamplerConfig hmtc =
 {
 	.energyThreshold = -0.1 * EPSILON,
-	.Tstart = 20,
+	.Tstart = CELSIUS(20),
 	.Tstep = 10,
 	.numSteps = 10,
 	.relaxationTime = 5 * NANOSECONDS,
@@ -178,18 +178,26 @@ static void printUsage(void)
 	//TODO parameter names are a mess
 	printf("Parameters for hairpin melting temperature measurement:\n");
 	printf(" -A <flt>  startTemp (Celsius)\n");
+	printf("             default: %f\n", TO_CELSIUS(hmtc.Tstart));
 	printf(" -B <flt>  stepTemp\n");
+	printf("             default: %f\n", hmtc.Tstep);
 	printf(" -C <int>  nSteps\n");
+	printf("             default: %d\n", hmtc.numSteps);
 	printf(" -G <flt>  measureTime per step (nanoseconds)\n");
+	printf("             default: %f\n", hmtc.measureTime / NANOSECONDS);
 	printf(" -L <flt>  reLaxTime per step (nanoseconds)\n");
+	printf("             default: %f\n", hmtc.relaxationTime / NANOSECONDS);
 	printf(" -V        Be verbose: also dump hairpin state to file\n");
 	printf("Parameters for hairpin formation measurement:\n");
 	printf(" -H <int>  min required bounded base pairs for confirming 'zipped' state\n");
 	printf(" -M <int>  max allowed bounded base pairs for confirming 'unzipped' state\n");
 	printf("             default: %d\n", hfc.allowedBoundBPs);
 	printf(" -O <flt>  zipping temperature (Celsius)\n");
+	printf("             default: %f\n", TO_CELSIUS(hfc.zippingTemperature));
 	printf(" -Q <flt>  unzipping temperature (Celsius)\n");
+	printf("             default: %f\n", TO_CELSIUS(hfc.unzippingTemperature));
 	printf(" -U <flt>  zipped relaxation phase duration (nanoseconds)\n");
+	printf("             default: %f\n", hfc.zippedRelaxationTime / NANOSECONDS);
 	printf("\n");
 }
 
