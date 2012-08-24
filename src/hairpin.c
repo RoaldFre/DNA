@@ -65,7 +65,7 @@ static HairpinFormationSamplerConfig hfc =
 {
 	.energyThreshold = -0.1 * EPSILON,
 	.confirmationTime = 1 * NANOSECONDS,
-	.allowedUnboundBPs = 1,
+	.requiredBoundBPs = -1, /* guard */
 	.allowedBoundBPs = 1,
 	.zippingTemperature = CELSIUS(20),
 	.unzippingTemperature = CELSIUS(90),
@@ -184,8 +184,9 @@ static void printUsage(void)
 	printf(" -L <flt>  reLaxTime per step (nanoseconds)\n");
 	printf(" -V        Be verbose: also dump hairpin state to file\n");
 	printf("Parameters for hairpin formation measurement:\n");
-	printf(" -H <int>  allowed unbounded base pairs\n");
-	printf(" -M <int>  allowed bounded base pairs\n");
+	printf(" -H <int>  min required bounded base pairs for confirming 'zipped' state\n");
+	printf(" -M <int>  max allowed bounded base pairs for confirming 'unzipped' state\n");
+	printf("             default: %d\n", hfc.allowedBoundBPs);
 	printf(" -O <flt>  zipping temperature (Celsius)\n");
 	printf(" -Q <flt>  unzipping temperature (Celsius)\n");
 	printf(" -U <flt>  zipped relaxation phase duration (nanoseconds)\n");
@@ -340,7 +341,7 @@ static void parseArguments(int argc, char **argv)
 			hmtc.verbose = true;
 			break;
 		case 'H':
-			hfc.allowedUnboundBPs = atoi(optarg);
+			hfc.requiredBoundBPs = atoi(optarg);
 			break;
 		case 'M':
 			hfc.allowedBoundBPs = atoi(optarg);
@@ -495,6 +496,10 @@ int main(int argc, char **argv)
 		hairpin.sampler = hairpinMeltingTempSampler(&hmtc);
 		break;
 	case HAIRPIN_FORMATION_TIME:
+		if (hfc.requiredBoundBPs < 0) /* guard */
+			die("You need to give the minimum required number "
+					"of bound base pairs to measure "
+					"hairpin formation time!\n");
 		hairpin.sampler = hairpinFormationSampler(&hfc);
 		break;
 	case HAIRPIN_NO_MEASUREMENT:

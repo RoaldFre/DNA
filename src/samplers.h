@@ -49,12 +49,12 @@ typedef struct {
 	 * it to be considered a stable(melted) hairpin */
 	double confirmationTime;
 
-	/* Number of unbound basepairs to allow when determining whether a 
-	 * hairpin is fully zipped */
-	int allowedUnboundBPs; 
+	/* Minimum number of bound basepairs required when determining 
+	 * whether a hairpin is fully zipped */
+	int requiredBoundBPs; 
 
-	/* Number of bound basepairs to allow when determining whether a 
-	 * hairpin is fully unzipped */
+	/* Maximum number of bound basepairs to allow when determining 
+	 * whether a hairpin is fully unzipped */
 	int allowedBoundBPs; 
 
 	/* Time to wait after having confirmed zipping before switching the 

@@ -256,7 +256,7 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 	octaveScalar("zippingPhaseStartTime",   getTime());
 	octaveScalar("zippingTemperature",      hfc->zippingTemperature);
 	octaveScalar("unzippingTemperature",    hfc->unzippingTemperature);
-	octaveScalar("allowedUnboundBPs",       hfc->allowedUnboundBPs);
+	octaveScalar("requiredBoundBPs",        hfc->requiredBoundBPs);
 	octaveScalar("allowedBoundBPs",         hfc->allowedBoundBPs);
 	octaveScalar("numMonomers",             n);
 	octaveScalar("timestep",                config.timeStep);
@@ -272,8 +272,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 
 	int correctlyBound = getCorrectlyBoundHairpinBasePairs(
 				&world.strands[0], hfc->energyThreshold);
-	int n = world.strands[0].numMonomers;
-	int requiredBounds = n/2 - hfc->allowedUnboundBPs; /* for zipping */
+	int requiredBounds = hfc->requiredBoundBPs; /* for zipping */
 	int allowedBounds = hfc->allowedBoundBPs; /* for unzipping */
 
 	if(sd->string != NULL)
