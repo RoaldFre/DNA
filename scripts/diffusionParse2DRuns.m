@@ -1,4 +1,4 @@
-function data = parse2DRuns(filesglob)
+function data = diffusionParse2DRuns(filesglob)
 
 #files = glob([directory, "/*"]);
 files = glob(filesglob);
