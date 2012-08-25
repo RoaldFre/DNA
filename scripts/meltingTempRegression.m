@@ -2,6 +2,8 @@
 %function [A, B, C, Astddev, Bstddev, Cstddev] = meltingTempRegression(xs, ys, guessA, guessB, guessC, yerr)
 function [A, B, Astddev, Bstddev] = meltingTempRegression(xs, ys, guessA, guessB, yerr)
 
+addpath('octave-forge');
+
 if (nargin < 4)
        error("not enough required arguments!");
 end
