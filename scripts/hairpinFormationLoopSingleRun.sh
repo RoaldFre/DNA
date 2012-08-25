@@ -27,7 +27,7 @@ requiredBound=`echo $S - $allowUnbounded | bc`
 
 outputBaseDir=`mktemp -d`
 outputFile="$outputBaseDir/outputFrom_${suffix}"
-destinationDir="$destinationDirRoot/formation_CG${S}_A${L}_zipT${zippingTemp}_unzipT${unzippingTemp}_allowUnb${allowUnbounded}_allowB${allowBounded}_zippedRel${zippedRelaxation}/dt${timestep}_time${time}/N${N}"
+destinationDir="$destinationDirRoot/formation_S=CG_L=A_zipT${zippingTemp}_unzipT${unzippingTemp}_allowUnb${allowUnbounded}_allowB${allowBounded}_zippedRel${zippedRelaxation}/dt${timestep}_time${time}/L${L}"
 destinationFile="$destinationDir/formation_${suffix}"
 
 mkdir -p $destinationDir
