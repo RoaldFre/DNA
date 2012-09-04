@@ -1,11 +1,14 @@
-import random
-alphabet = 'ACTG'
-total = 100
-string=''
+#!/usr/bin/python
 
-for x in range(100):
-    i=random.sample(alphabet,1)
-    i=str(i).strip("'[]'")
-    string+=i
+import random, sys
+
+try: N = int(sys.argv[1])
+except IndexError: N = 100
+
+alphabet = 'ACTG'
+string = ''
+
+for x in range(N):
+    string += random.choice(alphabet)
     
 print(string)
