@@ -528,8 +528,10 @@ int main(int argc, char **argv)
 		hairpin.sampler = hairpinFormationSampler(&hfc);
 		break;
 	case HAIRPIN_NO_MEASUREMENT:
-		/* This is probably an error, so die */
-		die("You should give a hairpin measurement type!\n");
+		///* This is probably an error, so die */
+		//die("You should give a hairpin measurement type!\n");
+		hairpin.sampler = trivialSampler();
+		break;
 	default:
 		assert(false); die("Unknown hairpin measurement type!\n");
 	}
