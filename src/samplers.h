@@ -22,6 +22,12 @@ Sampler particleSquaredDisplacementSampler(Particle *p);
  * the strand. */
 Sampler strandCOMSquaredDisplacementSampler(Strand *s);
 
+/* Sampler that dumps the end-to-end distance of the given strand. The 
+ * end-to-end distance is the distance between the Center Of Mass of the 
+ * first monomer and the COM of the last monomer. */
+Sampler endToEndDistSampler(Strand *strand);
+
+
 typedef struct {
 	/* A pair is 'bound' if its base pair potential is lower than the 
 	 * given threshold. */

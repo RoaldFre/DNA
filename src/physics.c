@@ -1256,4 +1256,16 @@ Vec3 getCOM(Particle *ps, int num)
 	return scale(COM, 1/M);
 }
 
+Vec3 getMonomerCOM(Strand *s, int monomer)
+{
+	Particle *base      = &s->Bs[monomer];
+	Particle *sugar     = &s->Ss[monomer];
+	Particle *phosphate = &s->Ps[monomer];
+
+	Vec3 COM = add(scale(base->pos,      base->m),
+	           add(scale(sugar->pos,     sugar->m),
+	               scale(phosphate->pos, phosphate->m)));
+
+	return scale(COM, 1/(base->m + sugar->m + phosphate->m));
+}
 

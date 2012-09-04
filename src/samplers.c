@@ -156,7 +156,6 @@ static SamplerSignal particlesSquaredDisplacementSample(SamplerData *sd, void *s
 		return SAMPLER_ERROR;
 	}
 
-
 	return SAMPLER_OK;
 }
 static Sampler particlesSquaredDisplacementSampler(Particle *ps, int num)
@@ -183,6 +182,41 @@ Sampler strandCOMSquaredDisplacementSampler(Strand *s)
 	return particlesSquaredDisplacementSampler(s->all, 3 * s->numMonomers);
 }
 
+
+
+/* END TO END DISTANCE */
+
+typedef struct
+{
+	Strand *strand;
+} EndToEndDistConf;
+
+static SamplerSignal endToEndDistSample(SamplerData *sd, void *state)
+{
+	UNUSED(sd);
+	EndToEndDistConf *etedc = (EndToEndDistConf*) state;
+	Strand *s = etedc->strand;
+
+	double endToEndDist = distance(
+			getMonomerCOM(s, 0),
+			getMonomerCOM(s, s->numMonomers - 1));
+	printf("%e\t%e\n", getTime(), endToEndDist);
+
+	return SAMPLER_OK;
+}
+Sampler endToEndDistSampler(Strand *strand)
+{
+	EndToEndDistConf *etedc = malloc(sizeof(*etedc));
+	memset(etedc, 0, sizeof(*etedc));
+	etedc->strand = strand;
+
+	Sampler sampler;
+	sampler.samplerConf = etedc;
+	sampler.start  = &passConf;
+	sampler.sample = &endToEndDistSample;
+	sampler.stop   = &freeState;
+	return sampler;
+}
 
 
 

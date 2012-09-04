@@ -86,6 +86,7 @@ static enum {
 	HAIRPIN_FORMATION_TIME,
 	HAIRPIN_NO_MEASUREMENT,
 } hairpinMeasurementType = HAIRPIN_NO_MEASUREMENT;
+static bool measureEndToEndDistance = false;
 
 static RenderConf renderConf =
 {
@@ -173,6 +174,7 @@ static void printUsage(void)
 	printf(" -X <m|f>  measurement to perform:\n");
 	printf("             m: hairpin Melting temperature\n");
 	printf("             f: hairpin Formation time\n");
+	printf(" -e        also measure End-to-end distance of the strand\n");
 	printf("\n");
 	printf("For more info and default values of params below: see code :P\n");
 	//TODO parameter names are a mess
@@ -215,7 +217,7 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:hA:B:C:G:L:VH:M:O:Q:U:")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:ehA:B:C:G:L:VH:M:O:Q:U:")) != -1)
 	{
 		switch (c)
 		{
@@ -376,6 +378,9 @@ static void parseArguments(int argc, char **argv)
 				break;
 			}
 			break;
+		case 'e':
+			measureEndToEndDistance = true;
+			break;
 		case ':':
 			printUsage();
 			die("Option -%c requires an argument\n", optopt);
@@ -484,11 +489,11 @@ int main(int argc, char **argv)
 	Task verboseTask = measurementTask(&verbose);
 
 	const char *filenameBase = measurementConf.measureFile;
+#if 0
 	char *basePairFile;
 	if (0 >	asprintf(&basePairFile, "%s_basePair", filenameBase))
 		die("Could not create base pair file name string!\n");
 
-#if 0
 	Measurement basePairing;
 	basePairing.sampler = basePairingSampler(&bpc);
 	basePairing.measConf = measurementConf;
@@ -497,6 +502,18 @@ int main(int argc, char **argv)
 						 hairpin sampler */
 	Task basePairingTask = measurementTask(&basePairing);
 #endif
+
+	char *endToEndFile;
+	if (0 >	asprintf(&endToEndFile, "%s_endToEndDist", filenameBase))
+		die("Could not create end-to-end dist file name string!\n");
+	Measurement endToEnd;
+	endToEnd.sampler = endToEndDistSampler(&world.strands[0]);
+	endToEnd.measConf = measurementConf; /* struct copy */
+	endToEnd.measConf.measureFile = endToEndFile;
+	endToEnd.measConf.verbose = false; /* Let output come from 
+						 hairpin sampler */
+	Task endToEndTask = measurementTask(&endToEnd);	
+
 
 	Measurement hairpin;
 	switch (hairpinMeasurementType) {
@@ -519,21 +536,25 @@ int main(int argc, char **argv)
 	hairpin.measConf = measurementConf;
 	Task hairpinTask = measurementTask(&hairpin);
 
+
+
 	Task renderTask = makeRenderTask(&renderConf);
 
 	Task integratorTask = makeIntegratorTask(&integratorConf);
 
-	Task *tasks[5];
+	Task *tasks[6];
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
 	//tasks[3] = &basePairingTask;
 	tasks[3] = NULL; /* Disabled atm */
 	tasks[4] = &hairpinTask;;
-	Task task = sequence(tasks, 5);
+	tasks[5] = (measureEndToEndDistance ? &endToEndTask : NULL);
+	Task task = sequence(tasks, 6);
 	bool everythingOK = run(&task);
 
-	free(basePairFile);
+	//free(basePairFile);
+	free(endToEndFile);
 
 	if (!everythingOK)
 		return 1;
