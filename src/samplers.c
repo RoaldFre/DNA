@@ -688,3 +688,16 @@ Sampler basePairingSampler(BasePairingConfig *bpc)
 }
 
 
+
+/* TRIVIAL SAMPLER */
+
+Sampler trivialSampler(void) {
+	Sampler sampler = {
+			.samplerConf = NULL,
+			.start = NULL,
+			.sample = NULL,
+			.stop = NULL
+	};
+	return sampler;
+}
+

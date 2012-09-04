@@ -106,4 +106,8 @@ typedef struct {
 
 Sampler hairpinMeltingTempSampler(HairpinMeltingTempSamplerConfig *hsc);
 
+/* A trivial sampler that does nothing. Useful for debugging purposes. */
+Sampler trivialSampler(void);
+
 #endif
+
