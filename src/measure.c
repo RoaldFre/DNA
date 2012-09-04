@@ -86,15 +86,15 @@ static void *samplerStart(MeasTaskState *measState)
 }
 
 /* Sample and return sampler.sample(), or do nothing if sampler.sample == 
- * NULL and return true. Note that this would be a pretty useless sampler 
+ * NULL and return SAMPLER_OK. Note that this would be a pretty useless sampler 
  * in the latter case... */
-static bool samplerSample(MeasTaskState *measState)
+static SamplerSignal samplerSample(MeasTaskState *measState)
 {
 	Sampler *sampler = &measState->sampler;
 	StreamState *streamState = &measState->streamState;
 
 	if (sampler->sample == NULL)
-		return true;
+		return SAMPLER_OK;
 
 	switchStdout(streamState); /* Switch stdout to file */
 	bool ret = sampler->sample(&measState->samplerData, 
