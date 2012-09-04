@@ -44,6 +44,8 @@ doubleStrand: $(OBJECTS) doubleStrand.o
 hairpin: $(OBJECTS) hairpin.o
 	@echo "LD	hairpin"
 	@gcc -o hairpin $(CFLAGS) $(OBJECTS) hairpin.o $(LIBS) -ggdb $(PROFILE)
+hairpindebug:
+	make -B OPTIM="-O0" DEBUG="-DDEBUG" hairpin
 
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"
