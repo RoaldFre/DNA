@@ -15,6 +15,7 @@
 #include "math.h"
 
 #define DEF_DATA_PATH "data"
+#define END_TO_END_DIST_FILE_SUFFIX "_endToEnd"
 
 /* Defaults */
 #define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
@@ -175,6 +176,8 @@ static void printUsage(void)
 	printf("             m: hairpin Melting temperature\n");
 	printf("             f: hairpin Formation time\n");
 	printf(" -e        also measure End-to-end distance of the strand\n");
+	printf("             output: the data filename (see -D) with suffix: '%s'\n",
+							END_TO_END_DIST_FILE_SUFFIX);
 	printf("\n");
 	printf("For more info and default values of params below: see code :P\n");
 	//TODO parameter names are a mess
@@ -504,7 +507,9 @@ int main(int argc, char **argv)
 #endif
 
 	char *endToEndFile;
-	if (0 >	asprintf(&endToEndFile, "%s_endToEndDist", filenameBase))
+	if (0 >	asprintf(&endToEndFile, "%s%s",
+			filenameBase,
+			END_TO_END_DIST_FILE_SUFFIX))
 		die("Could not create end-to-end dist file name string!\n");
 	Measurement endToEnd;
 	endToEnd.sampler = endToEndDistSampler(&world.strands[0]);
