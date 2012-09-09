@@ -16,6 +16,7 @@
 
 #define DEF_DATA_PATH "data"
 #define END_TO_END_DIST_FILE_SUFFIX "_endToEnd"
+#define BASE_PAIRING_FILE_SUFFIX "_basePairing"
 
 /* Defaults */
 #define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
@@ -56,6 +57,10 @@ static MeasurementConf measurementConf =
 	.renderStrX = 10,
 	.renderStrY = 80,
 };
+static BasePairingConfig bpc =
+{
+	.energyThreshold = -0.1 * EPSILON,
+};
 static HairpinFormationSamplerConfig hfc =
 {
 	.energyThreshold = -0.1 * EPSILON,
@@ -82,6 +87,7 @@ static enum {
 	HAIRPIN_NO_MEASUREMENT,
 } hairpinMeasurementType = HAIRPIN_NO_MEASUREMENT;
 static bool measureEndToEndDistance = false;
+static bool measureBasePairing = false;
 
 static RenderConf renderConf =
 {
@@ -171,6 +177,9 @@ static void printUsage(void)
 	printf(" -e        also measure End-to-end distance of the strand\n");
 	printf("             output: the data filename (see -D) with suffix: '%s'\n",
 							END_TO_END_DIST_FILE_SUFFIX);
+	printf(" -p        also dump raw hairpin base Pairing state\n");
+	printf("             output: the data filename (see -D) with suffix: '%s'\n",
+							BASE_PAIRING_FILE_SUFFIX);
 	printf("\n");
 	printf("For more info and default values of params below: see code :P\n");
 	//TODO parameter names are a mess
@@ -213,7 +222,7 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:ehA:B:C:G:L:VH:M:O:Q:U:")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:ephA:B:C:G:L:VH:M:O:Q:U:")) != -1)
 	{
 		switch (c)
 		{
@@ -372,6 +381,9 @@ static void parseArguments(int argc, char **argv)
 		case 'e':
 			measureEndToEndDistance = true;
 			break;
+		case 'p':
+			measureBasePairing = true;
+			break;
 		case ':':
 			printUsage();
 			die("Option -%c requires an argument\n", optopt);
@@ -480,6 +492,21 @@ int main(int argc, char **argv)
 	Task verboseTask = measurementTask(&verbose);
 
 	const char *filenameBase = measurementConf.measureFile;
+
+	char *basePairFile;
+	if (0 >	asprintf(&basePairFile, "%s%s",
+			filenameBase,
+			BASE_PAIRING_FILE_SUFFIX))
+		die("Could not create base pair file name string!\n");
+	Measurement basePairing;
+	basePairing.sampler = basePairingSampler(&bpc);
+	basePairing.measConf = measurementConf; /* struct copy */
+	basePairing.measConf.measureFile = basePairFile;
+	basePairing.measConf.verbose = false; /* Let output come from
+						hairpin sampler */
+	Task basePairingTask = measurementTask(&basePairing);
+
+
 	char *endToEndFile;
 	if (0 >	asprintf(&endToEndFile, "%s%s",
 			filenameBase,
@@ -524,13 +551,14 @@ int main(int argc, char **argv)
 
 	Task integratorTask = makeIntegratorTask(&integratorConf);
 
-	Task *tasks[5];
+	Task *tasks[6];
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
 	tasks[3] = &hairpinTask;;
 	tasks[4] = (measureEndToEndDistance ? &endToEndTask : NULL);
-	Task task = sequence(tasks, 5);
+	tasks[5] = (measureBasePairing ? &basePairingTask : NULL);
+	Task task = sequence(tasks, 6);
 	bool everythingOK = run(&task);
 
 	free(endToEndFile);
