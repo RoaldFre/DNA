@@ -9,6 +9,9 @@ if (nargin == 1)
 end
 
 files = glob(filesglob);
+if (isempty(files))
+	error "No files match the given glob!"
+end
 
 nRuns = numel(files);
 

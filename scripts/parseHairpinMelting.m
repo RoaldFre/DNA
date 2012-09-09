@@ -1,7 +1,7 @@
 function [averageBoundBasePairs, temperatures, allStates, numMonomers, sampleInterval, timestep, temperature, relaxationTime] = parseHairpinMelting(filesglob, alsoLoadFullData);
 
 if (nargin < 1)
-	error("Not enough arguments!");
+	error "Not enough arguments!"
 end
 if (nargin == 1)
 	alsoLoadFullData = false;
@@ -9,6 +9,9 @@ if (nargin == 1)
 end
 
 files = glob(filesglob);
+if (isempty(files))
+	error "No files match the given glob!"
+end
 
 nRuns = numel(files);
 
