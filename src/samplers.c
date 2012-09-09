@@ -630,13 +630,6 @@ static void basePairingCounter(Particle *p1, Particle *p2, void *data)
 	if (V < bpcd->threshold)
 		bpcd->count++;
 }
-static void* basePairingStart(SamplerData *sd, void *conf)
-{
-	UNUSED(sd);
-	BasePairingConfig *bpc = (BasePairingConfig*) conf;
-	config.thermostatTemp = bpc->T;
-	return bpc;
-}
 static SamplerSignal basePairingSample(SamplerData *sd, void *state)
 {
 	BasePairingConfig *bpc = (BasePairingConfig*) state;
@@ -684,7 +677,7 @@ Sampler basePairingSampler(BasePairingConfig *bpc)
 	memcpy(bpcCopy, bpc, sizeof(*bpcCopy));
 
 	sampler.samplerConf = bpcCopy;
-	sampler.start  = &basePairingStart;
+	sampler.start  = &passConf;
 	sampler.sample = &basePairingSample;
 	sampler.stop   = &freeState;
 	return sampler;
