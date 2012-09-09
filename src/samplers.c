@@ -501,7 +501,7 @@ static void* hairpinMeltingTempStart(SamplerData *sd, void *conf)
 		octaveComment("   lastBasePair(t1)   lastBasePair(t2)   ...  lastBasePair(tn)");
 		octaveComment("         ...               ...           ...         ...      ");
 		octaveComment("   firstBasePair(tn)  firstBasePair(t2)  ...  firstBasePair(tn) ]");
-		octaveComment("Each such 2D matix i is measured with the corresponding");
+		octaveComment("Each such 2D matrix i is measured with the corresponding");
 		octaveComment("temperature in the array 'temperatures': temperatures(i).");
 		octave3DMatrixHeader("hairpinState",
 				2 + n/2,
@@ -569,9 +569,12 @@ static SamplerSignal hairpinMeltingTempSample(SamplerData *sd, void *state)
 
 		/* Not at the end of this step yet: just sample */
 		hmtd->accumulatedBoundBasePairs += correctlyBound;
-		if (hmtc->verbose)
+		if (hmtc->verbose) {
+			printf("%e ", time);
 			dumpHairpinState(&world.strands[0], 
 					hmtc->energyThreshold);
+			printf("\n");
+		}
 		break;
 	default:
 		fprintf(stderr, "Unknown status in hairpinMeltingTempSample!\n");
