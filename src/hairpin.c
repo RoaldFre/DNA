@@ -21,8 +21,7 @@
 #define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
 #define DEF_TIMESTEP 			20.0
 #define DEF_REBOX_INTERVAL		200.0
-#define DEF_INITIAL_TEMPERATURE		70.0
-#define DEF_SAMPLING_TEMPERATURE	20.0
+#define DEF_INITIAL_TEMPERATURE		20.0
 #define DEF_SALT_CONCENTRATION		100.0  /* mol/m^3 */
 #define DEF_LANGEVIN_GAMMA		5e12
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
@@ -56,11 +55,6 @@ static MeasurementConf measurementConf =
 	.renderStrBufSize = 64,
 	.renderStrX = 10,
 	.renderStrY = 80,
-};
-static BasePairingConfig bpc =
-{
-	.energyThreshold = -0.1 * EPSILON,
-	.T = CELSIUS(DEF_SAMPLING_TEMPERATURE),
 };
 static HairpinFormationSamplerConfig hfc =
 {
@@ -128,10 +122,9 @@ static void printUsage(void)
 	printf(" -d        build a Double helix with complementary strand as well\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
-	printf(" -E <flt>  initial Equilibration temperature during relaxation phase (Celsius)\n");
+	printf(" -T <flt>  initial Temperature (Celsius)\n");
+	printf("             note: some measurements set their own temperature when sampling!\n");
 	printf("             default: %f\n", DEF_INITIAL_TEMPERATURE);
-	printf(" -T <flt>  Temperature during sampling (Celsius)\n");
-	printf("             default: %f\n", DEF_SAMPLING_TEMPERATURE);
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
 	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
 	printf(" -r        Render\n");
@@ -220,7 +213,7 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:ehA:B:C:G:L:VH:M:O:Q:U:")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:ehA:B:C:G:L:VH:M:O:Q:U:")) != -1)
 	{
 		switch (c)
 		{
@@ -235,15 +228,10 @@ static void parseArguments(int argc, char **argv)
 			if (config.timeStep <= 0)
 				die("Invalid timestep %s\n", optarg);
 			break;
-		case 'E':
+		case 'T':
 			config.thermostatTemp = CELSIUS(atof(optarg));
 			if (config.thermostatTemp < 0)
-				die("Invalid equilibration temperature %s\n", optarg);
-			break;
-		case 'T':
-			bpc.T = CELSIUS(atof(optarg));
-			if (bpc.T < 0)
-				die("Invalid sampling temperature %s\n", optarg);
+				die("Invalid initial temperature %s\n", optarg);
 			break;
 		case 'N':
 			config.saltConcentration = atof(optarg);
@@ -492,20 +480,6 @@ int main(int argc, char **argv)
 	Task verboseTask = measurementTask(&verbose);
 
 	const char *filenameBase = measurementConf.measureFile;
-#if 0
-	char *basePairFile;
-	if (0 >	asprintf(&basePairFile, "%s_basePair", filenameBase))
-		die("Could not create base pair file name string!\n");
-
-	Measurement basePairing;
-	basePairing.sampler = basePairingSampler(&bpc);
-	basePairing.measConf = measurementConf;
-	basePairing.measConf.measureFile = basePairFile;
-	basePairing.measConf.verbose = false; /* Let output come from 
-						 hairpin sampler */
-	Task basePairingTask = measurementTask(&basePairing);
-#endif
-
 	char *endToEndFile;
 	if (0 >	asprintf(&endToEndFile, "%s%s",
 			filenameBase,
@@ -535,6 +509,9 @@ int main(int argc, char **argv)
 	case HAIRPIN_NO_MEASUREMENT:
 		///* This is probably an error, so die */
 		//die("You should give a hairpin measurement type!\n");
+
+		//allow 'no explicit measurement', so we can use the endToEnd 
+		//measurement dumping without being hampered by measurements
 		hairpin.sampler = trivialSampler();
 		break;
 	default:
@@ -543,24 +520,19 @@ int main(int argc, char **argv)
 	hairpin.measConf = measurementConf;
 	Task hairpinTask = measurementTask(&hairpin);
 
-
-
 	Task renderTask = makeRenderTask(&renderConf);
 
 	Task integratorTask = makeIntegratorTask(&integratorConf);
 
-	Task *tasks[6];
+	Task *tasks[5];
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
-	//tasks[3] = &basePairingTask;
-	tasks[3] = NULL; /* Disabled atm */
-	tasks[4] = &hairpinTask;;
-	tasks[5] = (measureEndToEndDistance ? &endToEndTask : NULL);
-	Task task = sequence(tasks, 6);
+	tasks[3] = &hairpinTask;;
+	tasks[4] = (measureEndToEndDistance ? &endToEndTask : NULL);
+	Task task = sequence(tasks, 5);
 	bool everythingOK = run(&task);
 
-	//free(basePairFile);
 	free(endToEndFile);
 
 	if (!everythingOK)

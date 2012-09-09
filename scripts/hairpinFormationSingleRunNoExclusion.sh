@@ -33,7 +33,7 @@ destinationFile="$destinationDir/formation_${suffix}"
 mkdir -p $destinationDir
 
 seq=`perl -e "print 'C'x$N,'G'x$N"`
-$main -t $timestep -E $zippingTemp -T $zippingTemp -I $interval -P $time -W $wait -s $seq -D $outputFile -H $requiredBound -M $allowBounded -O $zippingTemp -Q $unzippingTemp -U $zippedRelaxation -X f
+$main -t $timestep -T $zippingTemp -I $interval -P $time -W $wait -s $seq -D $outputFile -H $requiredBound -M $allowBounded -O $zippingTemp -Q $unzippingTemp -U $zippedRelaxation -X f
 mv ${outputFile} ${destinationFile}
 
 rm -rf $outputBaseDir

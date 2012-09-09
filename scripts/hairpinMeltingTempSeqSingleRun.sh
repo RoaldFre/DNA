@@ -33,7 +33,7 @@ destinationFile="$destinationDir/meltingTemp_${suffix}"
 
 mkdir -p $destinationDir
 
-$main -t $timestep -I $interval -W $wait -s $seq -D $outputFile -T $startTemp -E $startTemp -A $startTemp -B $stepTemp -C $nSteps -G $measureTime -L $relaxTime -N $saltConcentration -X m $verbose
+$main -t $timestep -I $interval -W $wait -s $seq -D $outputFile -T $startTemp -A $startTemp -B $stepTemp -C $nSteps -G $measureTime -L $relaxTime -N $saltConcentration -X m $verbose
 mv ${outputFile} ${destinationFile}
 
 rm -rf $outputBaseDir
