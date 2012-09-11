@@ -25,7 +25,7 @@ static double boxSize = 0; /* Linear length of one box. */
 static int nb = 0; /* Number of Boxes in one dimension. Total number of 
 		      boxes is nb^3. Total volume of the grid is 
 		      (nb*boxSize)^3. */
-static double L; /* nb * boxSize -- cached for performance */
+static double gridSize; /* nb * boxSize -- cached for performance */
 static int gridNumParticles = 0; /* Total number of particles in the grid. For 
 				consistency checking only! */
 
@@ -36,7 +36,7 @@ bool allocGrid(int numBoxes, double size)
 	grid = calloc(numBoxes * numBoxes * numBoxes, sizeof(*grid));
 	if (grid == NULL)
 		return false;
-	L = size;
+	gridSize = size;
 	nb = numBoxes;
 	boxSize = size / numBoxes;
 	assert(spgridSanityCheck(true, false));
@@ -83,12 +83,16 @@ void addToGrid(Particle *p) {
 	assert(spgridSanityCheck(false, false));
 }
 
+static void periodicPosition(Particle *p)
+{
+	p->pos = periodic(gridSize, p->pos);
+}
 void reboxParticles(void)
 {
-	double gridSize = nb * boxSize;
-
-	if (nb == 1)
+	if (nb == 1) {
+		forEveryParticle(&periodicPosition);
 		return;
+	}
 
 	assert(spgridSanityCheck(false, true));
 
@@ -386,7 +390,7 @@ void forEveryConnectionPair(void (*f)(Particle*, Particle*, Particle*, Particle*
 /* PERIODIC VECTOR FUNCTIONS */
 Vec3 nearestImageVector(Vec3 v1, Vec3 v2)
 {
-	return fastPeriodic(L, sub(v2, v1));
+	return fastPeriodic(gridSize, sub(v2, v1));
 }
 
 double nearestImageDistance(Vec3 v1, Vec3 v2)
