@@ -97,7 +97,7 @@ static SamplerSignal samplerSample(MeasTaskState *measState)
 		return SAMPLER_OK;
 
 	switchStdout(streamState); /* Switch stdout to file */
-	bool ret = sampler->sample(&measState->samplerData, 
+	SamplerSignal ret = sampler->sample(&measState->samplerData, 
 				measState->samplerState);
 	switchStdout(streamState); /* Switch stdout back */
 
