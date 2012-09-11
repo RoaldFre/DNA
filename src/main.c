@@ -20,8 +20,7 @@
 #define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
 #define DEF_TIMESTEP 			20.0
 #define DEF_REBOX_INTERVAL		200.0
-#define DEF_INITIAL_TEMPERATURE		CELSIUS(70)
-#define DEF_SAMPLING_TEMPERATURE	CELSIUS(20)
+#define DEF_INITIAL_TEMPERATURE		CELSIUS(20)
 #define DEF_SALT_CONCENTRATION		100.0 /* mol/m^3 */
 #define DEF_LANGEVIN_GAMMA		5e12 //TODO sane?
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
@@ -59,7 +58,6 @@ static MeasurementConf measurementConf =
 static BasePairingConfig bpc =
 {
 	.energyThreshold = -0.1 * EPSILON,
-	.T = DEF_SAMPLING_TEMPERATURE,
 };
 static RenderConf renderConf =
 {
@@ -100,10 +98,9 @@ static void printUsage(void)
 	printf(" -d        build a Double helix with complementary strand as well\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
-	printf(" -E <flt>  initial Equilibration temperature during relaxation phase\n");
+	printf(" -T <flt>  initial Temperature (Celsius)\n");
+	printf("             note: some measurements set their own temperature when sampling!\n");
 	printf("             default: %f\n", DEF_INITIAL_TEMPERATURE);
-	printf(" -T <flt>  Temperature during sampling\n");
-	printf("             default: %f\n", DEF_SAMPLING_TEMPERATURE);
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
 	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
 	printf(" -r        Render\n");
@@ -157,7 +154,7 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:E:T:N:g:c:f:rR:Fl:S:b:B:v:i:W:I:P:D:h")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:T:N:g:c:f:rR:Fl:S:b:B:v:i:W:I:P:D:h")) != -1)
 	{
 		switch (c)
 		{
@@ -172,15 +169,10 @@ static void parseArguments(int argc, char **argv)
 			if (config.timeStep <= 0)
 				die("Invalid timestep %s\n", optarg);
 			break;
-		case 'E':
+		case 'T':
 			config.thermostatTemp = atof(optarg);
 			if (config.thermostatTemp < 0)
-				die("Invalid equilibration temperature %s\n", optarg);
-			break;
-		case 'T':
-			bpc.T = atof(optarg);
-			if (bpc.T < 0)
-				die("Invalid sampling temperature %s\n", optarg);
+				die("Invalid initial temperature %s\n", optarg);
 			break;
 		case 'N':
 			config.saltConcentration = atof(optarg);
@@ -387,12 +379,20 @@ int main(int argc, char **argv)
 
 	Task integratorTask = makeIntegratorTask(&integratorConf);
 
-	Task *tasks[4];
+	Measurement tempMeas;
+	tempMeas.sampler = averageTemperatureSampler();
+	tempMeas.measConf = measurementConf;
+	tempMeas.measConf.verbose = false;
+	tempMeas.measConf.measureFile = NULL;
+	Task temperatureTask = measurementTask(&tempMeas);
+
+	Task *tasks[5];
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
 	tasks[3] = &basePairingTask;
-	Task task = sequence(tasks, 4);
+	tasks[4] = &temperatureTask;
+	Task task = sequence(tasks, 5);
 	bool everythingOK = run(&task);
 
 	if (!everythingOK)
