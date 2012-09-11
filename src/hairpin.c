@@ -173,9 +173,9 @@ static void printUsage(void)
 	printf("             default: don't measure\n");
 	printf(" -P <flt>  measurement Period: total time to sample the system (in nanosectonds)\n");
 	printf("             default: sample indefinitely\n");
-	printf(" -D <path> Data file to Dump measurement output\n");
+	printf(" -D <path> Data file to Dump measurement output. The directory must exist.\n");
 	printf("             default: %s\n", DEF_DATA_PATH);
-	printf(" -X <m|f>  measurement to perform:\n");
+	printf(" -X <m|f>  measurement to eXecute:\n");
 	printf("             m: hairpin Melting temperature\n");
 	printf("             f: hairpin Formation time\n");
 	printf(" -e        also measure End-to-end distance of the strand\n");
