@@ -20,7 +20,7 @@ DEBUG = -DNDEBUG
 OPTIM = -O4 -flto -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations
 CFLAGS = $(WARNINGS) -std=c99 -pipe -march=native -ggdb $(OPTIM) $(DEBUG) $(DEFINES) $(PROFILE) -I/usr/include/freetype2
 
-all: main
+all: hairpin
 
 profile:
 	make -B PROFILE="-pg"
