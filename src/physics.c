@@ -821,7 +821,6 @@ static void calculateForces(void)
 		forEveryPair(&mutiallyExclusivePairForces);
 	else
 		forEveryPair(&pairForces);
-
 }
 
 
@@ -1061,50 +1060,17 @@ static void verlet(void)
 	forEveryParticle(&verletHelper2);
 }
 
-static void langevinBBKhelper1(Particle *p)
-{
-	double dt    = config.timeStep;
-	double gamma = config.langevinGamma;
 
-	Vec3 tmp1, tmp2;
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "start langevinBBKhelper1");
-		debugVectorSanity(p->vel, "start langevinBBKhelper1");
-		debugVectorSanity(p->F,   "start langevinBBKhelper1");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-		assert(isSaneVector(p->F));
-	}
-
-	/* from v(t) to v(t + dt/2) */
-	tmp1 = scale(p->vel, 1 - gamma*dt/2);
-	tmp2 = scale(p->F, dt / (2*p->m)); /* p->F = regular + random force */
-	p->vel = add(tmp1, tmp2);
-
-	/* from r(t) to r(t + dt) */
-	p->pos = add(p->pos, scale(p->vel, dt));
-
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "end langevinBBKhelper1");
-		debugVectorSanity(p->vel, "end langevinBBKhelper1");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-	}
-}
-static void langevinBBKhelper2(Particle *p)
+static void langevinBBKhelper(Particle *p)
 {
 	double dt    = config.timeStep;
 	double gamma = config.langevinGamma;
 	double T     = config.thermostatTemp;
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "start langevinBBKhelper2");
-		debugVectorSanity(p->vel, "start langevinBBKhelper2");
-		debugVectorSanity(p->F,   "start langevinBBKhelper2");
+		debugVectorSanity(p->pos, "start langevinBBKhelper");
+		debugVectorSanity(p->vel, "start langevinBBKhelper");
+		debugVectorSanity(p->F,   "start langevinBBKhelper");
 	} else {
 		assert(isSaneVector(p->pos));
 		assert(isSaneVector(p->vel));
@@ -1118,31 +1084,37 @@ static void langevinBBKhelper2(Particle *p)
 	 * prefactor before p->m when looping over all particles. */
 	double Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * gamma * p->m / dt);
 	Vec3 R = randNormVec(Rstddev);
-	debugVectorSanity(R, "randNormVec in langevinBBKhelper2");
+	debugVectorSanity(R, "randNormVec in langevinBBKhelper");
 	p->F = add(p->F, R);
 
-	/* from v(t + dt/2) to v(t + dt) */
-	Vec3 tmp = add(p->vel, scale(p->F, dt / (2*p->m)));
-	p->vel = scale(tmp, 1 / (1 + gamma*dt/2));
+	Vec3 tmp;
+	tmp = scale(p->pos, 2);
+	tmp = add(tmp, scale(p->prevPos, (gamma*dt/2 - 1)));
+	tmp = add(tmp, scale(p->F, dt*dt / p->m));
+	Vec3 newPos = scale(tmp, 1 / (1 + gamma*dt/2));
+
+	p->vel = scale(sub(newPos, p->pos), 1/dt);
+	p->prevPos = p->pos;
+	p->pos = newPos;
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "end langevinBBKhelper2");
-		debugVectorSanity(p->vel, "end langevinBBKhelper2");
+		debugVectorSanity(p->pos, "end langevinBBKhelper");
+		debugVectorSanity(p->vel, "end langevinBBKhelper");
+		debugVectorSanity(p->F,   "end langevinBBKhelper");
 	} else {
 		assert(isSaneVector(p->pos));
 		assert(isSaneVector(p->vel));
+		assert(isSaneVector(p->F));
 	}
 }
 
-/* BBK integrator for Langevin dynamics. Uses the one based on 
- * velocity-verlet to include calculation of the velocities. 
+/* BBK integrator for Langevin dynamics.
  * See http://localscf.com/LangevinDynamics.aspx 
  * (relocated to http://localscf.com/localscf.com/LangevinDynamics.aspx.html atm) */
 static void langevinBBK(void)
 {
-	forEveryParticle(&langevinBBKhelper1); /* updates positions */
 	calculateForces();
-	forEveryParticle(&langevinBBKhelper2);
+	forEveryParticle(&langevinBBKhelper);
 }
 
 

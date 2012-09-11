@@ -85,7 +85,13 @@ void addToGrid(Particle *p) {
 
 static void periodicPosition(Particle *p)
 {
+	/* We need to watch out and update the previous position as well! */
+	Vec3 diffPos = sub(p->prevPos, p->pos);
+
 	p->pos = periodic(gridSize, p->pos);
+
+	/* Fix the previous position */
+	p->prevPos = add(p->pos, diffPos);
 }
 void reboxParticles(void)
 {
@@ -108,7 +114,7 @@ void reboxParticles(void)
 					  swap out particles! */
 		for (int j = 0; j < n; j++) {
 			/* Force periodic boundary condition. */
-			p->pos = periodic(gridSize, p->pos);
+			periodicPosition(p);
 
 			/* Since p might be removed from the current box, 
 			 * we keep a pointer to its successor. */
@@ -272,7 +278,7 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 			for (int diz = -1; diz <= 1; diz++) {
 				Box *b = boxFromNonPeriodicIndex(
 						ix+dix, iy+diy, iz+diz);
-				if (UNLIKELY(b <= box))
+				if (b <= box)
 					continue;
 					/* if b == box: it's our own box!
 					 * else: only check boxes that have 
