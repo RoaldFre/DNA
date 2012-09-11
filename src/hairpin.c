@@ -17,6 +17,7 @@
 #define DEF_DATA_PATH "data"
 #define END_TO_END_DIST_FILE_SUFFIX "_endToEnd"
 #define BASE_PAIRING_FILE_SUFFIX "_basePairing"
+#define TEMPERATURE_FILE_SUFFIX "_temperature"
 
 /* Defaults */
 #define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
@@ -86,8 +87,10 @@ static enum {
 	HAIRPIN_FORMATION_TIME,
 	HAIRPIN_NO_MEASUREMENT,
 } hairpinMeasurementType = HAIRPIN_NO_MEASUREMENT;
+
 static bool measureEndToEndDistance = false;
 static bool measureBasePairing = false;
+static bool measureTemperature = false;
 
 static RenderConf renderConf =
 {
@@ -131,6 +134,7 @@ static void printUsage(void)
 	printf(" -T <flt>  initial Temperature (Celsius)\n");
 	printf("             note: some measurements set their own temperature when sampling!\n");
 	printf("             default: %f\n", DEF_INITIAL_TEMPERATURE);
+	printf(" -K <flt>  initial temperature (Kelvin). Analogous to -T.\n");
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
 	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
 	printf(" -r        Render\n");
@@ -177,9 +181,12 @@ static void printUsage(void)
 	printf(" -e        also measure End-to-end distance of the strand\n");
 	printf("             output: the data filename (see -D) with suffix: '%s'\n",
 							END_TO_END_DIST_FILE_SUFFIX);
-	printf(" -p        also dump raw hairpin base Pairing state\n");
+	printf(" -p        also measure raw hairpin base Pairing state\n");
 	printf("             output: the data filename (see -D) with suffix: '%s'\n",
 							BASE_PAIRING_FILE_SUFFIX);
+	printf(" -k        also measure the Kinetic temperature\n");
+	printf("             output: the data filename (see -D) with suffix: '%s'\n",
+							TEMPERATURE_FILE_SUFFIX);
 	printf("\n");
 	printf("For more info and default values of params below: see code :P\n");
 	//TODO parameter names are a mess
@@ -222,7 +229,7 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:ephA:B:C:G:L:VH:M:O:Q:U:")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:T:K:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:epkhA:B:C:G:L:VH:M:O:Q:U:")) != -1)
 	{
 		switch (c)
 		{
@@ -240,7 +247,12 @@ static void parseArguments(int argc, char **argv)
 		case 'T':
 			config.thermostatTemp = CELSIUS(atof(optarg));
 			if (config.thermostatTemp < 0)
-				die("Invalid initial temperature %s\n", optarg);
+				die("Invalid initial temperature (C): '%s'\n", optarg);
+			break;
+		case 'K':
+			config.thermostatTemp = atof(optarg);
+			if (config.thermostatTemp < 0)
+				die("Invalid initial temperature (K): '%s'\n", optarg);
 			break;
 		case 'N':
 			config.saltConcentration = atof(optarg);
@@ -384,6 +396,9 @@ static void parseArguments(int argc, char **argv)
 		case 'p':
 			measureBasePairing = true;
 			break;
+		case 'k':
+			measureTemperature = true;
+			break;
 		case ':':
 			printUsage();
 			die("Option -%c requires an argument\n", optopt);
@@ -472,6 +487,7 @@ int main(int argc, char **argv)
 	seedRandom();
 
 	parseArguments(argc, argv);
+	const char *filenameBase = measurementConf.measureFile;
 
 	if (buildCompStrand)
 		allocWorld(2, worldSize);
@@ -486,13 +502,13 @@ int main(int argc, char **argv)
 
 	assert(worldSanityCheck());
 
+	/* Verbose task */
 	Measurement verbose;
 	verbose.measConf = verboseConf;
 	verbose.sampler = dumpStatsSampler();
 	Task verboseTask = measurementTask(&verbose);
 
-	const char *filenameBase = measurementConf.measureFile;
-
+	/* Base pairing task */
 	char *basePairFile;
 	if (0 >	asprintf(&basePairFile, "%s%s",
 			filenameBase,
@@ -507,6 +523,7 @@ int main(int argc, char **argv)
 	Task basePairingTask = measurementTask(&basePairing);
 
 
+	/* End to end task */
 	char *endToEndFile;
 	if (0 >	asprintf(&endToEndFile, "%s%s",
 			filenameBase,
@@ -520,7 +537,22 @@ int main(int argc, char **argv)
 						 hairpin sampler */
 	Task endToEndTask = measurementTask(&endToEnd);	
 
+	/* Temperature task */
+	char *temperatureFile;
+	if (0 >	asprintf(&temperatureFile, "%s%s",
+			filenameBase,
+			TEMPERATURE_FILE_SUFFIX))
+		die("Could not create temperature file name string!\n");
+	Measurement temp;
+	temp.sampler = temperatureSampler();
+	temp.measConf = measurementConf; /* struct copy */
+	temp.measConf.measureFile = temperatureFile;
+	temp.measConf.verbose = false; /* Let output come from 
+						 hairpin sampler */
+	Task temperatureTask = measurementTask(&temp);	
 
+
+	/* Hairpin task */
 	Measurement hairpin;
 	switch (hairpinMeasurementType) {
 	case HAIRPIN_MELTING_TEMPERATURE:
@@ -534,11 +566,6 @@ int main(int argc, char **argv)
 		hairpin.sampler = hairpinFormationSampler(&hfc);
 		break;
 	case HAIRPIN_NO_MEASUREMENT:
-		///* This is probably an error, so die */
-		//die("You should give a hairpin measurement type!\n");
-
-		//allow 'no explicit measurement', so we can use the endToEnd 
-		//measurement dumping without being hampered by measurements
 		hairpin.sampler = trivialSampler();
 		break;
 	default:
@@ -547,21 +574,28 @@ int main(int argc, char **argv)
 	hairpin.measConf = measurementConf;
 	Task hairpinTask = measurementTask(&hairpin);
 
+	/* Render task */
 	Task renderTask = makeRenderTask(&renderConf);
 
+	/* Integrator task */
 	Task integratorTask = makeIntegratorTask(&integratorConf);
 
-	Task *tasks[6];
+	/* Combined task */
+	Task *tasks[7];
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
 	tasks[3] = &hairpinTask;;
 	tasks[4] = (measureEndToEndDistance ? &endToEndTask : NULL);
 	tasks[5] = (measureBasePairing ? &basePairingTask : NULL);
-	Task task = sequence(tasks, 6);
+	tasks[6] = (measureTemperature ? &temperatureTask : NULL);
+	Task task = sequence(tasks, 7);
+
 	bool everythingOK = run(&task);
 
+	free(basePairFile);
 	free(endToEndFile);
+	free(temperatureFile);
 
 	if (!everythingOK)
 		return 1;
