@@ -165,7 +165,7 @@ static SamplerSignal particlesSquaredDisplacementSample(SamplerData *sd, void *s
 	Vec3 displacement = sub(COM, sdc->initialPos);
 	double squaredDisplacement = length2(displacement);
 	//printf("%e %e", getTime() - sdc->initialTime, squaredDisplacement);
-	printf("%e %e ", getTime(), squaredDisplacement);
+	printf("%e ", getTime());
 	printVectorExp(COM);
 	printf("\n");
 
