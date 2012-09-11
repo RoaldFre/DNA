@@ -165,12 +165,12 @@ static SamplerSignal particlesSquaredDisplacementSample(SamplerData *sd, void *s
 	Vec3 displacement = sub(COM, sdc->initialPos);
 	double squaredDisplacement = length2(displacement);
 	//printf("%e %e", getTime() - sdc->initialTime, squaredDisplacement);
-	printf("%e ",getTime());
+	printf("%e %e ", getTime(), squaredDisplacement);
 	printVectorExp(COM);
 	printf("\n");
 
 	if (squaredDisplacement > 0.25 * SQUARE(world.worldSize)) {
-		fprintf(stderr, "WARNING! displacement > 0.5*worldsize. "
+		fprintf(stderr, "\nWARNING! displacement > 0.5*worldsize. "
 				"Probably errors due to periodic boundary "
 				"conditions! Bailing out!\n");
 		return SAMPLER_ERROR;
