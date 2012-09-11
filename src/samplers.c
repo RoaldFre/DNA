@@ -25,7 +25,7 @@ static SamplerSignal tempSample(SamplerData *sd, void *data)
 {
 	UNUSED(sd);
 	UNUSED(data);
-	printf("%e %f\n", getTime(), temperature());
+	printf("%e %f\n", getTime(), getKineticTemperature());
 	return SAMPLER_OK;
 }
 Sampler temperatureSampler(void)

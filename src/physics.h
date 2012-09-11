@@ -167,7 +167,7 @@ typedef struct {
 void dumpStats(void);
 bool physicsCheck(void);
 
-double temperature(void);
+double getKineticTemperature(void);
 
 /* Parse a string of the form "<number><C|K>" and return the corresponding 
  * temperature (in Kelvin). Returns -1 in case of error. */

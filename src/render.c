@@ -605,7 +605,7 @@ static void render(RenderConf *rc)
 	const int n = 64;
 	char string[n];
 
-	snprintf(string, n, "T = %f K", temperature());
+	snprintf(string, n, "T = %f K", getKineticTemperature());
 	renderString(string, 10, 40);
 
 	snprintf(string, n, "t = %f µs   (dt = %f fs)",

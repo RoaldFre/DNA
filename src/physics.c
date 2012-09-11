@@ -841,7 +841,7 @@ static double kineticEnergy(void)
 	assert(isSaneNumber(twiceK));
 	return twiceK/2;
 }
-double temperature(void)
+double getKineticTemperature(void)
 {
 	return 2.0 / (3.0 * BOLTZMANN_CONSTANT)
 			* kineticEnergy() / numParticles();
@@ -986,7 +986,7 @@ static void thermostat(void)
 		return;
 
 	/* Mass and Boltzmann constant are 1 */ 
-	double Tk  = temperature();
+	double Tk  = getKineticTemperature();
 	assert(isSaneNumber(Tk));
 	double T0  = config.thermostatTemp;
 	double dt  = config.timeStep;
@@ -1206,7 +1206,7 @@ void dumpStats()
 {
 	PotentialEnergies pe = calcPotentialEnergies();
 	double K = kineticEnergy() * ENERGY_FACTOR;
-	double T = temperature();
+	double T = getKineticTemperature();
 	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.exclusion;
 
 	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Ve = %e, T = %f\n",
