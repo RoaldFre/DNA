@@ -1241,3 +1241,31 @@ Vec3 getMonomerCOM(Strand *s, int monomer)
 	return scale(COM, 1/(base->m + sugar->m + phosphate->m));
 }
 
+double parseTemperature(const char *string)
+{
+	if (string == NULL || string[0] == '\0')
+		return -1;
+
+	char *str = strdup(string);
+
+	int i = 1;
+	while (str[i] != '\0') i++;
+	i--;
+	char unit = str[i];
+	str[i] = '\0';
+	double value = atof(str);
+	free(str);
+
+	double temperature;
+	switch (unit) {
+		case 'K':
+			temperature = value;
+			break;
+		case 'C':
+			temperature = CELSIUS(value);
+			break;
+		default:
+			return -1;
+	}
+	return temperature;
+}

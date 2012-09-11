@@ -23,7 +23,7 @@
 #define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
 #define DEF_TIMESTEP 			20.0
 #define DEF_REBOX_INTERVAL		200.0
-#define DEF_INITIAL_TEMPERATURE		20.0
+#define DEF_INITIAL_TEMPERATURE		"20C"
 #define DEF_SALT_CONCENTRATION		100.0  /* mol/m^3 */
 #define DEF_LANGEVIN_GAMMA		5e12
 #define DEF_COUPLING_TIMESTEP_FACTOR 	1000
@@ -131,10 +131,9 @@ static void printUsage(void)
 	printf(" -d        build a Double helix with complementary strand as well\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
-	printf(" -T <flt>  initial Temperature (Celsius)\n");
+	printf(" -T <flt><C|K>  initial Temperature (example: 20C or 300K)\n");
 	printf("             note: some measurements set their own temperature when sampling!\n");
-	printf("             default: %f\n", DEF_INITIAL_TEMPERATURE);
-	printf(" -K <flt>  initial temperature (Kelvin). Analogous to -T.\n");
+	printf("             default: %s\n", DEF_INITIAL_TEMPERATURE);
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
 	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
 	printf(" -r        Render\n");
@@ -191,8 +190,8 @@ static void printUsage(void)
 	printf("For more info and default values of params below: see code :P\n");
 	//TODO parameter names are a mess
 	printf("Parameters for hairpin melting temperature measurement:\n");
-	printf(" -A <flt>  startTemp (Celsius)\n");
-	printf("             default: %f\n", TO_CELSIUS(hmtc.Tstart));
+	printf(" -A <flt><C|K> startTemp\n");
+	printf("             default: %fC\n", TO_CELSIUS(hmtc.Tstart));
 	printf(" -B <flt>  stepTemp\n");
 	printf("             default: %f\n", hmtc.Tstep);
 	printf(" -C <int>  nSteps\n");
@@ -206,10 +205,10 @@ static void printUsage(void)
 	printf(" -H <int>  min required bounded base pairs for confirming 'zipped' state\n");
 	printf(" -M <int>  max allowed bounded base pairs for confirming 'unzipped' state\n");
 	printf("             default: %d\n", hfc.allowedBoundBPs);
-	printf(" -O <flt>  zipping temperature (Celsius)\n");
-	printf("             default: %f\n", TO_CELSIUS(hfc.zippingTemperature));
-	printf(" -Q <flt>  unzipping temperature (Celsius)\n");
-	printf("             default: %f\n", TO_CELSIUS(hfc.unzippingTemperature));
+	printf(" -O <flt><C|K> zipping temperature\n");
+	printf("             default: %fC\n", TO_CELSIUS(hfc.zippingTemperature));
+	printf(" -Q <flt><C|K> unzipping temperature\n");
+	printf("             default: %fC\n", TO_CELSIUS(hfc.unzippingTemperature));
 	printf(" -U <flt>  zipped relaxation phase duration (nanoseconds)\n");
 	printf("             default: %f\n", hfc.zippedRelaxationTime / NANOSECONDS);
 	printf("\n");
@@ -221,7 +220,7 @@ static void parseArguments(int argc, char **argv)
 
 	/* defaults */
 	config.timeStep 	 = DEF_TIMESTEP * FEMTOSECONDS;
-	config.thermostatTemp	 = CELSIUS(DEF_INITIAL_TEMPERATURE);
+	config.thermostatTemp	 = parseTemperature(DEF_INITIAL_TEMPERATURE);
 	config.saltConcentration = DEF_SALT_CONCENTRATION;
 	config.truncationLen     = DEF_TRUNCATION_LENGTH * LENGTH_FACTOR;
 	config.langevinGamma	 = DEF_LANGEVIN_GAMMA;
@@ -229,7 +228,7 @@ static void parseArguments(int argc, char **argv)
 	/* guards */
 	config.thermostatTau = -1;
 
-	while ((c = getopt(argc, argv, ":s:dt:T:K:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:epkhA:B:C:G:L:VH:M:O:Q:U:")) != -1)
+	while ((c = getopt(argc, argv, ":s:dt:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:epkhA:B:C:G:L:VH:M:O:Q:U:")) != -1)
 	{
 		switch (c)
 		{
@@ -245,14 +244,9 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid timestep %s\n", optarg);
 			break;
 		case 'T':
-			config.thermostatTemp = CELSIUS(atof(optarg));
+			config.thermostatTemp = parseTemperature(optarg);
 			if (config.thermostatTemp < 0)
-				die("Invalid initial temperature (C): '%s'\n", optarg);
-			break;
-		case 'K':
-			config.thermostatTemp = atof(optarg);
-			if (config.thermostatTemp < 0)
-				die("Invalid initial temperature (K): '%s'\n", optarg);
+				die("Invalid temperature!\n");
 			break;
 		case 'N':
 			config.saltConcentration = atof(optarg);
@@ -345,7 +339,9 @@ static void parseArguments(int argc, char **argv)
 			break;
 		/* A,B,C,G,H: because I'm running out of sensible letters ... */
 		case 'A':
-			hmtc.Tstart = CELSIUS(atof(optarg));
+			hmtc.Tstart = parseTemperature(optarg);
+			if (hmtc.Tstart < 0)
+				die("Invalid starting temperature '%s'\n", optarg);
 			break;
 		case 'B':
 			hmtc.Tstep = atof(optarg);
@@ -369,10 +365,14 @@ static void parseArguments(int argc, char **argv)
 			hfc.allowedBoundBPs = atoi(optarg);
 			break;
 		case 'O':
-			hfc.zippingTemperature = CELSIUS(atof(optarg));
+			hfc.zippingTemperature = parseTemperature(optarg);
+			if (hfc.zippingTemperature < 0)
+				die("Invalid zipping temperature '%s'\n", optarg);
 			break;
 		case 'Q':
-			hfc.unzippingTemperature = CELSIUS(atof(optarg));
+			hfc.unzippingTemperature = parseTemperature(optarg);
+			if (hfc.unzippingTemperature < 0)
+				die("Invalid unzipping temperature '%s'\n", optarg);
 			break;
 		case 'U':
 			hfc.zippedRelaxationTime = atof(optarg) * NANOSECONDS;

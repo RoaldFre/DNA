@@ -168,6 +168,11 @@ void dumpStats(void);
 bool physicsCheck(void);
 
 double temperature(void);
+
+/* Parse a string of the form "<number><C|K>" and return the corresponding 
+ * temperature (in Kelvin). Returns -1 in case of error. */
+double parseTemperature(const char *str);
+
 /* Returns the position vector of the Center Of Mass. */
 Vec3 getCOM(Particle *ps, int num);
 /* Returns the position vector of the Center Of Mass of the given monomer 
