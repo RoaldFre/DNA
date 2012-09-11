@@ -1246,7 +1246,11 @@ double parseTemperature(const char *string)
 	if (string == NULL || string[0] == '\0')
 		return -1;
 
-	char *str = strdup(string);
+	/* Copy so we can modify characters */
+	char *str = calloc(strlen(string) + 1, sizeof(*str));
+	if (str == NULL)
+		return -1;
+	strcpy(str, string);
 
 	int i = 1;
 	while (str[i] != '\0') i++;
