@@ -223,6 +223,27 @@ void fillComplementaryStrand(Strand *s, const char *baseSequence)
 	fillStrandHelper(s, baseSequence, true, true);
 }
 
+char *getSequence(Strand *s)
+{
+	int n = s->numMonomers;
+	char *seq = calloc(n + 1, sizeof(*seq));
+
+	for (int i = 0; i < n; i++) {
+		switch (s->Bs[i].type) {
+		case BASE_A: seq[i] = 'A'; break;
+		case BASE_T: seq[i] = 'T'; break;
+		case BASE_C: seq[i] = 'C'; break;
+		case BASE_G: seq[i] = 'G'; break;
+		default:
+		     assert(false);
+		     die("getSequence: got invalid strand!");
+		}
+	}
+
+	seq[n] = '\0';
+	return seq;
+}
+
 void freeStrand(Strand *strand)
 {
 	free(strand->all);

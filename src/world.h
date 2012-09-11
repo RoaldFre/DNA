@@ -85,6 +85,9 @@ bool allocStrand(Strand *s, int numMonomers);
  * the string, and the last char of the sequence is the 5' end */
 void fillStrand(Strand *s, const char *sequence);
 void fillComplementaryStrand(Strand *s, const char *baseSequence);
+/* Returns the base sequence of this strand. Don't forget to free the 
+ * pointer afterwards! */
+char *getSequence(Strand *s);
 void freeWorld(void);
 void freeStrand(Strand *strand);
 
