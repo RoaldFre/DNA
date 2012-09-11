@@ -17,7 +17,7 @@ interval=10
 sizeFactor=1e10 #So we don't have problems with periodic boundary condition!
 boxes="-b1" #So we don't grind ourselves to a halt with the above (huge) worldsize!
 
-T=296
+T="296K"
 
 integrator=l
 
@@ -37,6 +37,4 @@ seq=`perl -e "print 'A'x$N"`
 $main -i $integrator $render -f $fps -t $timestep -T $T -I $interval -P $time -W $wait -s $seq -D $outputBaseName -S $sizeFactor -g $gamma $boxes
 mv ${outputBaseName}_particle ${particleFilenameBase}
 mv ${outputBaseName}_strand ${strandFilenameBase}
-
-
 
