@@ -53,7 +53,7 @@ static SamplerSignal avgTempSample(SamplerData *sd, void *data)
 {
 	UNUSED(sd);
 	double *accum = (double*) data;
-	*accum += temperature();
+	*accum += getKineticTemperature();
 	return SAMPLER_OK;
 }
 static void avgTempStop(SamplerData *sd, void *data)
