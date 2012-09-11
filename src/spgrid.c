@@ -25,6 +25,7 @@ static double boxSize = 0; /* Linear length of one box. */
 static int nb = 0; /* Number of Boxes in one dimension. Total number of 
 		      boxes is nb^3. Total volume of the grid is 
 		      (nb*boxSize)^3. */
+static double L; /* nb * boxSize -- cached for performance */
 static int gridNumParticles = 0; /* Total number of particles in the grid. For 
 				consistency checking only! */
 
@@ -35,6 +36,7 @@ bool allocGrid(int numBoxes, double size)
 	grid = calloc(numBoxes * numBoxes * numBoxes, sizeof(*grid));
 	if (grid == NULL)
 		return false;
+	L = size;
 	nb = numBoxes;
 	boxSize = size / numBoxes;
 	assert(spgridSanityCheck(true, false));
@@ -109,7 +111,7 @@ void reboxParticles(void)
 			Particle *next = p->next;
 
 			Box *correctBox = boxFromParticle(p);
-			if (currentBox != correctBox) {
+			if (UNLIKELY(currentBox != correctBox)) {
 				removeFromBox(p, currentBox);
 				addToBox(p, correctBox);
 			}
@@ -158,13 +160,13 @@ static Box *boxFromNonPeriodicParticle(const Particle *p)
 static Box *boxFromNonPeriodicIndex(int ix, int iy, int iz)
 {
 	ix = ix % nb;
-	if (ix < 0) ix += nb;
+	if (UNLIKELY(ix < 0)) ix += nb;
 
 	iy = iy % nb;
-	if (iy < 0) iy += nb;
+	if (UNLIKELY(iy < 0)) iy += nb;
 
 	iz = iz % nb;
-	if (iz < 0) iz += nb;
+	if (UNLIKELY(iz < 0)) iz += nb;
 
 	return boxFromIndex (ix, iy, iz);
 }
@@ -266,7 +268,7 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 			for (int diz = -1; diz <= 1; diz++) {
 				Box *b = boxFromNonPeriodicIndex(
 						ix+dix, iy+diy, iz+diz);
-				if (b <= box)
+				if (UNLIKELY(b <= box))
 					continue;
 					/* if b == box: it's our own box!
 					 * else: only check boxes that have 
@@ -384,8 +386,7 @@ void forEveryConnectionPair(void (*f)(Particle*, Particle*, Particle*, Particle*
 /* PERIODIC VECTOR FUNCTIONS */
 Vec3 nearestImageVector(Vec3 v1, Vec3 v2)
 {
-	double L = nb * boxSize;
-	return periodic(L, sub(v2, v1));
+	return fastPeriodic(L, sub(v2, v1));
 }
 
 double nearestImageDistance(Vec3 v1, Vec3 v2)

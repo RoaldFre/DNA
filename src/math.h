@@ -34,6 +34,10 @@ typedef struct Vec3
 #define SQUARE(x) ((x) * (x))
 #define CUBE(x) ((x) * (x) * (x))
 
+/* For micro optimizations. Remove these if you aren't compiling with gcc 
+ * and your compiler doesn't support them. */
+#define LIKELY(x)       __builtin_expect((x),1)
+#define UNLIKELY(x)     __builtin_expect((x),0)
 
 /* In header for inlining */
 
@@ -154,14 +158,14 @@ static __inline__ double dihedral(Vec3 v1, Vec3 v2, Vec3 v3)
 }
 
 /* Helper for function below */
-static double _periodic(double period, double val)
+static __inline__ double _periodic(double period, double val)
 {
-	if (-period/2.0 > val) {
-		do val += period; while (-period/2.0 > val);
+	if (UNLIKELY(2*val < -period)) {
+		do val += period; while (UNLIKELY(2*val < -period));
 		return val;
 	}
-	if (val >= period/2.0) {
-		do val -= period; while (val >= period/2.0);
+	if (UNLIKELY(2*val >= period)) {
+		do val -= period; while (UNLIKELY(2*val >= period));
 		return val;
 	}
 	return val;
@@ -179,6 +183,51 @@ static __inline__ Vec3 periodic(double period, Vec3 v)
 	res.y = _periodic(period, v.y);
 	res.z = _periodic(period, v.z);
 	
+	assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
+	assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
+	assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
+
+	return res;
+}
+
+/* Helper for function below */
+static __inline__ double _fastPeriodic(double period, double val)
+{
+	//attempt to minimise branches, but still slower:
+	//return val + period * ((2*val >= period) - (2*val < -period));
+
+	if (UNLIKELY(2*val < -period))
+		return val + period;
+
+	if (UNLIKELY(2*val >= period))
+		return val - period;
+
+	return val;
+}
+/* Returns the vector clamped to periodic boundary conditions and is faster 
+ * than the general period() function above.
+ * However, we require that (for each dimension) the length of the vector 
+ * is at most 1.5*'period', i.e.:
+ * PreConditions:
+ *     -1.5 * period <= v.x   &&   v.x < 1.5 * period
+ *     -1.5 * period <= v.y   &&   v.y < 1.5 * period
+ *     -1.5 * period <= v.z   &&   v.z < 1.5 * period
+ * PostConditions:
+ *     -period/2.0 <= res.x   &&   res.x < period/2.0
+ *     -period/2.0 <= res.y   &&   res.y < period/2.0
+ *     -period/2.0 <= res.z   &&   res.z < period/2.0
+ */
+static __inline__ Vec3 fastPeriodic(double period, Vec3 v)
+{
+	assert(-1.5 * period <= v.x  &&  v.x < 1.5 * period);
+	assert(-1.5 * period <= v.y  &&  v.y < 1.5 * period);
+	assert(-1.5 * period <= v.z  &&  v.z < 1.5 * period);
+
+	Vec3 res;
+	res.x = _fastPeriodic(period, v.x);
+	res.y = _fastPeriodic(period, v.y);
+	res.z = _fastPeriodic(period, v.z);
+
 	assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
 	assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
 	assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
