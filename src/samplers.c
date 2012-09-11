@@ -21,6 +21,26 @@ static void freeState(SamplerData *sd, void *state)
 
 /* TEMPERATURE */
 
+static SamplerSignal tempSample(SamplerData *sd, void *data)
+{
+	UNUSED(sd);
+	UNUSED(data);
+	printf("%e %f\n", getTime(), temperature());
+	return SAMPLER_OK;
+}
+Sampler temperatureSampler(void)
+{
+	Sampler sampler;
+	sampler.samplerConf = NULL;
+	sampler.start  = NULL;
+	sampler.sample = &tempSample;
+	sampler.stop   = NULL;
+	return sampler;
+}
+
+
+/* AVERAGE TEMPERATURE */
+
 static void *avgTempStart(SamplerData *sd, void *conf)
 {
 	UNUSED(sd);
