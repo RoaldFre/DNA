@@ -157,8 +157,30 @@ static __inline__ double dihedral(Vec3 v1, Vec3 v2, Vec3 v3)
 	return atan2(length(v2) * dot(v1, v2xv3), dot(v1xv2, v2xv3));
 }
 
+/* Returns the vector clamped to periodic boundary conditions.
+ * This is slower, but works every time. Use the faster functions below for 
+ * specific cases.
+ * PostConditions:
+ *     -period/2.0 <= res.x   &&   res.x < period/2.0
+ *     -period/2.0 <= res.y   &&   res.y < period/2.0
+ *     -period/2.0 <= res.z   &&   res.z < period/2.0
+ */
+static __inline__ Vec3 periodic(double period, Vec3 v)
+{
+	if (LIKELY(length2(v) < SQUARE(period)/4.0))
+		return v;
+
+	Vec3 res;
+	double hp = period / 2.0; /* Half Period */
+	res.x = hp - floor((v.x - hp) / period) * period;
+	res.y = hp - floor((v.y - hp) / period) * period;
+	res.z = hp - floor((v.z - hp) / period) * period;
+
+	return res;
+}
+
 /* Helper for function below */
-static __inline__ double _periodic(double period, double val)
+static __inline__ double _closePeriodic(double period, double val)
 {
 	if (UNLIKELY(2*val < -period)) {
 		do val += period; while (UNLIKELY(2*val < -period));
@@ -171,17 +193,24 @@ static __inline__ double _periodic(double period, double val)
 	return val;
 }
 /* Returns the vector clamped to periodic boundary conditions.
+ * Only use this if the vector is "only a couple of times" outside of the 
+ * range. If it is far out, use periodic(). If it is at most 1.5 periods 
+ * out, use fastPeriodic().
  * PostConditions:
  *     -period/2.0 <= res.x   &&   res.x < period/2.0
  *     -period/2.0 <= res.y   &&   res.y < period/2.0
  *     -period/2.0 <= res.z   &&   res.z < period/2.0
  */
-static __inline__ Vec3 periodic(double period, Vec3 v)
+static __inline__ Vec3 closePeriodic(double period, Vec3 v)
 {
+	// This saves a couple of percents of time...
+	if (LIKELY(length2(v) < SQUARE(period)/4.0))
+		return v;
+
 	Vec3 res;
-	res.x = _periodic(period, v.x);
-	res.y = _periodic(period, v.y);
-	res.z = _periodic(period, v.z);
+	res.x = _closePeriodic(period, v.x);
+	res.y = _closePeriodic(period, v.y);
+	res.z = _closePeriodic(period, v.z);
 	
 	assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
 	assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
@@ -222,6 +251,10 @@ static __inline__ Vec3 fastPeriodic(double period, Vec3 v)
 	assert(-1.5 * period <= v.x  &&  v.x < 1.5 * period);
 	assert(-1.5 * period <= v.y  &&  v.y < 1.5 * period);
 	assert(-1.5 * period <= v.z  &&  v.z < 1.5 * period);
+
+	// This saves a couple of percents of time...
+	if (LIKELY(length2(v) < SQUARE(period)/4.0))
+		return v;
 
 	Vec3 res;
 	res.x = _fastPeriodic(period, v.x);

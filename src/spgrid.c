@@ -88,7 +88,11 @@ static void periodicPosition(Particle *p)
 	/* We need to watch out and update the previous position as well! */
 	Vec3 diffPos = sub(p->prevPos, p->pos);
 
-	p->pos = periodic(gridSize, p->pos);
+	/* closePeriodic should suffice. When debugging, it can be useful 
+	 * to use periodic instead if we hang on periodic [but that's a bad 
+	 * sign anyway!]. */
+	p->pos = closePeriodic(gridSize, p->pos);
+	//p->pos = periodic(gridSize, p->pos);
 
 	/* Fix the previous position */
 	p->prevPos = add(p->pos, diffPos);
