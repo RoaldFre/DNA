@@ -256,7 +256,6 @@ void freeWorld(void)
 	for (int s = 0; s < world.numStrands; s++)
 		freeStrand(&world.strands[s]);
 	free(world.strands);
-	freeGrid();
 	return;
 }
 
