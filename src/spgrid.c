@@ -5,8 +5,22 @@
 
 typedef struct box
 {
-	Particle *p;
-	int n;
+	Particle *p;	/* (Linked list of) particles in this box */
+	int n;		/* number of particles in this box */
+
+	/* Circular linked list of boxes that contain particles. Both are 
+	 * NULL if this box has no particles, and hence is not part of the 
+	 * list. */
+	struct box *prevOccupied;
+	struct box *nextOccupied;
+
+	/* TODO be more smart so we don't need this */
+	struct box *prevX;
+	struct box *nextX;
+	struct box *prevY;
+	struct box *nextY;
+	struct box *prevZ;
+	struct box *nextZ;
 } Box;
 
 
@@ -20,7 +34,11 @@ static void forEveryPairBruteForce(void (*f)(Particle *p1, Particle *p2, void *d
 
 
 /* Globals */
-static Box *grid;
+static Box *grid; /* All boxes in the spgrid. */
+static Box *occupiedBoxes; /* First element in linked list of boxes that 
+			      contain particles, or NULL if all boxes are 
+			      empty. reboxParticles() is responsible to 
+			      keep this consistent. */
 static double boxSize = 0; /* Linear length of one box. */
 static int nb = 0; /* Number of Boxes in one dimension. Total number of 
 		      boxes is nb^3. Total volume of the grid is 
@@ -28,6 +46,59 @@ static int nb = 0; /* Number of Boxes in one dimension. Total number of
 static double gridSize; /* nb * boxSize -- cached for performance */
 static int gridNumParticles = 0; /* Total number of particles in the grid. For 
 				consistency checking only! */
+
+/* Add the (newly) occupied box to the list. It cannot already be part of 
+ * the list. */
+static void addOccupiedBox(Box *box)
+{
+	assert(box != NULL);
+	assert(box->n > 0);
+	assert(box->p != NULL);
+	assert(box->nextOccupied == NULL);
+	assert(box->prevOccupied == NULL);
+
+	if (occupiedBoxes == NULL) {
+		/* Start a new list */
+		box->nextOccupied = box;
+		box->prevOccupied = box;
+		occupiedBoxes = box;
+	} else {
+		box->nextOccupied = occupiedBoxes;
+		box->prevOccupied = occupiedBoxes->prevOccupied;
+		box->prevOccupied->nextOccupied = box;
+		box->nextOccupied->prevOccupied = box;
+	}
+}
+/* Remove the empty box from the list */
+static void removeNonOccupiedBox(Box *emptyBox)
+{
+	assert(emptyBox != NULL);
+	assert(occupiedBoxes != NULL);
+	assert(emptyBox->n == 0);
+	assert(emptyBox->p == NULL);
+
+	if (emptyBox->nextOccupied == emptyBox) {
+		/* List contains only emptyBox itself */
+		assert(emptyBox->prevOccupied == emptyBox);
+		assert(emptyBox == occupiedBoxes);
+
+		occupiedBoxes = NULL;
+	} else {
+		/* List contains at least one other box */
+		assert(emptyBox->prevOccupied->nextOccupied == emptyBox);
+		assert(emptyBox->nextOccupied->prevOccupied == emptyBox);
+
+		emptyBox->prevOccupied->nextOccupied = emptyBox->nextOccupied;
+		emptyBox->nextOccupied->prevOccupied = emptyBox->prevOccupied;
+
+		/* If the list uses emptyBox as head, pick another head */
+		if (occupiedBoxes == emptyBox)
+			occupiedBoxes = emptyBox->nextOccupied;
+	}
+
+	emptyBox->prevOccupied = NULL;
+	emptyBox->nextOccupied = NULL;
+}
 
 
 bool allocGrid(int numBoxes, double size)
@@ -39,6 +110,21 @@ bool allocGrid(int numBoxes, double size)
 	gridSize = size;
 	nb = numBoxes;
 	boxSize = size / numBoxes;
+
+	/* set the prev/nextXYZ pointers */
+	for (int ix = 0; ix < nb; ix++)
+	for (int iy = 0; iy < nb; iy++)
+	for (int iz = 0; iz < nb; iz++) {
+		Box *box = boxFromIndex(ix, iy, iz);
+
+		box->nextX = boxFromNonPeriodicIndex(ix+1, iy,   iz  );
+		box->prevX = boxFromNonPeriodicIndex(ix-1, iy,   iz  );
+		box->nextY = boxFromNonPeriodicIndex(ix,   iy+1, iz  );
+		box->prevY = boxFromNonPeriodicIndex(ix,   iy-1, iz  );
+		box->nextZ = boxFromNonPeriodicIndex(ix,   iy,   iz+1);
+		box->prevZ = boxFromNonPeriodicIndex(ix,   iy,   iz-1);
+	}
+
 	assert(spgridSanityCheck(true, false));
 	return true;
 }
@@ -47,6 +133,7 @@ void freeGrid()
 {
 	if (grid == NULL) {
 		assert(nb == 0);
+		assert(occupiedBoxes == NULL);
 		return;
 	}
 
@@ -70,6 +157,8 @@ void freeGrid()
 	assert(spgridSanityCheck(true, true));
 	assert(gridNumParticles == 0);
 
+	occupiedBoxes = NULL;
+
 	nb = 0;
 	free(grid);
 }
@@ -89,8 +178,8 @@ static void periodicPosition(Particle *p)
 	Vec3 diffPos = sub(p->prevPos, p->pos);
 
 	/* closePeriodic should suffice. When debugging, it can be useful 
-	 * to use periodic instead if we hang on periodic [but that's a bad 
-	 * sign anyway!]. */
+	 * to use periodic instead if we hang on closePeriodic [but that's 
+	 * a bad sign anyway!]. */
 	p->pos = closePeriodic(gridSize, p->pos);
 	//p->pos = periodic(gridSize, p->pos);
 
@@ -182,7 +271,7 @@ static Box *boxFromNonPeriodicIndex(int ix, int iy, int iz)
 	iz = iz % nb;
 	if (UNLIKELY(iz < 0)) iz += nb;
 
-	return boxFromIndex (ix, iy, iz);
+	return boxFromIndex(ix, iy, iz);
 }
 
 static Box *boxFromIndex(int ix, int iy, int iz)
@@ -197,12 +286,15 @@ static Box *boxFromIndex(int ix, int iy, int iz)
 static void removeFromBox(Particle *p, Box *b)
 {
 	assert(p != NULL);
-	assert(b->n != 0);
+	assert(b->n >= 0);
 
-	if (b->n == 1) {
+	b->n--;
+
+	if (b->n == 0) {
 		assert(p->prev == p);
 		assert(p->next == p);
 		b->p = NULL;
+		removeNonOccupiedBox(b);
 	} else {
 		assert(p->prev->next == p);
 		assert(p->next->prev == p);
@@ -215,8 +307,6 @@ static void removeFromBox(Particle *p, Box *b)
 
 	p->prev = NULL;
 	p->next = NULL;
-
-	b->n--;
 }
 
 static void addToBox(Particle *p, Box *b)
@@ -224,48 +314,125 @@ static void addToBox(Particle *p, Box *b)
 	assert(p->prev == NULL);
 	assert(p->next == NULL);
 
+	b->n++;
+
 	if (b->p == NULL) {
-		assert(b->n == 0);
+		assert(b->n == 1);
 		b->p = p;
 		p->prev = p;
 		p->next = p;
+		addOccupiedBox(b);
 	} else {
-		assert(b->n > 0);
+		assert(b->n > 1);
 		p->next = b->p;
 		p->prev = b->p->prev;
 		p->prev->next = p;
 		p->next->prev = p;
 	}
-
-	b->n++;
 }
 
+/* Loop between particles of adjacent boxes of box.  We need a total 
+ * ordering on the boxes so we don't check the same box twice. We use the 
+ * pointer value for this.
+ * However, due to periodic boundary conditions, this ONLY works when there 
+ * are AT LEAST 3 boxes in each dimension!  */
+static void visitNeighbours(Box *box, Box *neighbour,
+		void (*f)(Particle *p1, Particle *p2, void *data), void *data)
+{
+	if (neighbour <= box)
+		return;
+		/* if neighbour == box: it's our own box!
+		 * else: only check boxes that have a 
+		 * strictly larger pointer value to avoid 
+		 * double work. */
 
+	if (neighbour->n == 0)
+		return;
+
+	/* Match up all particles from box and neighbour. */
+	int n1 = box->n;
+	int n2 = neighbour->n;
+	Particle *p1 = box->p;
+	for (int i = 0; i < n1; i++) {
+		Particle *p2 = neighbour->p;
+		for (int j = 0; j < n2; j++) {
+			f(p1, p2, data);
+			p2 = p2->next;
+		}
+		assert(p2 == neighbour->p);
+		p1 = p1->next;
+	}
+	assert(p1 == box->p);
+}
+
+static void visitNeighboursOf(Box *box,
+		void (*f)(Particle *p1, Particle *p2, void *data), void *data)
+{
+	//TODO: be more smart/elegant
+
+	/* x-1 */
+	visitNeighbours(box, box->prevX->prevY->nextZ, f, data);
+	visitNeighbours(box, box->prevX->prevY,        f, data);
+	visitNeighbours(box, box->prevX->prevY->prevZ, f, data);
+
+	visitNeighbours(box, box->prevX->nextZ,        f, data);
+	visitNeighbours(box, box->prevX,               f, data);
+	visitNeighbours(box, box->prevX->prevZ,        f, data);
+
+	visitNeighbours(box, box->prevX->nextY->nextZ, f, data);
+	visitNeighbours(box, box->prevX->nextY,        f, data);
+	visitNeighbours(box, box->prevX->nextY->prevZ, f, data);
+
+
+	/* x */
+	visitNeighbours(box, box->prevY->nextZ, f, data);
+	visitNeighbours(box, box->prevY,        f, data);
+	visitNeighbours(box, box->prevY->prevZ, f, data);
+
+	visitNeighbours(box, box->nextZ,        f, data);
+	visitNeighbours(box, box->prevZ,        f, data);
+
+	visitNeighbours(box, box->nextY->nextZ, f, data);
+	visitNeighbours(box, box->nextY,        f, data);
+	visitNeighbours(box, box->nextY->prevZ, f, data);
+
+
+	/* x+1 */
+	visitNeighbours(box, box->nextX->prevY->nextZ, f, data);
+	visitNeighbours(box, box->nextX->prevY,        f, data);
+	visitNeighbours(box, box->nextX->prevY->prevZ, f, data);
+
+	visitNeighbours(box, box->nextX->nextZ,        f, data);
+	visitNeighbours(box, box->nextX,               f, data);
+	visitNeighbours(box, box->nextX->prevZ,        f, data);
+
+	visitNeighbours(box, box->nextX->nextY->nextZ, f, data);
+	visitNeighbours(box, box->nextX->nextY,        f, data);
+	visitNeighbours(box, box->nextX->nextY->prevZ, f, data);
+}
 
 /* ITERATION OVER PAIRS */
 void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data)
 {
-	int n1, n2;
-
 	if (nb < 3) {
 		/* Brute force. Reason: see comment below */
 		forEveryPairBruteForce(f, data);
 		return;
 	}
 
-	/* Loop over all boxes */
-	for (int ix = 0; ix < nb; ix++)
-	for (int iy = 0; iy < nb; iy++)
-	for (int iz = 0; iz < nb; iz++) {
-		Box *box = boxFromIndex(ix, iy, iz);
+	/* Loop over all occupied boxes */
+	if (occupiedBoxes == NULL)
+		return;
 
+	Box *box = occupiedBoxes;
+	do {
 		/* Loop over all i'th particles 'p' from the box 'box' and 
 		 * match them with the j'th praticle in the same box */
 		Particle *p = box->p;
-		n1 = box->n;
-		for (int i = 0; i < n1; i++) {
+		int n = box->n;
+		for (int i = 0; i < n; i++) {
 			Particle *p2 = p->next;
-			for (int j = i + 1; j < n1; j++) {
+			for (int j = i + 1; j < n; j++) {
 				f(p, p2, data);
 				p2 = p2->next;
 			}
@@ -274,42 +441,10 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 		}
 		assert(p == box->p); /* We went 'full circle' */
 
-		/* Loop between particles of adjacent boxes of box.  We 
-		 * need a total ordering on the boxes so we don't check the 
-		 * same box twice. We use the pointer value for this.
-		 * However, due to periodic boundary conditions, this ONLY 
-		 * works when there are AT LEAST 3 boxes in each dimension! 
-		 * */
-		for (int dix = -1; dix <= 1; dix++)
-		for (int diy = -1; diy <= 1; diy++)
-		for (int diz = -1; diz <= 1; diz++) {
-			Box *neighbour = boxFromNonPeriodicIndex(
-						ix+dix, iy+diy, iz+diz);
-			if (neighbour <= box)
-				continue;
-				/* if neighbour == box: it's our own box!
-				 * else: only check boxes that have a 
-				 * strictly larger pointer value to avoid 
-				 * double work. */
+		visitNeighboursOf(box, f, data);
 
-			if (neighbour->n == 0)
-				continue;
-
-			/* Match up all particles from box and neighbour. */
-			n2 = neighbour->n;
-			p = box->p;
-			for (int i = 0; i < n1; i++) {
-				Particle *p2 = neighbour->p;
-				for (int j = 0; j < n2; j++) {
-					f(p, p2, data);
-					p2 = p2->next;
-				}
-				assert(p2 == neighbour->p);
-				p = p->next;
-			}
-			assert(p == box->p);
-		}
-	}
+		box = box->nextOccupied;
+	} while (box != occupiedBoxes);
 }
 
 static void pairWrapper(Particle *p1, Particle *p2, void *data)
@@ -498,6 +633,8 @@ bool forEveryPairCheck(void)
 	if (data.count != correctCount) {
 		fprintf(stderr, "forEveryPair ran over %d pairs, but should "
 				"be %d\n", data.count, correctCount);
+		fprintf(stderr, "number of particles in grid: %d\n", 
+				gridNumParticles);
 		return false;
 	}
 
@@ -544,7 +681,9 @@ bool spgridSanityCheck(bool checkCorrectBox, bool checkConnections)
 	int nParts2 = 0;
 	bool OK = true;
 
-	/* Check linked list consistency */
+	/* BOXES */
+
+	/* Check linked list consistency of boxes */
 	for (int i = 0; i < nb*nb*nb; i++) {
 		Box *box = &grid[i];
 		Particle *p = box->p;
@@ -627,6 +766,77 @@ bool spgridSanityCheck(bool checkCorrectBox, bool checkConnections)
 			"should be %d\n", nParts2, gridNumParticles);
 		OK = false;
 	}
+
+
+
+	/* OCCUPIED BOXES */
+
+	/* Check linked list consistency of occupiedboxes and count them */
+	int numOccupiedBoxes = 0;
+	if (occupiedBoxes != NULL) {
+		Box *box = occupiedBoxes;
+		do {
+			if (box->nextOccupied->prevOccupied != box
+					|| box->prevOccupied->nextOccupied != box) {
+				fprintf(stderr, "numOccupiedBoxes is broken at %p\n",
+						(const void *) box);
+				OK = false;
+			}
+			numOccupiedBoxes++;
+			if (numOccupiedBoxes > nb*nb*nb) {
+				fprintf(stderr, "numOccupiedBoxes contains more boxes "
+						"than there are boxes in the "
+						"grid!\n");
+				OK = false;
+				break; /* Avoid possible infinite loops */
+			}
+			box = box->nextOccupied;
+		} while (box != occupiedBoxes);
+	}
+
+	/* Check whether all occupied boxes (n > 0) are in the list, and 
+	 * that we don't have any extra in the list (count them) */
+	int correctNumOccupiedBoxes = 0;
+	for (int ix = 0; ix < nb; ix++)
+	for (int iy = 0; iy < nb; iy++)
+	for (int iz = 0; iz < nb; iz++) {
+		Box *box = boxFromIndex(ix, iy, iz);
+
+		if (box->n == 0) {
+			/* empty box */
+			if (box->nextOccupied != NULL
+					|| box->prevOccupied != NULL) {
+				fprintf(stderr, "box %p has no particles "
+						"but appears to be in the "
+						"occupiedBoxes list!\n",
+						(void *) box);
+				OK = false;
+			}
+		} else {
+			/* occupied box */
+			correctNumOccupiedBoxes++;
+
+			if (box->nextOccupied == NULL
+					|| box->prevOccupied == NULL) {
+				fprintf(stderr, "box %p has particles but "
+						"doesn't appear to be in the "
+						"occupiedBoxes list!\n",
+						(void *) box);
+				OK = false;
+			}
+		}
+	}
+
+	if (numOccupiedBoxes != correctNumOccupiedBoxes) {
+		fprintf(stderr, "Found %d boxes in the numOccupiedBoxes "
+				"list, but counted %d occupied boxes!\n", 
+				numOccupiedBoxes, correctNumOccupiedBoxes);
+		OK = false;
+	}
+
+
+
+	/* PAIRS AND CONNECTIONS */
 
 	OK = forEveryPairCheck() && OK;
 
