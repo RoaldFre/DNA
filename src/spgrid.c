@@ -13,6 +13,14 @@ typedef struct box
 	 * list. */
 	struct box *prevOccupied;
 	struct box *nextOccupied;
+
+	/* TODO be more smart so we don't need this */
+	struct box *prevX;
+	struct box *nextX;
+	struct box *prevY;
+	struct box *nextY;
+	struct box *prevZ;
+	struct box *nextZ;
 } Box;
 
 
@@ -102,6 +110,21 @@ bool allocGrid(int numBoxes, double size)
 	gridSize = size;
 	nb = numBoxes;
 	boxSize = size / numBoxes;
+
+	/* set the prev/nextXYZ pointers */
+	for (int ix = 0; ix < nb; ix++)
+	for (int iy = 0; iy < nb; iy++)
+	for (int iz = 0; iz < nb; iz++) {
+		Box *box = boxFromIndex(ix, iy, iz);
+
+		box->nextX = boxFromNonPeriodicIndex(ix+1, iy,   iz  );
+		box->prevX = boxFromNonPeriodicIndex(ix-1, iy,   iz  );
+		box->nextY = boxFromNonPeriodicIndex(ix,   iy+1, iz  );
+		box->prevY = boxFromNonPeriodicIndex(ix,   iy-1, iz  );
+		box->nextZ = boxFromNonPeriodicIndex(ix,   iy,   iz+1);
+		box->prevZ = boxFromNonPeriodicIndex(ix,   iy,   iz-1);
+	}
+
 	assert(spgridSanityCheck(true, false));
 	return true;
 }
@@ -260,18 +283,6 @@ static Box *boxFromIndex(int ix, int iy, int iz)
 	return grid + ix*nb*nb + iy*nb + iz;
 }
 
-static Box *shiftedBox(Box *box, int dix, int diy, int diz)
-{
-	//TODO: smarter way that avoids divisions/modulo?
-	int index = ((char*)box - (char*)grid) / (sizeof *box);
-	int ix = index / (nb * nb);
-	index %= (nb * nb);
-	int iy = index / nb;
-	index %= nb;
-	int iz = index;
-	return boxFromNonPeriodicIndex(ix+dix, iy+diy, iz+diz);
-}
-
 static void removeFromBox(Particle *p, Box *b)
 {
 	assert(p != NULL);
@@ -320,72 +331,120 @@ static void addToBox(Particle *p, Box *b)
 	}
 }
 
+/* Loop between particles of adjacent boxes of box.  We need a total 
+ * ordering on the boxes so we don't check the same box twice. We use the 
+ * pointer value for this.
+ * However, due to periodic boundary conditions, this ONLY works when there 
+ * are AT LEAST 3 boxes in each dimension!  */
+static void visitNeighbours(Box *box, Box *neighbour,
+		void (*f)(Particle *p1, Particle *p2, void *data), void *data)
+{
+	if (neighbour <= box)
+		return;
+		/* if neighbour == box: it's our own box!
+		 * else: only check boxes that have a 
+		 * strictly larger pointer value to avoid 
+		 * double work. */
 
+	if (neighbour->n == 0)
+		return;
+
+	/* Match up all particles from box and neighbour. */
+	int n1 = box->n;
+	int n2 = neighbour->n;
+	Particle *p1 = box->p;
+	for (int i = 0; i < n1; i++) {
+		Particle *p2 = neighbour->p;
+		for (int j = 0; j < n2; j++) {
+			f(p1, p2, data);
+			p2 = p2->next;
+		}
+		assert(p2 == neighbour->p);
+		p1 = p1->next;
+	}
+	assert(p1 == box->p);
+}
+
+static void visitNeighboursOf(Box *box,
+		void (*f)(Particle *p1, Particle *p2, void *data), void *data)
+{
+	//TODO: be more smart/elegant
+
+	/* x-1 */
+	visitNeighbours(box, box->prevX->prevY->nextZ, f, data);
+	visitNeighbours(box, box->prevX->prevY,        f, data);
+	visitNeighbours(box, box->prevX->prevY->prevZ, f, data);
+
+	visitNeighbours(box, box->prevX->nextZ,        f, data);
+	visitNeighbours(box, box->prevX,               f, data);
+	visitNeighbours(box, box->prevX->prevZ,        f, data);
+
+	visitNeighbours(box, box->prevX->nextY->nextZ, f, data);
+	visitNeighbours(box, box->prevX->nextY,        f, data);
+	visitNeighbours(box, box->prevX->nextY->prevZ, f, data);
+
+
+	/* x */
+	visitNeighbours(box, box->prevY->nextZ, f, data);
+	visitNeighbours(box, box->prevY,        f, data);
+	visitNeighbours(box, box->prevY->prevZ, f, data);
+
+	visitNeighbours(box, box->nextZ,        f, data);
+	visitNeighbours(box, box->prevZ,        f, data);
+
+	visitNeighbours(box, box->nextY->nextZ, f, data);
+	visitNeighbours(box, box->nextY,        f, data);
+	visitNeighbours(box, box->nextY->prevZ, f, data);
+
+
+	/* x+1 */
+	visitNeighbours(box, box->nextX->prevY->nextZ, f, data);
+	visitNeighbours(box, box->nextX->prevY,        f, data);
+	visitNeighbours(box, box->nextX->prevY->prevZ, f, data);
+
+	visitNeighbours(box, box->nextX->nextZ,        f, data);
+	visitNeighbours(box, box->nextX,               f, data);
+	visitNeighbours(box, box->nextX->prevZ,        f, data);
+
+	visitNeighbours(box, box->nextX->nextY->nextZ, f, data);
+	visitNeighbours(box, box->nextX->nextY,        f, data);
+	visitNeighbours(box, box->nextX->nextY->prevZ, f, data);
+}
 
 /* ITERATION OVER PAIRS */
 void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data)
 {
-	int n1, n2;
-
 	if (nb < 3) {
 		/* Brute force. Reason: see comment below */
 		forEveryPairBruteForce(f, data);
 		return;
 	}
 
-	/* Loop over all occupied boxes */
-
+	/* Loop over all boxes */
 	if (occupiedBoxes == NULL)
-		return; /* No particles in the world! */
+		return;
 
 	Box *box = occupiedBoxes;
 	do {
-		/* Loop over all particles in this box */
+		/* Loop over all i'th particles 'p' from the box 'box' and 
+		 * match them with the j'th praticle in the same box */
 		Particle *p = box->p;
-
-		/* Loop over every partner of the i'th particle 'p' from the 
-		 * box 'box' */
-		n1 = box->n;
-		for (int i = 0; i < n1; i++) { /* i'th particle in box */
+		int n = box->n;
+		for (int i = 0; i < n; i++) {
 			Particle *p2 = p->next;
-			for (int j = i + 1; j < n1; j++) {
+			for (int j = i + 1; j < n; j++) {
 				f(p, p2, data);
 				p2 = p2->next;
-			}
-			/* Loop over particles in adjacent boxes to the box 
-			 * of p. We need a total ordering on the boxes so 
-			 * we don't check the same box twice. We use the 
-			 * pointer value for this.
-			 * However, due to periodic boundary conditions, 
-			 * this ONLY works when there are AT LEAST 3 boxes 
-			 * in each dimension! */
-			for (int dix = -1; dix <= 1; dix++)
-			for (int diy = -1; diy <= 1; diy++)
-			for (int diz = -1; diz <= 1; diz++) {
-				Box *b = shiftedBox(box, dix, diy, diz);
-				if (b <= box)
-					continue;
-					/* if b == box: it's our own box!
-					 * else: only check boxes that have 
-					 * a strictly larger pointer value 
-					 * to avoid double work. */
-				p2 = b->p;
-				n2 = b->n;
-				for (int j = 0; j < n2; j++) {
-					f(p, p2, data);
-					p2 = p2->next;
-				}
-				assert(p2 == b->p);
 			}
 
 			p = p->next;
 		}
+		assert(p == box->p); /* We went 'full circle' */
 
-		assert(p == box->p);
+		visitNeighboursOf(box, f, data);
 
 		box = box->nextOccupied;
-
-	} while (box != occupiedBoxes); /* Back where we started. */
+	} while (box != occupiedBoxes);
 }
 
 static void pairWrapper(Particle *p1, Particle *p2, void *data)
