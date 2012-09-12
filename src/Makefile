@@ -1,4 +1,4 @@
-#Disable building with rendering by passing RENDER=no to make
+#Disable building with rendering by passing RENDER= to make
 RENDER = yes
 
 OBJECTS = system.o math.o task.o measure.o samplers.o physics.o world.o spgrid.o tinymt/tinymt64.o render.o octave.o
@@ -17,8 +17,21 @@ endif
 WARNINGS = -pedantic -Wextra -Wall -Wwrite-strings -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wunsafe-loop-optimizations
 PROFILE = 
 DEBUG = -DNDEBUG
-OPTIM = -O4 -flto -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations
-CFLAGS = $(WARNINGS) -std=c99 -pipe -march=native -ggdb $(OPTIM) $(DEBUG) $(DEFINES) $(PROFILE) -I/usr/include/freetype2
+GCC_OPTIM = -O4 -flto -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations
+GCC_CFLAGS = $(WARNINGS) -std=c99 -pipe -march=native -ggdb $(GCC_OPTIM) $(DEBUG) $(DEFINES) $(PROFILE) -I/usr/include/freetype2
+
+CLANG_OPTIM = -O4 -march=core2 –enable-unsafe-fp-math
+CLANG_CFLAGS = -I/usr/include/freetype2 $(CLANG_OPTIM)
+
+#use 'make target CLANG=' to build with clang instead of gcc
+CLANG=no
+ifneq ($(CLANG), no)
+	CC = clang
+	CFLAGS = $(CLANG_CFLAGS)
+else
+	CC = gcc
+	CFLAGS = $(GCC_CFLAGS)
+endif
 
 all: hairpin
 
@@ -35,21 +48,21 @@ fastdebug:
 
 main: $(OBJECTS) main.o
 	@echo "LD	main"
-	@gcc -o main $(CFLAGS) $(OBJECTS) main.o $(LIBS) -ggdb $(PROFILE)
+	@$(CC) -o main $(CFLAGS) $(OBJECTS) main.o $(LIBS) -ggdb $(PROFILE)
 
 doubleStrand: $(OBJECTS) doubleStrand.o
 	@echo "LD	doubleStrand"
-	@gcc -o doubleStrand $(CFLAGS) $(OBJECTS) doubleStrand.o $(LIBS) -ggdb $(PROFILE)
+	@$(CC) -o doubleStrand $(CFLAGS) $(OBJECTS) doubleStrand.o $(LIBS) -ggdb $(PROFILE)
 
 hairpin: $(OBJECTS) hairpin.o
 	@echo "LD	hairpin"
-	@gcc -o hairpin $(CFLAGS) $(OBJECTS) hairpin.o $(LIBS) -ggdb $(PROFILE)
+	@$(CC) -o hairpin $(CFLAGS) $(OBJECTS) hairpin.o $(LIBS) -ggdb $(PROFILE)
 hairpindebug:
 	make -B OPTIM="-O0" DEBUG="-DDEBUG" hairpin
 
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"
-	@gcc -o diffusion $(CFLAGS) $(OBJECTS) diffusion.o $(LIBS) -ggdb $(PROFILE)
+	@$(CC) -o diffusion $(CFLAGS) $(OBJECTS) diffusion.o $(LIBS) -ggdb $(PROFILE)
 
 diffdebug:
 	make -B OPTIM="-O0" DEBUG="-DDEBUG" diff
@@ -59,7 +72,7 @@ difffastdebug:
 
 .c.o:
 	@echo "CC	$@"
-	@gcc -o $@ $(CFLAGS) -c $<
+	@$(CC) -o $@ $(CFLAGS) -c $<
 
 clean:
 	rm -f *.o mathlib/*.o tinymt/*.o
