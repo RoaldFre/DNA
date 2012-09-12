@@ -257,50 +257,55 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 	for (int ix = 0; ix < nb; ix++)
 	for (int iy = 0; iy < nb; iy++)
 	for (int iz = 0; iz < nb; iz++) {
-		/* Loop over all particles in this box */
 		Box *box = boxFromIndex(ix, iy, iz);
-		Particle *p = box->p;
 
-		/* Loop over every partner of the i'th particle 'p' from the 
-		 * box 'box' */
+		/* Loop over all i'th particles 'p' from the box 'box' and 
+		 * match them with the j'th praticle in the same box */
+		Particle *p = box->p;
 		n1 = box->n;
-		for (int i = 0; i < n1; i++) { /* i'th particle in box */
+		for (int i = 0; i < n1; i++) {
 			Particle *p2 = p->next;
 			for (int j = i + 1; j < n1; j++) {
 				f(p, p2, data);
 				p2 = p2->next;
 			}
-			/* Loop over particles in adjacent boxes to the box 
-			 * of p. We need a total ordering on the boxes so 
-			 * we don't check the same box twice. We use the 
-			 * pointer value for this.
-			 * However, due to periodic boundary conditions, 
-			 * this ONLY works when there are AT LEAST 3 boxes 
-			 * in each dimension! */
-			for (int dix = -1; dix <= 1; dix++)
-			for (int diy = -1; diy <= 1; diy++)
-			for (int diz = -1; diz <= 1; diz++) {
-				Box *b = boxFromNonPeriodicIndex(
+
+			p = p->next;
+		}
+		assert(p == box->p); /* We went 'full circle' */
+
+		/* Loop between particles of adjacent boxes of box.  We 
+		 * need a total ordering on the boxes so we don't check the 
+		 * same box twice. We use the pointer value for this.
+		 * However, due to periodic boundary conditions, this ONLY 
+		 * works when there are AT LEAST 3 boxes in each dimension! 
+		 * */
+		for (int dix = -1; dix <= 1; dix++)
+		for (int diy = -1; diy <= 1; diy++)
+		for (int diz = -1; diz <= 1; diz++) {
+			Box *neighbour = boxFromNonPeriodicIndex(
 						ix+dix, iy+diy, iz+diz);
-				if (b <= box)
-					continue;
-					/* if b == box: it's our own box!
-					 * else: only check boxes that have 
-					 * a strictly larger pointer value 
-					 * to avoid double work. */
-				p2 = b->p;
-				n2 = b->n;
+			if (neighbour <= box)
+				continue;
+				/* if neighbour == box: it's our own box!
+				 * else: only check boxes that have a 
+				 * strictly larger pointer value to avoid 
+				 * double work. */
+
+			/* Match up all particles from box and neighbour. */
+			n2 = neighbour->n;
+			p = box->p;
+			for (int i = 0; i < n1; i++) {
+				Particle *p2 = neighbour->p;
 				for (int j = 0; j < n2; j++) {
 					f(p, p2, data);
 					p2 = p2->next;
 				}
-				assert(p2 == b->p);
+				assert(p2 == neighbour->p);
+				p = p->next;
 			}
-
-			p = p->next;
+			assert(p == box->p);
 		}
-
-		assert(p == box->p);
 	}
 }
 
