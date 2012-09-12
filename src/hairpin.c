@@ -593,6 +593,7 @@ int main(int argc, char **argv)
 
 	bool everythingOK = run(&task);
 
+	freeWorld();
 	free(basePairFile);
 	free(endToEndFile);
 	free(temperatureFile);

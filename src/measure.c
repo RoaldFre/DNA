@@ -138,7 +138,8 @@ static void *measStart(void *initialData)
 
 	if (meas->measConf.measureInterval <= 0) {
 		/* Nothing to do */
-		free(initialData);
+		free(mid->strBuf);
+		free(mid);
 		return NULL;
 	}
 

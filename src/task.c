@@ -99,6 +99,7 @@ static void seqStop(void *state)
 	}
 
 	/* We can free the state now */
+	free(seqState->tasks);
 	free(seqState);
 }
 
