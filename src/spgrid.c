@@ -292,6 +292,9 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 				 * strictly larger pointer value to avoid 
 				 * double work. */
 
+			if (neighbour->n == 0)
+				continue;
+
 			/* Match up all particles from box and neighbour. */
 			n2 = neighbour->n;
 			p = box->p;
