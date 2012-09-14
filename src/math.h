@@ -172,9 +172,9 @@ static __inline__ Vec3 periodic(double period, Vec3 v)
 
 	Vec3 res;
 	double hp = period / 2.0; /* Half Period */
-	res.x = hp - floor((v.x - hp) / period) * period;
-	res.y = hp - floor((v.y - hp) / period) * period;
-	res.z = hp - floor((v.z - hp) / period) * period;
+	res.x = hp + floor((v.x - hp) / period) * period;
+	res.y = hp + floor((v.y - hp) / period) * period;
+	res.z = hp + floor((v.z - hp) / period) * period;
 
 	return res;
 }
