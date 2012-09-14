@@ -37,8 +37,7 @@ static void forEveryPairBruteForce(void (*f)(Particle *p1, Particle *p2, void *d
 static Box *grid; /* All boxes in the spgrid. */
 static Box *occupiedBoxes; /* First element in linked list of boxes that 
 			      contain particles, or NULL if all boxes are 
-			      empty. reboxParticles() is responsible to 
-			      keep this consistent. */
+			      empty. */
 static double boxSize = 0; /* Linear length of one box. */
 static int nb = 0; /* Number of Boxes in one dimension. Total number of 
 		      boxes is nb^3. Total volume of the grid is 
