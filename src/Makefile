@@ -21,7 +21,7 @@ GCC_OPTIM = -O4 -flto -fexcess-precision=fast -ffast-math -finline-limit=2000 -f
 GCC_CFLAGS = $(WARNINGS) -std=c99 -pipe -march=native -ggdb $(GCC_OPTIM) $(DEBUG) $(DEFINES) $(PROFILE) -I/usr/include/freetype2
 
 CLANG_OPTIM = -O4 -march=core2
-CLANG_CFLAGS = -I/usr/include/freetype2 $(CLANG_OPTIM)
+CLANG_CFLAGS = $(CLANG_OPTIM) $(DEBUG) $(DEFINES) -I/usr/include/freetype2 
 
 #use 'make target CLANG=' to build with clang instead of gcc
 CLANG=no
