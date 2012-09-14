@@ -40,7 +40,7 @@ profile:
 
 #Debug (asserts etc) *without* optimizations
 debug:
-	make -B OPTIM="-O0" DEBUG="-DDEBUG"
+	make -B GCC_OPTIM="-O0" CLANG_OPTIM="-O0" DEBUG="-DDEBUG"
 
 #Debug (asserts etc) *with* optimizations
 fastdebug:
@@ -58,14 +58,14 @@ hairpin: $(OBJECTS) hairpin.o
 	@echo "LD	hairpin"
 	@$(CC) -o hairpin $(CFLAGS) $(OBJECTS) hairpin.o $(LIBS) -ggdb $(PROFILE)
 hairpindebug:
-	make -B OPTIM="-O0" DEBUG="-DDEBUG" hairpin
+	make -B GCC_OPTIM="-O0" CLANG_OPTIM="-O0" DEBUG="-DDEBUG" hairpin
 
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"
 	@$(CC) -o diffusion $(CFLAGS) $(OBJECTS) diffusion.o $(LIBS) -ggdb $(PROFILE)
 
 diffdebug:
-	make -B OPTIM="-O0" DEBUG="-DDEBUG" diff
+	make -B GCC_OPTIM="-O0" CLANG_OPTIM="-O0" DEBUG="-DDEBUG" diff
 
 difffastdebug:
 	make -B DEBUG="-DDEBUG" diff
