@@ -1,4 +1,5 @@
 #include "render.h"
+#include "integrator.h"
 
 #ifdef NO_RENDER
 /* =========== BUILD WITHOUT RENDERING =========== */
@@ -27,7 +28,7 @@ void registerString(RenderStringConfig *rsc)
 #include <SDL/SDL.h>
 #include <GL/gl.h>
 #include <math.h>
-#include "main.h"
+#include "system.h"
 #include "physics.h"
 #include "task.h"
 #include "font.h"
@@ -355,22 +356,22 @@ static bool handleEvents(void)
 				return false;
 				break;
 			case SDLK_UP:
-				config.timeStep *= 1.02;
+				setTimeStep(getTimeStep() * 1.02);
 				printf("Time step: %f\n", 
-						config.timeStep / TIME_FACTOR);
+						getTimeStep() / FEMTOSECONDS);
 				break;
 			case SDLK_DOWN:
-				config.timeStep /= 1.02;
+				setTimeStep(getTimeStep() / 1.02);
 				printf("Time step: %f\n",
-						config.timeStep / TIME_FACTOR);
+						getTimeStep() / FEMTOSECONDS);
 				break;
 			case SDLK_SPACE:
-				config.thermostatTemp *= 1.02;
-				printf("Temperature: %f\n", config.thermostatTemp);
+				setHeatBathTemperature(getHeatBathTemperature() * 1.02);
+				printf("Temperature: %f\n", getHeatBathTemperature());
 				break;
 			case SDLK_BACKSPACE:
-				config.thermostatTemp /= 1.02;
-				printf("Temperature: %f\n", config.thermostatTemp);
+				setHeatBathTemperature(getHeatBathTemperature() / 1.02);
+				printf("Temperature: %f\n", getHeatBathTemperature());
 				break;
 			case SDLK_RETURN:
 				SDL_WM_ToggleFullScreen(surface);
@@ -609,12 +610,12 @@ static void render(RenderConf *rc)
 	renderString(string, 10, 40);
 
 	snprintf(string, n, "t = %f µs   (dt = %f fs)",
-			getTime() * 1e6, config.timeStep * 1e15);
+			getTime() * 1e6, getTimeStep() / FEMTOSECONDS);
 	renderString(string, 10, 25);
 
 	int ips = getIterationsPerSecond();
 	snprintf(string, n, "ips = %d   (dt/min = %f ns)",
-			ips, ips * config.timeStep * 1e9 * 60);
+			ips, ips * getTimeStep() / NANOSECONDS * 60);
 	renderString(string, 10, 10);
 
 	glLoadIdentity();

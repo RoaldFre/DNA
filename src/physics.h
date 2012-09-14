@@ -123,11 +123,6 @@
 #define AVOGADRO		6.023e23
 
 
-typedef enum {
-	LANGEVIN,
-	VERLET
-} Integrator;
-
 typedef struct {
 	bool enableBond;
 	bool enableAngle;
@@ -155,17 +150,14 @@ typedef struct {
 		 * pairing. */
 		BASE_PAIR_DOUBLE_STRAND,
 	} basePairInteraction;
+
+	double saltConcentration; /* Na+ concentration, in mol/m^3 */
+	double truncationLen; /* Length at which potentials are truncated */
 } InteractionSettings;
 
-typedef struct {
-	Integrator integrator;
-	InteractionSettings interactionSettings;
-	int numBoxes; /* For space partition grid */
-	double reboxInterval; /* time interval after which to rebox the particles */
-} IntegratorConf;
+void registerInteractionSettings(InteractionSettings interactionSettings);
 
-void dumpStats(void);
-bool physicsCheck(void);
+void calculateForces(void);
 
 double getKineticTemperature(void);
 
@@ -186,6 +178,7 @@ double VbasePair(Particle *p1, Particle *p2);
 double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2);
 double getExclusionCutOff(ParticleType t1, ParticleType t2);
 
-Task makeIntegratorTask(IntegratorConf *conf);
+void dumpStats(void);
+bool physicsCheck(void);
 
 #endif

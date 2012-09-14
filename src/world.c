@@ -1,8 +1,12 @@
-#include "main.h" //for die TODO clean
+#define _GNU_SOURCE
+
+#include "system.h"
 #include "world.h"
 #include "spgrid.h"
-#include "physics.h" /* for spacings/angles/... */
+#include "physics.h"
+#include "integrator.h"
 #include <string.h>
+#include <stdio.h>
 
 
 World world;
@@ -108,9 +112,9 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 
 	/* <v^2> = 3 T k_B / m
 	 * -> per dimension: gaussian with variance T k_B / m */
-	double T = config.thermostatTemp;
+	double T = getHeatBathTemperature();
 	double velVarPerInvMass = T * BOLTZMANN_CONSTANT;
-	double dt = config.timeStep;
+	double dt = getTimeStep();
 
 	double phi = 0;
 	double z = 0;
@@ -223,6 +227,8 @@ void fillComplementaryStrand(Strand *s, const char *baseSequence)
 	fillStrandHelper(s, baseSequence, true, true);
 }
 
+/* Returns the base sequence string of the given strand. You need to free 
+ * the returned pointer yourself! */
 char *getSequence(Strand *s)
 {
 	int n = s->numMonomers;
@@ -331,6 +337,25 @@ void translateStrand(Strand *s, Vec3 delta)
 {
 	forEveryParticleOfD(s, translateParticle, (void*) &delta);
 }
+char *getWorldInfo(void)
+{
+	int n = world.numStrands;
+	char *ret;
+	int err = asprintf(&ret, "# Number of strands in the world: %d\n", n);
+	if (err < 0) dieMem();
+
+	for (int i = 0; i < n; i++) {
+		/* This isn't very malloc friendly, but meh. */
+		char *tmp = ret;
+		err = asprintf(&ret, "%s# Strand %d: %s\n", tmp,
+				i + 1, getSequence(&world.strands[i]));
+		if (err < 0) dieMem();
+		free(tmp);
+	}
+
+	return ret;
+}
+
 
 
 

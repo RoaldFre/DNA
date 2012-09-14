@@ -4,19 +4,6 @@
 #include <stdbool.h>
 #include "math.h"
 
-typedef struct
-{
-	double timeStep;        /* The timestep (dt) in the simulation */
-	double thermostatTemp;  /* Thermostat temperature */
-	double thermostatTau;   /* Thermostat relaxation time */
-	double langevinGamma;	/* Friction coefficient for Langevin dynamics */
-	double truncationLen;	/* Length at which potentials are truncated */
-	double saltConcentration; /* Na+ concentration, in mol/m^3 */
-} Config;
-
-extern Config config;
-
-
 
 /* Tasks are used to do stuff during the simulation, such as (accumulating) 
  * measurements. */
@@ -57,10 +44,16 @@ typedef struct
  * error. */
 bool run(Task *task);
 
-/* Get the time in the simulation after the last completed iteration. */
-double getTime(void);
-
 /* Get the number of the last completed iteration. */
 long getIteration(void);
+
+
+
+/* Exit the program with an error. Print the given message. */
+void die(const char *fmt, ...);
+
+/* Call this when you want to quit because you cannot allocate memory that 
+ * you need. */
+void dieMem(void);
 
 #endif

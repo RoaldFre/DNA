@@ -51,6 +51,30 @@ static __inline__ bool isSaneVector(Vec3 v)
 	return isSaneNumber(v.x) && isSaneNumber(v.y) && isSaneNumber(v.z);
 }
 
+/* Enable for debugging purposes. If an interaction generates an invalid 
+ * vector, we will trigger a segfault. Only usefull if you run the code 
+ * from a debugger or enable core dumps.
+ *
+ * This is useful for rare bugs because it only checks for vector sanity, 
+ * whereas compiling with assertions checks all assertions and is therefore 
+ * slower. */
+#define DEBUG_VECTOR_SANITY true
+
+static __inline__ void debugVectorSanity(Vec3 v, const char *location)
+{
+	if (!DEBUG_VECTOR_SANITY)
+		return;
+
+	if (isSaneVector(v))
+		return;
+
+	fprintf(stderr, "Found invalid vector at '%s'!\n"
+			"Triggering segfault!\n", location);
+	int *nil = (int*)NULL;
+	*nil = 1; /* segfaults */
+}
+
+
 static __inline__ void fprintVector(FILE *stream, Vec3 v)
 {
 	fprintf(stream, "%10f\t%10f\t%10f\t", v.x, v.y, v.z);

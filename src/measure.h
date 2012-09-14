@@ -16,7 +16,7 @@ typedef struct {
 	double measureWait;
 
 	/* Path to a file to dump the measurement in. NULL means dump to 
-	 * stdout. */
+	 * stdout. The directory of the destination file MUST exist! */
 	const char *measureFile;
 
 	/* Print status and progress of the measurement to stdout. */

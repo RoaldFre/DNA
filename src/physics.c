@@ -4,35 +4,17 @@
 #include <stdbool.h>
 #include <string.h>
 #include "physics.h"
+#include "integrator.h"
 #include "world.h"
 #include "spgrid.h"
 
-
-/* Static global, gets set in integratorTaskStart. */
 static InteractionSettings interactions;
+static double truncationLenSq; /* Cached: interactions.truncationLen^2 */
 
-
-/* Enable for debugging purposes. If an interaction generates an invalid 
- * vector, we will trigger a segfault. Only usefull if you run the code 
- * from a debugger or enable core dumps.
- *
- * This is useful for rare bugs because it only checks for vector sanity, 
- * whereas compiling with assertions checks all assertions and is therefore 
- * slower. */
-#define DEBUG_VECTOR_SANITY false
-
-static void debugVectorSanity(Vec3 v, const char *location)
+void registerInteractionSettings(InteractionSettings interactionSettings)
 {
-	if (!DEBUG_VECTOR_SANITY)
-		return;
-
-	if (isSaneVector(v))
-		return;
-
-	fprintf(stderr, "Found invalid vector at '%s'!\n"
-			"Triggering segfault!\n", location);
-	int *nil = (int*)NULL;
-	*nil = 1; /* segfaults */
+	interactions = interactionSettings;
+	truncationLenSq = SQUARE(interactionSettings.truncationLen);
 }
 
 
@@ -424,15 +406,13 @@ static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 		return 0;
 
 	double rSq = nearestImageDistance2(p1->pos, p2->pos);
-	double truncSq = SQUARE(config.truncationLen); //TODO cache this result!
-	if (rSq > truncSq)
+	if (rSq > truncationLenSq)
 		return 0;
 
 	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
 						monomerDistance);
 	double V = calcVLJ(STACK_COUPLING, rEqSq, rSq)
-			- calcVLJ(STACK_COUPLING, rEqSq, truncSq); //TODO cache correction!
-	//printf("rfrac2=%f\tr2=%e, rEq2=%e, V=%f\n", rSq/rEqSq, rSq, rEqSq, V/EPSILON);
+			- calcVLJ(STACK_COUPLING, rEqSq, truncationLenSq); //TODO cache correction!
 	return V;
 }
 static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
@@ -444,8 +424,7 @@ static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 
 	Vec3 r = nearestImageVector(p1->pos, p2->pos);
 	double rSq = length2(r);
-	double truncSq = SQUARE(config.truncationLen); //TODO cache this result!
-	if (rSq > truncSq)
+	if (rSq > truncationLenSq)
 		return;
 
 	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
@@ -536,11 +515,10 @@ double VbasePair(Particle *p1, Particle *p2)
 		return 0; /* Wrong pair */
 	
 	double rsq = nearestImageDistance2(p1->pos, p2->pos);
-	double truncSq = SQUARE(config.truncationLen);
-	if (rsq > truncSq)
+	if (rsq > truncationLenSq)
 		return 0; /* Too far away */
 
-	return calcVbasePair(bpi, rsq) - calcVbasePair(bpi, truncSq);
+	return calcVbasePair(bpi, rsq) - calcVbasePair(bpi, truncationLenSq);
 }
 
 static double calcFbasePair(BasePairInfo bpi, double r)
@@ -565,7 +543,7 @@ static void FbasePair(Particle *p1, Particle *p2)
 	
 	Vec3 rVec = nearestImageVector(p1->pos, p2->pos);
 	double r = length(rVec);
-	if (r > config.truncationLen)
+	if (r > interactions.truncationLen)
 		return; /* Too far away */
 
 	Vec3 direction = scale(rVec, 1/r);
@@ -663,8 +641,8 @@ static void Fexclusion(Particle *p1, Particle *p2)
 /* COULOMB */
 static double calcInvDebyeLength(void)
 {
-	double T = config.thermostatTemp;
-	double saltCon = config.saltConcentration;
+	double T = getHeatBathTemperature();
+	double saltCon = interactions.saltConcentration;
 	double lambdaBDenom, lambdaB;
 
 	if (T == 0)
@@ -696,7 +674,7 @@ static double VCoulomb(Particle *p1, Particle *p2)
 	if (!isChargedPair(p1->type, p2->type))
 		return 0;
 
-	double truncLength = config.truncationLen;
+	double truncLength = interactions.truncationLen;
 	double r = nearestImageDistance(p1->pos, p2->pos);
 
 	if (r > truncLength)
@@ -722,7 +700,7 @@ static void FCoulomb(Particle *p1, Particle *p2)
 	if (!isChargedPair(p1->type, p2->type))
 		return;
 
-	double truncLen = config.truncationLen;
+	double truncLen = interactions.truncationLen;
 	double r = nearestImageDistance(p2->pos, p1->pos);
 	if (r > truncLen)
 		return; /* Too far away */
@@ -807,7 +785,7 @@ static void pairForces(Particle *p1, Particle *p2)
 	Fexclusion(p1, p2);
 }
 
-static void calculateForces(void)
+void calculateForces(void)
 {
 	/* Reset forces */
 	forEveryParticle(&resetForce);
@@ -968,234 +946,6 @@ bool physicsCheck(void)
 		return false;
 	}
 	return true;
-}
-
-
-
-
-/* ===== INTEGRATOR ===== */
-
-static void thermostatHelper(Particle *p, void *data)
-{
-	double lambda = *(double*) data;
-	p->vel = scale(p->vel, lambda);
-}
-static void thermostat(void)
-{
-	if (config.thermostatTau <= 0)
-		return;
-
-	/* Mass and Boltzmann constant are 1 */ 
-	double Tk  = getKineticTemperature();
-	assert(isSaneNumber(Tk));
-	double T0  = config.thermostatTemp;
-	double dt  = config.timeStep;
-	double tau = config.thermostatTau;
-	double lambda2 = 1 + dt/tau * (T0/Tk - 1);
-	double lambda;
-	if (lambda2 >= 0)
-		lambda = sqrt(lambda2);
-	else
-		lambda = 1e-20; //TODO sane?
-
-	forEveryParticleD(&thermostatHelper, (void*) &lambda);
-}
-
-static void verletHelper1(Particle *p)
-{
-	double dt = config.timeStep;
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "start verletHelper1");
-		debugVectorSanity(p->vel, "start verletHelper1");
-		debugVectorSanity(p->F,   "start verletHelper1");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-		assert(isSaneVector(p->F));
-	}
-
-	/* vel(t + dt/2) = vel(t) + acc(t)*dt/2 */
-	p->vel = add(p->vel, scale(p->F, dt / (2 * p->m)));
-
-	/* pos(t + dt) = pos(t) + vel(t + dt/2)*dt */
-	p->pos = add(p->pos, scale(p->vel, dt));
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "end verletHelper1");
-		debugVectorSanity(p->vel, "end verletHelper1");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-	}
-}
-static void verletHelper2(Particle *p)
-{
-	double dt = config.timeStep;
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "start verletHelper2");
-		debugVectorSanity(p->vel, "start verletHelper2");
-		debugVectorSanity(p->F,   "start verletHelper2");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-		assert(isSaneVector(p->F));
-	}
-
-	/* vel(t + dt) = vel(t + dt/2) + acc(t + dt)*dt/2 */
-	p->vel = add(p->vel, scale(p->F, dt / (2*p->m)));
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->vel, "end verletHelper2");
-	} else {
-		assert(isSaneVector(p->vel));
-	}
-}
-static void verlet(void)
-{
-	// The compiler better inlines all of this. TODO if not: force it.
-	forEveryParticle(&verletHelper1);
-	calculateForces(); /* acc(t + dt) */
-	forEveryParticle(&verletHelper2);
-}
-
-
-static void langevinBBKhelper(Particle *p)
-{
-	double dt    = config.timeStep;
-	double gamma = config.langevinGamma;
-	double T     = config.thermostatTemp;
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "start langevinBBKhelper");
-		debugVectorSanity(p->vel, "start langevinBBKhelper");
-		debugVectorSanity(p->F,   "start langevinBBKhelper");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-		assert(isSaneVector(p->F));
-	}
-
-	/* Regular forces have been calculated. Add the random force due 
-	 * to collisions to the total force. The result is:
-	 * p->F = F(t + dt) + R(t + dt) */
-	/* TODO check that compiler inlines this and precalculates the 
-	 * prefactor before p->m when looping over all particles. */
-	double Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * gamma * p->m / dt);
-	Vec3 R = randNormVec(Rstddev);
-	debugVectorSanity(R, "randNormVec in langevinBBKhelper");
-	p->F = add(p->F, R);
-
-	Vec3 tmp;
-	tmp = scale(p->pos, 2);
-	tmp = add(tmp, scale(p->prevPos, (gamma*dt/2 - 1)));
-	tmp = add(tmp, scale(p->F, dt*dt / p->m));
-	Vec3 newPos = scale(tmp, 1 / (1 + gamma*dt/2));
-
-	p->vel = scale(sub(newPos, p->pos), 1/dt);
-	p->prevPos = p->pos;
-	p->pos = newPos;
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "end langevinBBKhelper");
-		debugVectorSanity(p->vel, "end langevinBBKhelper");
-		debugVectorSanity(p->F,   "end langevinBBKhelper");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-		assert(isSaneVector(p->F));
-	}
-}
-
-/* BBK integrator for Langevin dynamics.
- * See http://localscf.com/LangevinDynamics.aspx 
- * (relocated to http://localscf.com/localscf.com/LangevinDynamics.aspx.html atm) */
-static void langevinBBK(void)
-{
-	calculateForces();
-	forEveryParticle(&langevinBBKhelper);
-}
-
-
-
-static void stepPhysics(Integrator integrator)
-{
-	assert(worldSanityCheck());
-
-	switch(integrator) {
-	case VERLET:
-		verlet();
-		assert(physicsCheck());
-		thermostat();
-		assert(physicsCheck());
-		break;
-	case LANGEVIN:
-		langevinBBK();
-		break;
-	default:
-		fprintf(stderr, "ERROR: Unknown integrator!\n");
-		assert(false);
-		break;
-	}
-}
-
-typedef struct
-{
-	Integrator integrator;
-	double reboxInterval;
-	double lastReboxTime;
-} IntegratorState;
-/* The integrator task is responsible for handeling the space partition 
- * grid */
-static void *integratorTaskStart(void *initialData)
-{
-	IntegratorConf *ic = (IntegratorConf*) initialData;
-
-	if(!allocGrid(ic->numBoxes, world.worldSize))
-		return NULL;
-
-	forEveryParticle(&addToGrid);
-
-	interactions = ic->interactionSettings;
-
-	IntegratorState *state = malloc(sizeof(*state));
-	state->integrator = ic->integrator;
-	state->reboxInterval = ic->reboxInterval;
-	state->lastReboxTime = 0;
-
-	free(initialData);
-	return state;
-}
-static TaskSignal integratorTaskTick(void *state)
-{
-	IntegratorState *is = (IntegratorState*) state;
-	stepPhysics(is->integrator);
-
-	if (getTime() > is->lastReboxTime + is->reboxInterval) {
-		reboxParticles();
-		is->lastReboxTime = getTime();
-	}
-
-	return TASK_OK;
-}
-static void integratorTaskStop(void *state)
-{
-	UNUSED(state);
-	freeGrid();
-}
-
-Task makeIntegratorTask(IntegratorConf *conf)
-{
-	Task task;
-	IntegratorConf *confCpy = malloc(sizeof(*confCpy));
-	memcpy(confCpy, conf, sizeof(*confCpy));
-
-	task.initialData = confCpy;
-	task.start = &integratorTaskStart;
-	task.tick  = &integratorTaskTick;
-	task.stop  = &integratorTaskStop;
-	return task;
 }
 
 

@@ -88,6 +88,10 @@ void fillComplementaryStrand(Strand *s, const char *baseSequence);
 /* Returns the base sequence of this strand. Don't forget to free the 
  * pointer afterwards! */
 char *getSequence(Strand *s);
+/* Returns a string containing information of the world. Each line is 
+ * prefixed with '#'. You should free the returned pointer when you don't 
+ * need it any more. */
+char *getWorldInfo(void);
 void freeWorld(void);
 void freeStrand(Strand *strand);
 

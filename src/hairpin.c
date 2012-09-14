@@ -8,8 +8,9 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <string.h>
-#include "main.h"
+#include "system.h"
 #include "world.h"
+#include "integrator.h"
 #include "render.h"
 #include "samplers.h"
 #include "math.h"
@@ -95,27 +96,40 @@ static bool measureTemperature = false;
 static RenderConf renderConf =
 {
 	.framerate = DEF_RENDER_FRAMERATE,
-	.radius    = DEF_RENDER_RADIUS * LENGTH_FACTOR,
+	.radius    = DEF_RENDER_RADIUS * A,
 	.drawForces = false,
 };
 static bool render;
-static IntegratorConf integratorConf =
-{
-	.integrator = DEF_INTEGRATOR,
-	.numBoxes   = -1, /* guard */
-	.reboxInterval = DEF_REBOX_INTERVAL * FEMTOSECONDS,
-	.interactionSettings = {
-			.enableBond	= true,
-			.enableAngle	= true,
-			.enableDihedral	= true,
-			.enableStack	= true,
-			.enableExclusion= true,
-			.enableBasePair	= true,
-			.enableCoulomb	= true,
-			.mutuallyExclusivePairForces = true,
-			.basePairInteraction = BASE_PAIR_HAIRPIN,
-	},
+
+static IntegratorType integratorType = DEF_INTEGRATOR;
+static VerletSettings verletSettings = {
+	.tau = -1, /* guard */
 };
+static LangevinSettings langevinSettings = {
+	.gamma = DEF_LANGEVIN_GAMMA,
+};
+static IntegratorConf integratorConf = {
+	.timeStep      = DEF_TIMESTEP * FEMTOSECONDS,
+	.numBoxes      = -1, /* guard */
+	.reboxInterval = DEF_REBOX_INTERVAL * FEMTOSECONDS,
+};
+
+static double temperature;
+
+static InteractionSettings interactionSettings = {
+	.enableBond	= true,
+	.enableAngle	= true,
+	.enableDihedral	= true,
+	.enableStack	= true,
+	.enableExclusion= true,
+	.enableBasePair	= true,
+	.enableCoulomb	= true,
+	.mutuallyExclusivePairForces = true,
+	.basePairInteraction = BASE_PAIR_HAIRPIN,
+	.saltConcentration   = DEF_SALT_CONCENTRATION,
+	.truncationLen       = DEF_TRUNCATION_LENGTH * A,
+};
+
 static const char* baseSequence = DEF_BASE_SEQUENCE;
 static bool buildCompStrand = false;
 static double worldSize = -1; /* guard */
@@ -219,14 +233,7 @@ static void parseArguments(int argc, char **argv)
 	int c;
 
 	/* defaults */
-	config.timeStep 	 = DEF_TIMESTEP * FEMTOSECONDS;
-	config.thermostatTemp	 = parseTemperature(DEF_INITIAL_TEMPERATURE);
-	config.saltConcentration = DEF_SALT_CONCENTRATION;
-	config.truncationLen     = DEF_TRUNCATION_LENGTH * LENGTH_FACTOR;
-	config.langevinGamma	 = DEF_LANGEVIN_GAMMA;
-
-	/* guards */
-	config.thermostatTau = -1;
+	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
 	while ((c = getopt(argc, argv, ":s:dt:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:epkhA:B:C:G:L:VH:M:O:Q:U:")) != -1)
 	{
@@ -239,28 +246,28 @@ static void parseArguments(int argc, char **argv)
 			buildCompStrand = true;
 			break;
 		case 't':
-			config.timeStep = atof(optarg) * FEMTOSECONDS;
-			if (config.timeStep <= 0)
+			integratorConf.timeStep = atof(optarg) * FEMTOSECONDS;
+			if (integratorConf.timeStep <= 0)
 				die("Invalid timestep %s\n", optarg);
 			break;
 		case 'T':
-			config.thermostatTemp = parseTemperature(optarg);
-			if (config.thermostatTemp < 0)
+			temperature = parseTemperature(optarg);
+			if (temperature < 0)
 				die("Invalid temperature!\n");
 			break;
 		case 'N':
-			config.saltConcentration = atof(optarg);
-			if (config.saltConcentration < 0)
+			interactionSettings.saltConcentration = atof(optarg);
+			if (interactionSettings.saltConcentration < 0)
 				die("Invalid salt concentration %s\n", optarg);
 			break;
 		case 'g':
-			config.langevinGamma = atof(optarg);
-			if (config.langevinGamma < 0)
+			langevinSettings.gamma = atof(optarg);
+			if (langevinSettings.gamma < 0)
 				die("Invalid friction coefficient %s\n", optarg);
 			break;
 		case 'c':
-			config.thermostatTau = atof(optarg) * FEMTOSECONDS;
-			if (config.thermostatTau < 0)
+			verletSettings.tau = atof(optarg) * FEMTOSECONDS;
+			if (verletSettings.tau < 0)
 				die("Invalid thermostat relaxation time %s\n",
 						optarg);
 			break;
@@ -273,7 +280,7 @@ static void parseArguments(int argc, char **argv)
 			render = true;
 			break;
 		case 'R':
-			renderConf.radius = atof(optarg) * LENGTH_FACTOR;
+			renderConf.radius = atof(optarg) * A;
 			if (renderConf.radius <= 0)
 				die("Invalid radius %s\n", optarg);
 			break;
@@ -281,7 +288,7 @@ static void parseArguments(int argc, char **argv)
 			renderConf.drawForces = true;
 			break;
 		case 'l':
-			config.truncationLen = atof(optarg) * LENGTH_FACTOR;
+			interactionSettings.truncationLen = atof(optarg) * A;
 			break;
 		case 'S':
 			worldSize = atof(optarg) * A;
@@ -309,8 +316,8 @@ static void parseArguments(int argc, char **argv)
 			if (optarg[0] == '\0' || optarg[1] != '\0')
 				die("Integrator: badly formatted integrator type\n");
 			switch(optarg[0]) {
-			case 'l': integratorConf.integrator = LANGEVIN; break;
-			case 'v': integratorConf.integrator = VERLET; break;
+			case 'l': integratorType = LANGEVIN; break;
+			case 'v': integratorType = VERLET; break;
 			default: die("Unknown integrator type '%s'\n", optarg);
 				 break;
 			}
@@ -422,33 +429,33 @@ static void parseArguments(int argc, char **argv)
 	}
 
 	if (worldSize < 0)
-		worldSize = LENGTH_FACTOR * (strlen(baseSequence) + 2)
-					* DEF_MONOMER_WORLDSIZE_FACTOR;
+		worldSize = ((strlen(baseSequence) + 2)
+					* DEF_MONOMER_WORLDSIZE_FACTOR) * A;
 
-	if (config.thermostatTau < 0)
-		config.thermostatTau = DEF_COUPLING_TIMESTEP_FACTOR
-						* config.timeStep;
+	if (verletSettings.tau < 0)
+		verletSettings.tau = DEF_COUPLING_TIMESTEP_FACTOR
+						* integratorConf.timeStep;
 
-	if (config.truncationLen < 0) {
+	if (interactionSettings.truncationLen < 0) {
 		/* Disable truncation -> no space partitioning */
 		printf("Disabling space partitioning, "
 				"maximizing truncation length.\n");
 		integratorConf.numBoxes = 1;
-		config.truncationLen = worldSize / 2.0;
+		interactionSettings.truncationLen = worldSize / 2.0;
 		/* Due to (cubic) periodicity, we still need to truncate at 
 		 * worldsize/2 to have correct energy conservation and to 
 		 * make sure every particle 'sees' the same (spherical) 
 		 * potential, no matter where it is within the cube. */
-	} else if (config.truncationLen > worldSize / 2.0) {
+	} else if (interactionSettings.truncationLen > worldSize / 2.0) {
 		/* World is too small, extend it so we correctly compute 
 		 * the potentials and forces up to the requested truncation 
 		 * length. We need twice the truncation length for the same 
 		 * reason as above. */
 		printf("Truncation (%e) > worldSize/2 (%e)\n   => "
 				"Extending worldSize to 2*Truncation (%e).\n",
-				config.truncationLen, worldSize/2.0,
-				2.0 * config.truncationLen);
-		worldSize = 2.0 * config.truncationLen;
+				interactionSettings.truncationLen, worldSize/2.0,
+				2.0 * interactionSettings.truncationLen);
+		worldSize = 2.0 * interactionSettings.truncationLen;
 		integratorConf.numBoxes = 1; /* No space partitioning */
 	} else if (integratorConf.numBoxes == -1) {
 		/* Automatically determine ideal number of boxes.
@@ -457,29 +464,18 @@ static void parseArguments(int argc, char **argv)
 		 * (+ 0.5 for correct rounding to int) */
 		int ideal = 0.5 + 2.73 * pow(strlen(baseSequence), 0.446);
 		integratorConf.numBoxes = MIN(ideal,
-					worldSize / config.truncationLen);
+					worldSize / interactionSettings.truncationLen);
 		if (integratorConf.numBoxes < 1)
 			integratorConf.numBoxes = 1;
 		printf("Number of boxes per dimension: %d\n",
 				integratorConf.numBoxes);
 	}
 
-	if (worldSize / integratorConf.numBoxes < config.truncationLen)
+	if (worldSize / integratorConf.numBoxes < interactionSettings.truncationLen)
 		die("The boxsize (%e) is smaller than the potential "
 			"truncation radius (%e)!\n",
-			worldSize / integratorConf.numBoxes / LENGTH_FACTOR,
-			config.truncationLen / LENGTH_FACTOR);
-}
-
-void die(const char *fmt, ...)
-{
-	va_list args;
-
-	va_start(args, fmt);
-	vfprintf(stderr, fmt, args);
-	va_end(args);
-
-	exit(1);
+			worldSize / integratorConf.numBoxes / A,
+			interactionSettings.truncationLen / A);
 }
 
 int main(int argc, char **argv)
@@ -543,13 +539,13 @@ int main(int argc, char **argv)
 			filenameBase,
 			TEMPERATURE_FILE_SUFFIX))
 		die("Could not create temperature file name string!\n");
-	Measurement temperature;
-	temperature.sampler = temperatureSampler();
-	temperature.measConf = measurementConf; /* struct copy */
-	temperature.measConf.measureFile = temperatureFile;
-	temperature.measConf.verbose = false; /* Let output come from 
+	Measurement tempMeas;
+	tempMeas.sampler = temperatureSampler();
+	tempMeas.measConf = measurementConf; /* struct copy */
+	tempMeas.measConf.measureFile = temperatureFile;
+	tempMeas.measConf.verbose = false; /* Let output come from 
 						 hairpin sampler */
-	Task temperatureTask = measurementTask(&temperature);	
+	Task temperatureTask = measurementTask(&tempMeas);	
 
 
 	/* Hairpin task */
@@ -578,6 +574,19 @@ int main(int argc, char **argv)
 	Task renderTask = makeRenderTask(&renderConf);
 
 	/* Integrator task */
+	Integrator integrator;
+	integrator.type = integratorType;
+	switch (integratorType) {
+	case VERLET: 
+		integrator.settings.verlet = verletSettings;
+		break;
+	case LANGEVIN:
+		integrator.settings.langevin = langevinSettings;
+		break;
+	default:
+		assert(false); die("Unknown integrator type!\n");
+	}
+	integratorConf.integrator = integrator;
 	Task integratorTask = makeIntegratorTask(&integratorConf);
 
 	/* Combined task */
@@ -590,6 +599,9 @@ int main(int argc, char **argv)
 	tasks[5] = (measureBasePairing ? &basePairingTask : NULL);
 	tasks[6] = (measureTemperature ? &temperatureTask : NULL);
 	Task task = sequence(tasks, 7);
+
+	setHeatBathTemperature(temperature);
+	registerInteractionSettings(interactionSettings);
 
 	bool everythingOK = run(&task);
 
