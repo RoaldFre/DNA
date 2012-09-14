@@ -163,7 +163,7 @@ void freeGrid()
 }
 
 void addToGrid(Particle *p) {
-	p->pos = periodic(nb * boxSize, p->pos);
+	p->pos = periodic(gridSize, p->pos);
 	Box *box = boxFromParticle(p);
 	addToBox(p, box);
 	gridNumParticles++;
@@ -227,15 +227,15 @@ void reboxParticles(void)
 /* Precondition: particle must be within the grid. */
 static Box *boxFromParticle(const Particle *p)
 {
-	double ws = boxSize * nb; /* "world size" */
-	/* shift coordinates from [-ws/2 to ws/2] to [0 to ws] */
-	Vec3 shifted = add(p->pos, (Vec3) {ws/2.0, ws/2.0, ws/2.0});
+	double gs = gridSize;
+	/* shift coordinates from [-gs/2 to gs/2] to [0 to gs] */
+	Vec3 shifted = add(p->pos, (Vec3) {gs/2.0, gs/2.0, gs/2.0});
 
 	assert(p != NULL);
 	assert(!isnan(p->pos.x) && !isnan(p->pos.y) && !isnan(p->pos.z));
-	assert(0 <= shifted.x  &&  shifted.x < ws);
-	assert(0 <= shifted.y  &&  shifted.y < ws);
-	assert(0 <= shifted.z  &&  shifted.z < ws);
+	assert(0 <= shifted.x  &&  shifted.x < gs);
+	assert(0 <= shifted.y  &&  shifted.y < gs);
+	assert(0 <= shifted.z  &&  shifted.z < gs);
 
 	int ix = shifted.x / boxSize;
 	int iy = shifted.y / boxSize;
@@ -249,8 +249,8 @@ static Box *boxFromNonPeriodicParticle(const Particle *p)
 	assert(p != NULL);
 	assert(!isnan(p->pos.x) && !isnan(p->pos.y) && !isnan(p->pos.z));
 
-	double ws = boxSize * nb;
-	Vec3 shifted = add(p->pos, (Vec3) {ws/2.0, ws/2.0, ws/2.0});
+	double gs = gridSize;
+	Vec3 shifted = add(p->pos, (Vec3) {gs/2.0, gs/2.0, gs/2.0});
 
 	int ix = shifted.x / boxSize;
 	int iy = shifted.y / boxSize;
