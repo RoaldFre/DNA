@@ -187,6 +187,8 @@ static void periodicPosition(Particle *p)
 }
 void reboxParticles(void)
 {
+	int reboxedPartices = 0;
+
 	if (nb == 1) {
 		forEveryParticle(&periodicPosition);
 		return;
@@ -213,15 +215,17 @@ void reboxParticles(void)
 			Particle *next = p->next;
 
 			Box *correctBox = boxFromParticle(p);
-			if (UNLIKELY(currentBox != correctBox)) {
+			if (currentBox != correctBox) {
 				removeFromBox(p, currentBox);
 				addToBox(p, correctBox);
+				reboxedPartices++;
 			}
 
 			p = next;
 		}
 	}
 	assert(spgridSanityCheck(true, true));
+	//fprintf(stderr, "reboxed particles: %d\n", reboxedPartices);
 }
 
 /* Precondition: particle must be within the grid. */
