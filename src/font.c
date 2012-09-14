@@ -10,7 +10,7 @@
 #include FT_GLYPH_H
 
 #include "font.h"
-static char *strdup(const char *string)
+static char *myStrdup(const char *string)
 {
 	char *new;
 	new = malloc(strlen(string) + 1);
@@ -265,10 +265,10 @@ Text *text_create(Font *font, const char *char_string, int size)
 	text->size = size;
 	text->vao = text->vbo = text->texture = 0;
 	text->texture_image = NULL;
-	text->string = (uint8_t *) strdup((const char *) string);
+	text->string = (uint8_t *) myStrdup((const char *) string);
 	len = strlen((const char *) string); /* Bytecount */
-	/* We allocate more space than necessary for the glyph string, better safe
-	 * than sorry. */
+	/* We allocate more space than necessary for the glyph string, 
+	 * better safe than sorry. */
 	glyph_string = calloc(sizeof(FT_Glyph), len);
 	pos = calloc(sizeof(FT_Vector), len);
 	if (text->string == NULL || glyph_string == NULL || pos == NULL)
