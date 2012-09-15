@@ -1,3 +1,5 @@
+% function [D, Derr, meanSqDisplacement, sqDisplacement] = plotDiffusion(datafilename, fraction)
+%
 % datafilename: a file that holds a 3D matrix.
 % data(:,:,i) = data of i'th run, which is:
 %   [ time(1)  x(1)  y(1)  z(1);
@@ -43,6 +45,7 @@ ts = linspace(dt, nSamplesInResult*dt, nSamplesInResult)';
 if (nRuns == 1)
 	meanSqDisplacement = sqDisplacement;
 	D = mean(meanSqDisplacement ./ (6 * ts))
+	Derr = inf;
 else
 	meanSqDisplacement = mean(sqDisplacement')';
 	individualDs = sqDisplacement ./ (6 * (ts * ones(1,nRuns)));
@@ -50,12 +53,14 @@ else
 	individualMeanDs = mean(individualDs);
 	D = mean(individualMeanDs);
 	%TODO check error analysis
-	statisticalErrBecauseOfIndividualStds = norm(individualDstds) / sqrt(nRuns)
+	statisticalErrBecauseOfIndividualStds = norm(individualDstds) / sqrt(nRuns - 1)
 	statisticalErrBecauseOfStdsInD = std(individualMeanDs)
 	Derr = norm([statisticalErrBecauseOfStdsInD, statisticalErrBecauseOfIndividualStds]);
 end
 
-tsFit = [min(ts), max(ts)]
+[D, Derr]
+
+tsFit = [min(ts), max(ts)];
 fit = 6*D*tsFit;
 
 
@@ -87,4 +92,4 @@ height    = '800';
 
 %makeGraph(filename,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
 presentationDir = '../presentation/images';
-makeGraphPresentation(filename,presentationDir,xlab,ylab,ylabrule,width,height);
+%makeGraphPresentation(filename,presentationDir,xlab,ylab,ylabrule,width,height);

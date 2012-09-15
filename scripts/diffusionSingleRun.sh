@@ -2,7 +2,7 @@
 
 set -e
 
-destinationDir=$1
+destinationDirRoot=$1
 gamma=$2
 N=$3
 timestep=$4
@@ -25,16 +25,14 @@ integrator=l
 fps=10
 
 
-outputBaseName=`mktemp`
-nameSuffix="dt${timestep}_wait${wait}_time${time}_N${N}_g${gamma}_${suffix}"
-particleFilenameBase="$destinationDir/diff_particle_${nameSuffix}"
-strandFilenameBase="$destinationDir/diff_strand_${nameSuffix}"
+tempOutputFile=`mktemp`
+destinationDir="$destinationDirRoot/dt${timestep}_wait${wait}_time${time}_N${N}_T${T}/g${gamma}/"
+destination="$destinationDir/diff_${suffix}"
 
 mkdir -p $destinationDir
 
 
 seq=`perl -e "print 'A'x$N"`
-$main -i $integrator $render -f $fps -t $timestep -T $T -I $interval -P $time -W $wait -s $seq -D $outputBaseName -S $sizeFactor -g $gamma $boxes
-mv ${outputBaseName}_particle ${particleFilenameBase}
-mv ${outputBaseName}_strand ${strandFilenameBase}
+$main -i $integrator $render -f $fps -t $timestep -T $T -I $interval -P $time -W $wait -s $seq -D $tempOutputFile -S $sizeFactor -g $gamma $boxes
+mv ${tempOutputFile} ${destination}
 
