@@ -20,7 +20,7 @@ WARNINGS = -pedantic -Wextra -Wall -Wwrite-strings -Wshadow -Wcast-qual -Wstrict
 PROFILE = 
 DEBUG = -DNDEBUG
 GCC_OPTIM = -O4 -flto -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations
-GCC_CFLAGS = $(WARNINGS) -std=c99 -pipe -march=native -ggdb $(GCC_OPTIM) $(DEBUG) $(DEFINES) $(PROFILE) -I/usr/include/freetype2
+GCC_CFLAGS = $(WARNINGS) -std=gnu99 -pipe -march=native -ggdb $(GCC_OPTIM) $(DEBUG) $(DEFINES) $(PROFILE) -I/usr/include/freetype2
 
 CLANG_OPTIM = -O4 -march=core2
 CLANG_CFLAGS = $(CLANG_OPTIM) $(DEBUG) $(DEFINES) -I/usr/include/freetype2 
@@ -61,6 +61,9 @@ hairpin: $(OBJECTS) hairpin.o
 	@$(CC) -o hairpin $(CFLAGS) $(OBJECTS) hairpin.o $(LIBS) -ggdb $(PROFILE)
 hairpindebug:
 	make -B GCC_OPTIM="-O0" CLANG_OPTIM="-O0" DEBUG="-DDEBUG" hairpin
+hairpinCombined: hairpinCombined.o
+	@echo "LD	hairpinCombined"
+	@$(CC) -o hairpinCombined $(CFLAGS) hairpinCombined.o $(LIBS) -ggdb $(PROFILE)
 
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"
