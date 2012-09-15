@@ -10,6 +10,7 @@
 #include "measure.c"
 #include "samplers.c"
 #include "physics.c"
+#include "integrator.c"
 #include "world.c"
 #include "spgrid.c"
 #include "tinymt/tinymt64.c"
