@@ -35,6 +35,13 @@
 #define DEF_RENDER_RADIUS 		0.5
 #define DEF_INTEGRATOR			LANGEVIN
 
+/* Profiling */
+#ifdef GOOGLE_PERFTOOLS
+#include <google/profiler.h>
+#define PROFILE(cmd, filename) ProfilerStart(filename); cmd; ProfilerStop();
+#else
+#define PROFILE(cmd, filename) cmd;
+#endif
 
 /* Static global configuration variables */
 
@@ -591,7 +598,7 @@ int main(int argc, char **argv)
 	tasks[6] = (measureTemperature ? &temperatureTask : NULL);
 	Task task = sequence(tasks, 7);
 
-	bool everythingOK = run(&task);
+	PROFILE(bool everythingOK = run(&task), "run.prof");
 
 	freeWorld();
 	free(basePairFile);

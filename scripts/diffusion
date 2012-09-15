@@ -49,7 +49,7 @@ do
 	do
 		echo "    run $i"
 		seq=`perl -e "print 'A'x$N"`
-		$main -i $integrator $render -f $fps -t $timestep -T $T -I $interval -P $time -W $wait -s $seq -D $outputBaseName $boxes
+		$main -i $integrator $render -f $fps -t $timestep -T ${T}K -I $interval -P $time -W $wait -s $seq -D $outputBaseName $boxes
 		mv ${outputBaseName}_particle ${particleFilenameBase}_${i}
 		mv ${outputBaseName}_strand ${strandFilenameBase}_${i}
 	done

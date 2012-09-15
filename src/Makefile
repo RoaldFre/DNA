@@ -1,5 +1,7 @@
 #Disable building with rendering by passing RENDER= to make
 RENDER = yes
+#Enable profiling with google-perftools by passing GPERF=
+GPERF = no
 
 OBJECTS = system.o math.o task.o measure.o samplers.o physics.o world.o spgrid.o tinymt/tinymt64.o render.o octave.o
 EXTRA_RENDER_OBJECTS = font.o mathlib/vector.o mathlib/quaternion.o mathlib/matrix.o
@@ -17,11 +19,11 @@ endif
 WARNINGS = -pedantic -Wextra -Wall -Wwrite-strings -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wunsafe-loop-optimizations
 PROFILE = 
 DEBUG = -DNDEBUG
-GCC_OPTIM = -O4 -flto -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations
-GCC_CFLAGS = $(WARNINGS) -std=c99 -pipe -march=native -ggdb $(GCC_OPTIM) $(DEBUG) $(DEFINES) $(PROFILE) -I/usr/include/freetype2
+GCC_OPTIM = -O4 -flto -mmmx -msse -msse2 -msse3 -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations
+GCC_CFLAGS = $(WARNINGS) -std=gnu99 -pipe -march=native -ggdb $(GCC_OPTIM) $(DEBUG) $(DEFINES) $(PROFILE) -I/usr/include/freetype2
 
 CLANG_OPTIM = -O4 -march=core2
-CLANG_CFLAGS = -I/usr/include/freetype2 $(CLANG_OPTIM)
+CLANG_CFLAGS = $(CLANG_OPTIM) $(DEBUG) $(DEFINES) -I/usr/include/freetype2 
 
 #use 'make target CLANG=' to build with clang instead of gcc
 CLANG=no
@@ -32,6 +34,12 @@ else
 	CC = gcc
 	CFLAGS = $(GCC_CFLAGS)
 endif
+
+ifneq ($(GPERF), no)
+	DEFINES += -DGOOGLE_PERFTOOLS
+	LIBS += -lprofiler
+endif
+
 
 all: hairpin
 
@@ -59,6 +67,11 @@ hairpin: $(OBJECTS) hairpin.o
 	@$(CC) -o hairpin $(CFLAGS) $(OBJECTS) hairpin.o $(LIBS) -ggdb $(PROFILE)
 hairpindebug:
 	make -B GCC_OPTIM="-O0" CLANG_OPTIM="-O0" DEBUG="-DDEBUG" hairpin
+hairpinCombined: hairpinCombined.o
+	@echo "LD	hairpinCombined"
+	@$(CC) -o hairpinCombined $(CFLAGS) hairpinCombined.o $(LIBS) -ggdb $(PROFILE)
+hairpinCombinedProfile:
+	make -B PROFILE="-pg" hairpinCombined
 
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"
