@@ -1,5 +1,7 @@
 #Disable building with rendering by passing RENDER= to make
 RENDER = yes
+#Enable profiling with google-perftools by passing GPERF=
+GPERF = no
 
 OBJECTS = system.o math.o task.o measure.o samplers.o physics.o world.o spgrid.o tinymt/tinymt64.o render.o octave.o
 EXTRA_RENDER_OBJECTS = font.o mathlib/vector.o mathlib/quaternion.o mathlib/matrix.o
@@ -17,7 +19,7 @@ endif
 WARNINGS = -pedantic -Wextra -Wall -Wwrite-strings -Wshadow -Wcast-qual -Wstrict-prototypes -Wmissing-prototypes -Wunsafe-loop-optimizations
 PROFILE = 
 DEBUG = -DNDEBUG
-GCC_OPTIM = -O4 -flto -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations
+GCC_OPTIM = -O4 -flto -mmmx -msse -msse2 -msse3 -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations
 GCC_CFLAGS = $(WARNINGS) -std=gnu99 -pipe -march=native -ggdb $(GCC_OPTIM) $(DEBUG) $(DEFINES) $(PROFILE) -I/usr/include/freetype2
 
 CLANG_OPTIM = -O4 -march=core2
@@ -32,6 +34,12 @@ else
 	CC = gcc
 	CFLAGS = $(GCC_CFLAGS)
 endif
+
+ifneq ($(GPERF), no)
+	DEFINES += -DGOOGLE_PERFTOOLS
+	LIBS += -lprofiler
+endif
+
 
 all: hairpin
 
