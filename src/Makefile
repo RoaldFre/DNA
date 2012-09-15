@@ -62,6 +62,8 @@ hairpindebug:
 hairpinCombined: hairpinCombined.o
 	@echo "LD	hairpinCombined"
 	@$(CC) -o hairpinCombined $(CFLAGS) hairpinCombined.o $(LIBS) -ggdb $(PROFILE)
+hairpinCombinedProfile:
+	make -B PROFILE="-pg" hairpinCombined
 
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"
