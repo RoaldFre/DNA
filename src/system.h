@@ -56,4 +56,7 @@ void die(const char *fmt, ...);
  * you need. */
 void dieMem(void);
 
+/* This is an asprintf that always works. Unless it doesn't. Then it dies. */
+char *asprintfOrDie(const char *fmt, ...);
+
 #endif

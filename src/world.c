@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include "system.h"
 #include "world.h"
 #include "spgrid.h"
@@ -340,16 +338,14 @@ void translateStrand(Strand *s, Vec3 delta)
 char *getWorldInfo(void)
 {
 	int n = world.numStrands;
-	char *ret;
-	int err = asprintf(&ret, "# Number of strands in the world: %d\n", n);
-	if (err < 0) dieMem();
+	char *ret = asprintfOrDie("# Number of strands in the world: %d\n", n);
 
 	for (int i = 0; i < n; i++) {
-		/* This isn't very malloc friendly, but meh. */
+		/* This isn't very malloc friendly and quadratic in the 
+		 * string length, but meh. */
 		char *tmp = ret;
-		err = asprintf(&ret, "%s# Strand %d: %s\n", tmp,
+		ret = asprintfOrDie("%s# Strand %d: %s\n", tmp,
 				i + 1, getSequence(&world.strands[i]));
-		if (err < 0) dieMem();
 		free(tmp);
 	}
 

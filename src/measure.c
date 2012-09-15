@@ -73,13 +73,21 @@ static void *samplerStart(MeasTaskState *measState)
 {
 	Sampler *sampler = &measState->sampler;
 	StreamState *streamState = &measState->streamState;
-
-	if (sampler->start == NULL)
-		return NULL;
+	void *ret;
 
 	switchStdout(streamState); /* Switch stdout to file */
-	void *ret = sampler->start(&measState->samplerData, 
+	if (measState->measConf.measureHeader != NULL)
+		printf("%s", measState->measConf.measureHeader);
+
+	if (sampler->header != NULL)
+		printf("%s", sampler->header);
+
+	if (sampler->start == NULL)
+		ret = NULL;
+	else
+		ret = sampler->start(&measState->samplerData, 
 					sampler->samplerConf);
+
 	switchStdout(streamState); /* Switch stdout back */
 
 	return ret;

@@ -39,3 +39,17 @@ void dieMem()
 	die("Eek! Looks like we are out of memory! Bailing out!\n");
 }
 
+char *asprintfOrDie(const char *fmt, ...)
+{
+	va_list args;
+	char *ret;
+
+	va_start(args, fmt);
+	int err = vasprintf(&ret, fmt, args);
+	va_end(args);
+
+	if (err < 0)
+		dieMem();
+
+	return ret;
+}

@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,7 +53,7 @@ static MeasurementConf measurementConf =
 	.measureWait = 0,
 	.measureFile = DEF_DATA_PATH,
 	.verbose = true,
-	.renderStrBufSize = 64,
+	.renderStrBufSize = 0,
 	.renderStrX = 10,
 	.renderStrY = 80,
 };
@@ -498,6 +496,33 @@ int main(int argc, char **argv)
 
 	assert(worldSanityCheck());
 
+	/* Integrator config */
+	Integrator integrator;
+	integrator.type = integratorType;
+	switch (integratorType) {
+	case VERLET:
+		integrator.settings.verlet = verletSettings;
+		break;
+	case LANGEVIN:
+		integrator.settings.langevin = langevinSettings;
+		break;
+	default:
+		assert(false); die("Unknown integrator type!\n");
+	}
+	integratorConf.integrator = integrator;
+
+	/* Measurement header */
+	char *measHeaderStrings[2];
+	measHeaderStrings[0] = getWorldInfo();
+	measHeaderStrings[1] = integratorInfo(&integratorConf);
+	char *measHeader = asprintfOrDie("%s%s",
+				measHeaderStrings[0], measHeaderStrings[1]);
+	free(measHeaderStrings[0]); free(measHeaderStrings[1]);
+	measurementConf.measureHeader = measHeader;
+
+	/* Integrator task */
+	Task integratorTask = makeIntegratorTask(&integratorConf);
+
 	/* Verbose task */
 	Measurement verbose;
 	verbose.measConf = verboseConf;
@@ -572,22 +597,6 @@ int main(int argc, char **argv)
 
 	/* Render task */
 	Task renderTask = makeRenderTask(&renderConf);
-
-	/* Integrator task */
-	Integrator integrator;
-	integrator.type = integratorType;
-	switch (integratorType) {
-	case VERLET: 
-		integrator.settings.verlet = verletSettings;
-		break;
-	case LANGEVIN:
-		integrator.settings.langevin = langevinSettings;
-		break;
-	default:
-		assert(false); die("Unknown integrator type!\n");
-	}
-	integratorConf.integrator = integrator;
-	Task integratorTask = makeIntegratorTask(&integratorConf);
 
 	/* Combined task */
 	Task *tasks[7];

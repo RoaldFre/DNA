@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include "samplers.h"
 #include "physics.h"
 #include "integrator.h"
@@ -37,6 +38,8 @@ Sampler temperatureSampler(void)
 	sampler.start  = NULL;
 	sampler.sample = &tempSample;
 	sampler.stop   = NULL;
+	sampler.header ="# <time> <heat bath temperature> "
+			"<kinetic temperature>\n";
 	return sampler;
 }
 
@@ -110,6 +113,7 @@ static SamplerSignal particlesCOMSample(SamplerData *sd, void *data)
 	UNUSED(sd);
 	ParticlesCOMSamplerConf *pcsc = (ParticlesCOMSamplerConf*) data;
 	Vec3 COM = getCOM(pcsc->ps, pcsc->num);
+	printf("%e ", getTime());
 	printVectorExp(COM);
 	printf("\n");
 	return SAMPLER_OK;
@@ -126,6 +130,7 @@ static Sampler particlesCOMSampler(Particle *ps, int num)
 	sampler.start  = &passConf;
 	sampler.sample = &particlesCOMSample;
 	sampler.stop   = &freeState;
+	sampler.header = "# <time> <position vector of COM>\n";
 	return sampler;
 }
 
@@ -192,6 +197,7 @@ static Sampler particlesSquaredDisplacementSampler(Particle *ps, int num)
 	sampler.start  = &particlesSquaredDisplacementStart;
 	sampler.sample = &particlesSquaredDisplacementSample;
 	sampler.stop   = &freeState;
+	sampler.header = "# <time> <position vector of COM>\n";
 	return sampler;
 }
 
@@ -237,6 +243,7 @@ Sampler endToEndDistSampler(Strand *strand)
 	sampler.start  = &passConf;
 	sampler.sample = &endToEndDistSample;
 	sampler.stop   = &freeState;
+	sampler.header = "# <time> <end to end distance>\n";
 	return sampler;
 }
 
