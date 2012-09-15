@@ -87,7 +87,7 @@ typedef struct {
 	/* Optional header string that gets printed before the output of 
 	 * the sampler. Each line should start with '#'. No such header is 
 	 * printed when this is NULL. */
-	char *header;
+	const char *header;
 } Sampler;
 
 /* Everything we need to know about a measurement. */
