@@ -305,7 +305,7 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid rebox interval %s\n", optarg);
 			break;
 		case 'v':
-			verboseConf.measureInterval = atof(optarg) * NANOSECONDS;
+			verboseConf.measureInterval = atof(optarg) * PICOSECONDS;
 			if (verboseConf.measureInterval <= 0)
 				die("Verbose: invalid verbose interval %s\n",
 						optarg);
