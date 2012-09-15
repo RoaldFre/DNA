@@ -9,13 +9,14 @@ destinationDirRoot=$1
 seq=$2
 temperature=$3
 time=$4
-suffix=$5 # job label when running on cluster
+description=$5 # description of sequence
+suffix=$6 # job label when running on cluster
 
 saltConcentration=100
 
 main=hairpin # Should be in current working dir, or in $PATH
 timestep=15
-interval=20
+interval=100
 
 fps=10
 #render="-r -R 3 -f $fps"
@@ -23,7 +24,7 @@ fps=10
 
 outputBaseDir=`mktemp -d`
 outputFile="$outputBaseDir/outputFrom_${suffix}"
-destinationDir="$destinationDirRoot/dt${timestep}_time${time}_salt${saltConcentration}/T${temperature}"
+destinationDir="$destinationDirRoot/dt${timestep}_time${time}_salt${saltConcentration}/$description/T${temperature}"
 destinationFile="$destinationDir/meltingTemp_${suffix}"
 
 mkdir -p $destinationDir
