@@ -22,10 +22,20 @@ WARNINGS = -pedantic -Wextra -Wall -Wwrite-strings -Wshadow -Wcast-qual -Wstrict
 PROFILE = 
 DEBUG = -DNDEBUG
 GCC_OPTIM = -O4 -flto -fwhole-program -mmmx -msse -msse2 -msse3 -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations
-GCC_CFLAGS = $(WARNINGS) -std=gnu99 -pipe -march=native -ggdb $(GCC_OPTIM) $(DEBUG) $(DEFINES) $(PROFILE) -I/usr/include/freetype2
+GCC_CFLAGS = $(WARNINGS) -std=gnu99 -pipe -march=native -ggdb $(GCC_OPTIM) $(DEBUG) $(DEFINES) -I/usr/include/freetype2
 
 CLANG_OPTIM = -O4 -march=core2
 CLANG_CFLAGS = $(CLANG_OPTIM) $(DEBUG) $(DEFINES) -I/usr/include/freetype2 
+
+
+
+ifneq ($(GPERF), no)
+	DEFINES += -DGOOGLE_PERFTOOLS
+	LIBS += -lprofiler
+	PROFILE += -fno-omit-frame-pointer
+endif
+
+
 
 #use 'make target CLANG=' to build with clang instead of gcc
 CLANG=no
@@ -36,12 +46,6 @@ else
 	CC = gcc
 	CFLAGS = $(GCC_CFLAGS)
 endif
-
-ifneq ($(GPERF), no)
-	DEFINES += -DGOOGLE_PERFTOOLS
-	LIBS += -lprofiler
-endif
-
 
 all: hairpin
 
