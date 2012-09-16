@@ -618,6 +618,7 @@ int main(int argc, char **argv)
 
 	setHeatBathTemperature(temperature);
 	registerInteractionSettings(interactionSettings);
+	initPhysics();
 
 	PROFILE(bool everythingOK = run(&task), "run.prof");
 

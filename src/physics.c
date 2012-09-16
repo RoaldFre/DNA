@@ -235,38 +235,47 @@ static void FangleP3SB(Particle *p, Particle *s, Particle *b)
 
 /* DIHEDRAL */
 typedef struct {
-	double dihedralBS3P5S;
-	double dihedralS3P5SB;
+	double sinDihedral;
+	double cosDihedral;
+} DihedralCache;
+
+typedef struct {
+	DihedralCache BS3P5S;
+	DihedralCache S3P5SB;
 } DihedralBaseInfo;
-static DihedralBaseInfo getDihedralBaseInfo(ParticleType base)
+
+static DihedralBaseInfo dihedralsBases[NUM_BASE_TYPES];
+static DihedralCache dihedralP5S3P5S;
+static DihedralCache dihedralS3P5S3P;
+
+static DihedralCache makeDihedralCache(double dihedralAngle)
 {
-	DihedralBaseInfo info;
-	switch (base) {
-	case BASE_A:
-		info.dihedralBS3P5S = DIHEDRAL_A_S3_P_5S;
-		info.dihedralS3P5SB = DIHEDRAL_S3_P_5S_A;
-		break;
-	case BASE_T:
-		info.dihedralBS3P5S = DIHEDRAL_T_S3_P_5S;
-		info.dihedralS3P5SB = DIHEDRAL_S3_P_5S_T;
-		break;
-	case BASE_C:
-		info.dihedralBS3P5S = DIHEDRAL_C_S3_P_5S;
-		info.dihedralS3P5SB = DIHEDRAL_S3_P_5S_C;
-		break;
-	case BASE_G:
-		info.dihedralBS3P5S = DIHEDRAL_G_S3_P_5S;
-		info.dihedralS3P5SB = DIHEDRAL_S3_P_5S_G;
-		break;
-	default:
-		fprintf(stderr, "Unknown base type in getDihedralBaseInfo!\n");
-		assert(false);
-	}
-	return info;
+	DihedralCache ret;
+	ret.sinDihedral = sin(dihedralAngle);
+	ret.cosDihedral = cos(dihedralAngle);
+	return ret;
 }
+static void initDihedralCache(void)
+{
+	dihedralsBases[BASE_A].BS3P5S = makeDihedralCache(DIHEDRAL_A_S3_P_5S);
+	dihedralsBases[BASE_A].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_A);
+
+	dihedralsBases[BASE_T].BS3P5S = makeDihedralCache(DIHEDRAL_T_S3_P_5S);
+	dihedralsBases[BASE_T].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_T);
+
+	dihedralsBases[BASE_C].BS3P5S = makeDihedralCache(DIHEDRAL_C_S3_P_5S);
+	dihedralsBases[BASE_C].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_C);
+
+	dihedralsBases[BASE_G].BS3P5S = makeDihedralCache(DIHEDRAL_G_S3_P_5S);
+	dihedralsBases[BASE_G].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_G);
+
+	dihedralP5S3P5S = makeDihedralCache(DIHEDRAL_P_5S3_P_5S);
+	dihedralS3P5S3P = makeDihedralCache(DIHEDRAL_S3_P_5S3_P);
+}
+
 /* V = k * (1 - cos(phi - phi0)) */
 static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
-								double phi0)
+							DihedralCache phi0)
 {
 	if (!interactions.enableDihedral)
 		return 0;
@@ -283,7 +292,10 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	double sinPhi, cosPhi;
 	sinCosDihedral(r1, r2, r3, &sinPhi, &cosPhi);
 
-	double cosPhiPhi0 = cosPhi*cos(phi0) + sinPhi*sin(phi0); //TODO cache sin and cos of phi0!
+	double sinPhi0 = phi0.sinDihedral;
+	double cosPhi0 = phi0.cosDihedral;
+
+	double cosPhiPhi0 = cosPhi*cosPhi0 + sinPhi*sinPhi0;
 	double V = DIHEDRAL_COUPLING * (1 - cosPhiPhi0);
 
 #ifdef DEBUG
@@ -298,18 +310,18 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 static double VdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
 {
-	DihedralBaseInfo info = getDihedralBaseInfo(b->type);
-	return Vdihedral(b, s1, p, s2, info.dihedralBS3P5S);
+	assert(0 <= b->type && b->type < 4);
+	return Vdihedral(b, s1, p, s2, dihedralsBases[b->type].BS3P5S);
 }
 static double VdihedralS3P5SB(Particle *s1, Particle *p,
 				Particle *s2, Particle *b)
 {
-	DihedralBaseInfo info = getDihedralBaseInfo(b->type);
-	return Vdihedral(s1, p, s2, b, info.dihedralS3P5SB);
+	assert(0 <= b->type && b->type < 4);
+	return Vdihedral(s1, p, s2, b, dihedralsBases[b->type].S3P5SB);
 }
 static void FdihedralParticle(Particle *target, 
 		Particle *p1, Particle *p2, Particle *p3, Particle *p4, 
-		double Vorig, double phi0)
+		double Vorig, DihedralCache phi0)
 {
 	double hfactor = 1e-8; /* roughly sqrt(epsilon) for a double */
 	double h;
@@ -335,7 +347,7 @@ static void FdihedralParticle(Particle *target,
 	target->F = add(target->F, F);
 }
 static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
-								double phi0)
+							DihedralCache phi0)
 {
 	if (!interactions.enableDihedral)
 		return;
@@ -351,14 +363,12 @@ static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 static void FdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
 {
-	DihedralBaseInfo info = getDihedralBaseInfo(b->type);
-	Fdihedral(b, s1, p, s2, info.dihedralBS3P5S);
+	Fdihedral(b, s1, p, s2, dihedralsBases[b->type].BS3P5S);
 }
 static void FdihedralS3P5SB(Particle *s1, Particle *p,
 				Particle *s2, Particle *b)
 {
-	DihedralBaseInfo info = getDihedralBaseInfo(b->type);
-	Fdihedral(s1, p, s2, b, info.dihedralS3P5SB);
+	Fdihedral(s1, p, s2, b, dihedralsBases[b->type].S3P5SB);
 }
 
 
@@ -770,11 +780,11 @@ static void strandForces(Strand *s) {
 		FdihedralBS3P5S(&s->Bs[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1]);
 		FdihedralS3P5SB(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1]);
 		Fdihedral(&s->Ps[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
-							DIHEDRAL_P_5S3_P_5S);
+							dihedralP5S3P5S);
 
 		if (i < 2) continue;
 		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
-							DIHEDRAL_S3_P_5S3_P);
+							dihedralS3P5S3P);
 		Fstack(&s->Bs[i], &s->Bs[i-2], 2);
 	}
 }
@@ -884,11 +894,11 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 		Vd += VdihedralBS3P5S(&s->Bs[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1]);
 		Vd += VdihedralS3P5SB(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1]);
 		Vd += Vdihedral(&s->Ps[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
-							DIHEDRAL_P_5S3_P_5S);
+							dihedralP5S3P5S);
 
 		if (i < 2) continue;
 		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
-							DIHEDRAL_S3_P_5S3_P);
+							dihedralS3P5S3P);
 		Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 2);
 	}
 
@@ -984,6 +994,11 @@ void dumpStats()
 
 
 /* ===== MISC FUNCTIONS ===== */
+
+void initPhysics(void)
+{
+	initDihedralCache();
+}
 
 Vec3 getCOM(Particle *ps, int num)
 {
