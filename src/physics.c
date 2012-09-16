@@ -264,6 +264,7 @@ static DihedralBaseInfo getDihedralBaseInfo(ParticleType base)
 	}
 	return info;
 }
+/* V = k * (1 - cos(phi - phi0)) */
 static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 								double phi0)
 {
@@ -273,9 +274,26 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	Vec3 r1 = nearestImageVector(p1->pos, p2->pos);
 	Vec3 r2 = nearestImageVector(p2->pos, p3->pos);
 	Vec3 r3 = nearestImageVector(p3->pos, p4->pos);
-	
+
+	/* Trigonometric magic:
+	 * We need to compute cos(phi - phi0).
+	 * We can easily compute cos(phi) and sin(phi) and we have:
+	 *    cos(phi - phi0) = cos(phi)cos(phi0) + sin(phi)sin(phi0)
+	 */
+	double sinPhi, cosPhi;
+	sinCosDihedral(r1, r2, r3, &sinPhi, &cosPhi);
+
+	double cosPhiPhi0 = cosPhi*cos(phi0) + sinPhi*sin(phi0); //TODO cache sin and cos of phi0!
+	double V = DIHEDRAL_COUPLING * (1 - cosPhiPhi0);
+
+#ifdef DEBUG
+	/* Check with explicit goniometric formulas. */
 	double phi = dihedral(r1, r2, r3);
-	return DIHEDRAL_COUPLING * (1 - cos(phi - phi0));
+	double Vcheck = DIHEDRAL_COUPLING * (1 - cos(phi - phi0));
+	assert(equalsEpsilon(V, Vcheck));
+#endif
+
+	return V;
 }
 static double VdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)

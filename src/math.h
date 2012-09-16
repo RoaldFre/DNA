@@ -74,6 +74,14 @@ static __inline__ void debugVectorSanity(Vec3 v, const char *location)
 	*nil = 1; /* segfaults */
 }
 
+/* Check for equality of doubles (up to some small error). */
+static __inline__ bool equalsEpsilon(double a, double b)
+{
+	if (a + b == 0)
+		return a == 0;
+
+	return fabs((a-b) / (a+b)) < 1e-5;
+}
 
 static __inline__ void fprintVector(FILE *stream, Vec3 v)
 {
@@ -179,6 +187,37 @@ static __inline__ double dihedral(Vec3 v1, Vec3 v2, Vec3 v3)
 	Vec3 v1xv2 = cross(v1, v2);
 	Vec3 v2xv3 = cross(v2, v3);
 	return atan2(length(v2) * dot(v1, v2xv3), dot(v1xv2, v2xv3));
+}
+/* Returns fills the argument pointers with sin(phi) and cos(phi) where phi 
+ * is the dihedral angle. */
+static __inline__ void sinCosDihedral(Vec3 v1, Vec3 v2, Vec3 v3, 
+					double *sinPhi, double *cosPhi)
+{
+	/*
+	 *    sin(phi) = sin(atan(tan(phi))
+	 *             = tan(phi) / sqrt(tan(phi)^2 + 1)
+	 * and
+	 *    cos(phi) = cos(atan(tan(phi))
+	 *             =     1    / sqrt(tan(phi)^2 + 1)
+	 */
+
+	Vec3 v1xv2 = cross(v1, v2);
+	Vec3 v2xv3 = cross(v2, v3);
+	double y = length(v2) * dot(v1, v2xv3);
+	double x = dot(v1xv2, v2xv3);
+	double tanPhi = y/x;
+	double denom = sqrt(SQUARE(tanPhi) + 1);
+
+	/* Because tanPhi is degenerate over additions of pi, we need to 
+	 * make this distinction to get back to the full 2pi range of phi 
+	 * and the correct sin or cos values change by a sign. */
+	if (x > 0) {
+		*sinPhi = tanPhi / denom;
+		*cosPhi =    1   / denom;
+	} else {
+		*sinPhi = -tanPhi / denom;
+		*cosPhi =    -1   / denom;
+	}
 }
 
 /* Returns the vector clamped to periodic boundary conditions.
