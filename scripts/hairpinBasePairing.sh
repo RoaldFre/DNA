@@ -14,7 +14,7 @@ suffix=$6 # job label when running on cluster
 
 saltConcentration=100
 
-main=hairpin # Should be in current working dir, or in $PATH
+main=../src/hairpin # Should be in current working dir, or in $PATH
 timestep=15
 interval=100
 
@@ -31,9 +31,10 @@ mkdir -p $destinationDir
 
 endToEnd="-e" #while we're at it, sample this as well
 
-$main -t $timestep -I $interval -s $seq -D $outputFile -T $temperature -N $saltConcentration -P $time -p $endToEnd
+$main -t $timestep -I $interval -s $seq -D $outputFile -T $temperature -N $saltConcentration -P $time -p $endToEnd -k
 mv ${outputFile}_basePairing ${destinationFile}_basePairing
 mv ${outputFile}_endToEnd ${destinationFile}_endToEnd
+mv ${outputFile}_temperature ${destinationFile}_temperature
 
 rm -rf $outputBaseDir
 
