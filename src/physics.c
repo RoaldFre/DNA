@@ -968,7 +968,7 @@ static void strandForces(Strand *s) {
 	}
 }
 
-static void mutiallyExclusivePairForces(Particle *p1, Particle *p2)
+static void mutuallyExclusivePairForces(Particle *p1, Particle *p2)
 {
 	/* Nonbonded pair interactions are mutually exclusive. See Knotts.
 	 * Note that this screws up energy conservation!! */
@@ -1003,7 +1003,7 @@ void calculateForces(void)
 
 	/* Particle-based forces */
 	if (interactions.mutuallyExclusivePairForces)
-		forEveryPair(&mutiallyExclusivePairForces);
+		forEveryPair(&mutuallyExclusivePairForces);
 	else
 		forEveryPair(&pairForces);
 }
