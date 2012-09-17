@@ -310,7 +310,9 @@ static double VdihedralS3P5SB(Particle *s1, Particle *p,
 	assert(0 <= b->type && b->type < 4);
 	return Vdihedral(s1, p, s2, b, dihedralsBases[b->type].S3P5SB);
 }
-static void FdihedralParticle(Particle *target, 
+/* Apply the dihedral force to the target particle. Also returs the added 
+ * force on the target. */
+static Vec3 FdihedralParticle(Particle *target, 
 		Particle *p1, Particle *p2, Particle *p3, Particle *p4, 
 		double Vorig, DihedralCache phi0)
 {
@@ -336,6 +338,8 @@ static void FdihedralParticle(Particle *target,
 	debugVectorSanity(F, "FdihedralParticle");
 
 	target->F = add(target->F, F);
+
+	return F;
 }
 static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 							DihedralCache phi0)
@@ -346,10 +350,11 @@ static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	/* This is a *mess* to do analytically, so we do a numerical 
 	 * differentiation instead. */
 	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
-	FdihedralParticle(p1, p1, p2, p3, p4, Vorig, phi0);
-	FdihedralParticle(p2, p1, p2, p3, p4, Vorig, phi0);
-	FdihedralParticle(p3, p1, p2, p3, p4, Vorig, phi0);
-	FdihedralParticle(p4, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 F1 = FdihedralParticle(p1, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 F2 = FdihedralParticle(p2, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 F3 = FdihedralParticle(p3, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 negF4 = add(F1, add(F2, F3)); /* -F4 = F1 + F2 + F3 */
+	p4->F = sub(p4->F, negF4);
 }
 static void FdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
