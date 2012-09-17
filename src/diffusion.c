@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,13 +6,14 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <string.h>
-#include "main.h"
+#include "system.h"
 #include "world.h"
+#include "integrator.h"
 #include "render.h"
 #include "samplers.h"
 #include "math.h"
 
-#define DEF_DATA_PATH "data"
+#define DEF_DATA_PATH "hairpinData"
 #define END_TO_END_DIST_FILE_SUFFIX "_endToEnd"
 #define BASE_PAIRING_FILE_SUFFIX "_basePairing"
 #define TEMPERATURE_FILE_SUFFIX "_temperature"
@@ -35,7 +34,6 @@
 #define DEF_RENDER_RADIUS 		0.5
 #define DEF_INTEGRATOR			LANGEVIN
 
-
 /* Static global configuration variables */
 
 static MeasurementConf verboseConf =
@@ -54,35 +52,51 @@ static MeasurementConf measurementConf =
 	.measureWait = 0,
 	.measureFile = DEF_DATA_PATH,
 	.verbose = true,
-	.renderStrBufSize = 64,
+	.renderStrBufSize = 0,
 	.renderStrX = 10,
 	.renderStrY = 80,
 };
 
+static bool measureEndToEndDistance = false;
+static bool measureTemperature = false;
+
 static RenderConf renderConf =
 {
 	.framerate = DEF_RENDER_FRAMERATE,
-	.radius    = DEF_RENDER_RADIUS * LENGTH_FACTOR,
+	.radius    = DEF_RENDER_RADIUS * ANGSTROM,
 	.drawForces = false,
 };
 static bool render;
-static IntegratorConf integratorConf =
-{
-	.integrator = DEF_INTEGRATOR,
-	.numBoxes   = -1, /* guard */
-	.reboxInterval = DEF_REBOX_INTERVAL * FEMTOSECONDS,
-	.interactionSettings = {
-			.enableBond	= true,
-			.enableAngle	= true,
-			.enableDihedral	= true,
-			.enableStack	= true,
-			.enableExclusion= true,
-			.enableBasePair	= true,
-			.enableCoulomb	= true,
-			.mutuallyExclusivePairForces = true,
-			.basePairInteraction = BASE_PAIR_HAIRPIN,
-	},
+
+static IntegratorType integratorType = DEF_INTEGRATOR;
+static VerletSettings verletSettings = {
+	.tau = -1, /* guard */
 };
+static LangevinSettings langevinSettings = {
+	.gamma = DEF_LANGEVIN_GAMMA,
+};
+static IntegratorConf integratorConf = {
+	.timeStep      = DEF_TIMESTEP * FEMTOSECONDS,
+	.numBoxes      = -1, /* guard */
+	.reboxInterval = DEF_REBOX_INTERVAL * FEMTOSECONDS,
+};
+
+static double temperature;
+
+static InteractionSettings interactionSettings = {
+	.enableBond	= true,
+	.enableAngle	= true,
+	.enableDihedral	= true,
+	.enableStack	= true,
+	.enableExclusion= true,
+	.enableBasePair	= true,
+	.enableCoulomb	= true,
+	.mutuallyExclusivePairForces = true,
+	.basePairInteraction = BASE_PAIR_ALL,
+	.saltConcentration   = DEF_SALT_CONCENTRATION,
+	.truncationLen       = DEF_TRUNCATION_LENGTH * ANGSTROM,
+};
+
 static const char* baseSequence = DEF_BASE_SEQUENCE;
 static double worldSize = -1; /* guard */
 
@@ -131,14 +145,20 @@ static void printUsage(void)
 	printf("\n");
 	printf("\n");
 	printf("Parameters for measurements:\n");
-	printf(" -W <flt>  Waiting time before starting the measurement (in nanosectonds)\n");
+	printf(" -W <flt>  Waiting time before starting the measurement (in nanoseconds)\n");
 	printf("             default: 0 (ie, no relaxation phase)\n");
 	printf(" -I <flt>  sample Interval (in picosectonds)\n");
 	printf("             default: don't measure\n");
-	printf(" -P <flt>  measurement Period: total time to sample the system (in nanosectonds)\n");
+	printf(" -P <flt>  measurement Period: total time to sample the system (in nanoseconds)\n");
 	printf("             default: sample indefinitely\n");
 	printf(" -D <path> Data file to Dump measurement output. The directory must exist.\n");
 	printf("             default: %s\n", DEF_DATA_PATH);
+	printf(" -e        also measure End-to-end distance of the strand\n");
+	printf("             output: the data filename (see -D) with suffix: '%s'\n",
+							END_TO_END_DIST_FILE_SUFFIX);
+	printf(" -k        also measure the Kinetic temperature\n");
+	printf("             output: the data filename (see -D) with suffix: '%s'\n",
+							TEMPERATURE_FILE_SUFFIX);
 }
 
 static void parseArguments(int argc, char **argv)
@@ -146,16 +166,9 @@ static void parseArguments(int argc, char **argv)
 	int c;
 
 	/* defaults */
-	config.timeStep 	 = DEF_TIMESTEP * FEMTOSECONDS;
-	config.thermostatTemp	 = parseTemperature(DEF_INITIAL_TEMPERATURE);
-	config.saltConcentration = DEF_SALT_CONCENTRATION;
-	config.truncationLen     = DEF_TRUNCATION_LENGTH * LENGTH_FACTOR;
-	config.langevinGamma	 = DEF_LANGEVIN_GAMMA;
+	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
-	/* guards */
-	config.thermostatTau = -1;
-
-	while ((c = getopt(argc, argv, ":s:t:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:")) != -1)
+	while ((c = getopt(argc, argv, ":s:t:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:ekh")) != -1)
 	{
 		switch (c)
 		{
@@ -163,28 +176,28 @@ static void parseArguments(int argc, char **argv)
 			baseSequence = optarg;
 			break;
 		case 't':
-			config.timeStep = atof(optarg) * FEMTOSECONDS;
-			if (config.timeStep <= 0)
+			integratorConf.timeStep = atof(optarg) * FEMTOSECONDS;
+			if (integratorConf.timeStep <= 0)
 				die("Invalid timestep %s\n", optarg);
 			break;
 		case 'T':
-			config.thermostatTemp = parseTemperature(optarg);
-			if (config.thermostatTemp < 0)
+			temperature = parseTemperature(optarg);
+			if (temperature < 0)
 				die("Invalid temperature!\n");
 			break;
 		case 'N':
-			config.saltConcentration = atof(optarg);
-			if (config.saltConcentration < 0)
+			interactionSettings.saltConcentration = atof(optarg);
+			if (interactionSettings.saltConcentration < 0)
 				die("Invalid salt concentration %s\n", optarg);
 			break;
 		case 'g':
-			config.langevinGamma = atof(optarg);
-			if (config.langevinGamma < 0)
+			langevinSettings.gamma = atof(optarg);
+			if (langevinSettings.gamma < 0)
 				die("Invalid friction coefficient %s\n", optarg);
 			break;
 		case 'c':
-			config.thermostatTau = atof(optarg) * FEMTOSECONDS;
-			if (config.thermostatTau < 0)
+			verletSettings.tau = atof(optarg) * FEMTOSECONDS;
+			if (verletSettings.tau < 0)
 				die("Invalid thermostat relaxation time %s\n",
 						optarg);
 			break;
@@ -197,7 +210,7 @@ static void parseArguments(int argc, char **argv)
 			render = true;
 			break;
 		case 'R':
-			renderConf.radius = atof(optarg) * LENGTH_FACTOR;
+			renderConf.radius = atof(optarg) * ANGSTROM;
 			if (renderConf.radius <= 0)
 				die("Invalid radius %s\n", optarg);
 			break;
@@ -205,10 +218,10 @@ static void parseArguments(int argc, char **argv)
 			renderConf.drawForces = true;
 			break;
 		case 'l':
-			config.truncationLen = atof(optarg) * LENGTH_FACTOR;
+			interactionSettings.truncationLen = atof(optarg) * ANGSTROM;
 			break;
 		case 'S':
-			worldSize = atof(optarg) * A;
+			worldSize = atof(optarg) * ANGSTROM;
 			if (worldSize <= 0)
 				die("Invalid world size %s\n", optarg);
 			break;
@@ -224,7 +237,7 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid rebox interval %s\n", optarg);
 			break;
 		case 'v':
-			verboseConf.measureInterval = atof(optarg) * NANOSECONDS;
+			verboseConf.measureInterval = atof(optarg) * PICOSECONDS;
 			if (verboseConf.measureInterval <= 0)
 				die("Verbose: invalid verbose interval %s\n",
 						optarg);
@@ -233,8 +246,8 @@ static void parseArguments(int argc, char **argv)
 			if (optarg[0] == '\0' || optarg[1] != '\0')
 				die("Integrator: badly formatted integrator type\n");
 			switch(optarg[0]) {
-			case 'l': integratorConf.integrator = LANGEVIN; break;
-			case 'v': integratorConf.integrator = VERLET; break;
+			case 'l': integratorType = LANGEVIN; break;
+			case 'v': integratorType = VERLET; break;
 			default: die("Unknown integrator type '%s'\n", optarg);
 				 break;
 			}
@@ -261,6 +274,12 @@ static void parseArguments(int argc, char **argv)
 			printUsage();
 			exit(0);
 			break;
+		case 'e':
+			measureEndToEndDistance = true;
+			break;
+		case 'k':
+			measureTemperature = true;
+			break;
 		case ':':
 			printUsage();
 			die("Option -%c requires an argument\n", optopt);
@@ -284,33 +303,33 @@ static void parseArguments(int argc, char **argv)
 	}
 
 	if (worldSize < 0)
-		worldSize = LENGTH_FACTOR * (strlen(baseSequence) + 2)
-					* DEF_MONOMER_WORLDSIZE_FACTOR;
+		worldSize = ((strlen(baseSequence) + 2)
+					* DEF_MONOMER_WORLDSIZE_FACTOR) * ANGSTROM;
 
-	if (config.thermostatTau < 0)
-		config.thermostatTau = DEF_COUPLING_TIMESTEP_FACTOR
-						* config.timeStep;
+	if (verletSettings.tau < 0)
+		verletSettings.tau = DEF_COUPLING_TIMESTEP_FACTOR
+						* integratorConf.timeStep;
 
-	if (config.truncationLen < 0) {
+	if (interactionSettings.truncationLen < 0) {
 		/* Disable truncation -> no space partitioning */
 		printf("Disabling space partitioning, "
 				"maximizing truncation length.\n");
 		integratorConf.numBoxes = 1;
-		config.truncationLen = worldSize / 2.0;
+		interactionSettings.truncationLen = worldSize / 2.0;
 		/* Due to (cubic) periodicity, we still need to truncate at 
 		 * worldsize/2 to have correct energy conservation and to 
 		 * make sure every particle 'sees' the same (spherical) 
 		 * potential, no matter where it is within the cube. */
-	} else if (config.truncationLen > worldSize / 2.0) {
+	} else if (interactionSettings.truncationLen > worldSize / 2.0) {
 		/* World is too small, extend it so we correctly compute 
 		 * the potentials and forces up to the requested truncation 
 		 * length. We need twice the truncation length for the same 
 		 * reason as above. */
 		printf("Truncation (%e) > worldSize/2 (%e)\n   => "
 				"Extending worldSize to 2*Truncation (%e).\n",
-				config.truncationLen, worldSize/2.0,
-				2.0 * config.truncationLen);
-		worldSize = 2.0 * config.truncationLen;
+				interactionSettings.truncationLen, worldSize/2.0,
+				2.0 * interactionSettings.truncationLen);
+		worldSize = 2.0 * interactionSettings.truncationLen;
 		integratorConf.numBoxes = 1; /* No space partitioning */
 	} else if (integratorConf.numBoxes == -1) {
 		/* Automatically determine ideal number of boxes.
@@ -319,29 +338,18 @@ static void parseArguments(int argc, char **argv)
 		 * (+ 0.5 for correct rounding to int) */
 		int ideal = 0.5 + 2.73 * pow(strlen(baseSequence), 0.446);
 		integratorConf.numBoxes = MIN(ideal,
-					worldSize / config.truncationLen);
+					worldSize / interactionSettings.truncationLen);
 		if (integratorConf.numBoxes < 1)
 			integratorConf.numBoxes = 1;
 		printf("Number of boxes per dimension: %d\n",
 				integratorConf.numBoxes);
 	}
 
-	if (worldSize / integratorConf.numBoxes < config.truncationLen)
+	if (worldSize / integratorConf.numBoxes < interactionSettings.truncationLen)
 		die("The boxsize (%e) is smaller than the potential "
 			"truncation radius (%e)!\n",
-			worldSize / integratorConf.numBoxes / LENGTH_FACTOR,
-			config.truncationLen / LENGTH_FACTOR);
-}
-
-void die(const char *fmt, ...)
-{
-	va_list args;
-
-	va_start(args, fmt);
-	vfprintf(stderr, fmt, args);
-	va_end(args);
-
-	exit(1);
+			worldSize / integratorConf.numBoxes / ANGSTROM,
+			interactionSettings.truncationLen / ANGSTROM);
 }
 
 int main(int argc, char **argv)
@@ -349,6 +357,7 @@ int main(int argc, char **argv)
 	seedRandom();
 
 	parseArguments(argc, argv);
+	const char *filenameBase = measurementConf.measureFile;
 
 	allocWorld(1, worldSize);
 	fillStrand(&world.strands[0], baseSequence);
@@ -356,6 +365,33 @@ int main(int argc, char **argv)
 	killMomentum();
 
 	assert(worldSanityCheck());
+
+	/* Integrator config */
+	Integrator integrator;
+	integrator.type = integratorType;
+	switch (integratorType) {
+	case VERLET:
+		integrator.settings.verlet = verletSettings;
+		break;
+	case LANGEVIN:
+		integrator.settings.langevin = langevinSettings;
+		break;
+	default:
+		assert(false); die("Unknown integrator type!\n");
+	}
+	integratorConf.integrator = integrator;
+
+	/* Measurement header */
+	char *measHeaderStrings[2];
+	measHeaderStrings[0] = getWorldInfo();
+	measHeaderStrings[1] = integratorInfo(&integratorConf);
+	char *measHeader = asprintfOrDie("%s%s",
+				measHeaderStrings[0], measHeaderStrings[1]);
+	free(measHeaderStrings[0]); free(measHeaderStrings[1]);
+	measurementConf.measureHeader = measHeader;
+
+	/* Integrator task */
+	Task integratorTask = makeIntegratorTask(&integratorConf);
 
 	/* Verbose task */
 	Measurement verbose;
@@ -369,25 +405,53 @@ int main(int argc, char **argv)
 	diffusion.measConf = measurementConf;
 	Task diffusionTask = measurementTask(&diffusion);
 
+	/* End to end task */
+	char *endToEndFile = asprintfOrDie("%s%s", filenameBase,
+						END_TO_END_DIST_FILE_SUFFIX);
+	Measurement endToEnd;
+	endToEnd.sampler = endToEndDistSampler(&world.strands[0]);
+	endToEnd.measConf = measurementConf; /* struct copy */
+	endToEnd.measConf.measureFile = endToEndFile;
+	endToEnd.measConf.verbose = false; /* Let output come from 
+						 diffusion sampler */
+	Task endToEndTask = measurementTask(&endToEnd);	
+
+	/* Temperature task */
+	char *temperatureFile = asprintfOrDie("%s%s", filenameBase,
+						TEMPERATURE_FILE_SUFFIX);
+	Measurement tempMeas;
+	tempMeas.sampler = temperatureSampler();
+	tempMeas.measConf = measurementConf; /* struct copy */
+	tempMeas.measConf.measureFile = temperatureFile;
+	tempMeas.measConf.verbose = false; /* Let output come from 
+						 diffusion sampler */
+	Task temperatureTask = measurementTask(&tempMeas);	
+
 	/* Render task */
 	Task renderTask = makeRenderTask(&renderConf);
 
-	/* Integrator task */
-	Task integratorTask = makeIntegratorTask(&integratorConf);
-
 	/* Combined task */
-	Task *tasks[4];
+	Task *tasks[6];
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = &integratorTask;
 	tasks[2] = &verboseTask;
-	tasks[3] = &diffusionTask;;
-	Task task = sequence(tasks, 4);
+	tasks[3] = &diffusionTask;
+	tasks[4] = (measureEndToEndDistance ? &endToEndTask : NULL);
+	tasks[5] = (measureTemperature ? &temperatureTask : NULL);
+	Task task = sequence(tasks, 6);
+
+	setHeatBathTemperature(temperature);
+	registerInteractionSettings(interactionSettings);
+	initPhysics();
 
 	bool everythingOK = run(&task);
 
+	freeWorld();
+	free(endToEndFile);
+	free(temperatureFile);
+
 	if (!everythingOK)
 		return 1;
-
 	return 0;
 }
 

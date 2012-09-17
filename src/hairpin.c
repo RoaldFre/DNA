@@ -13,7 +13,7 @@
 #include "samplers.h"
 #include "math.h"
 
-#define DEF_DATA_PATH "data"
+#define DEF_DATA_PATH "hairpinData"
 #define END_TO_END_DIST_FILE_SUFFIX "_endToEnd"
 #define BASE_PAIRING_FILE_SUFFIX "_basePairing"
 #define TEMPERATURE_FILE_SUFFIX "_temperature"
@@ -185,11 +185,11 @@ static void printUsage(void)
 	printf("\n");
 	printf("\n");
 	printf("Parameters for measurements:\n");
-	printf(" -W <flt>  Waiting time before starting the measurement (in nanosectonds)\n");
+	printf(" -W <flt>  Waiting time before starting the measurement (in nanoseconds)\n");
 	printf("             default: 0 (ie, no relaxation phase)\n");
 	printf(" -I <flt>  sample Interval (in picosectonds)\n");
 	printf("             default: don't measure\n");
-	printf(" -P <flt>  measurement Period: total time to sample the system (in nanosectonds)\n");
+	printf(" -P <flt>  measurement Period: total time to sample the system (in nanoseconds)\n");
 	printf("             default: sample indefinitely\n");
 	printf(" -D <path> Data file to Dump measurement output. The directory must exist.\n");
 	printf("             default: %s\n", DEF_DATA_PATH);
@@ -537,11 +537,8 @@ int main(int argc, char **argv)
 	Task verboseTask = measurementTask(&verbose);
 
 	/* Base pairing task */
-	char *basePairFile;
-	if (0 >	asprintf(&basePairFile, "%s%s",
-			filenameBase,
-			BASE_PAIRING_FILE_SUFFIX))
-		die("Could not create base pair file name string!\n");
+	char *basePairFile = asprintfOrDie("%s%s", filenameBase,
+						BASE_PAIRING_FILE_SUFFIX);
 	Measurement basePairing;
 	basePairing.sampler = basePairingSampler(&bpc);
 	basePairing.measConf = measurementConf; /* struct copy */
@@ -552,11 +549,8 @@ int main(int argc, char **argv)
 
 
 	/* End to end task */
-	char *endToEndFile;
-	if (0 >	asprintf(&endToEndFile, "%s%s",
-			filenameBase,
-			END_TO_END_DIST_FILE_SUFFIX))
-		die("Could not create end-to-end dist file name string!\n");
+	char *endToEndFile = asprintfOrDie("%s%s", filenameBase,
+						END_TO_END_DIST_FILE_SUFFIX);
 	Measurement endToEnd;
 	endToEnd.sampler = endToEndDistSampler(&world.strands[0]);
 	endToEnd.measConf = measurementConf; /* struct copy */
@@ -566,11 +560,8 @@ int main(int argc, char **argv)
 	Task endToEndTask = measurementTask(&endToEnd);	
 
 	/* Temperature task */
-	char *temperatureFile;
-	if (0 >	asprintf(&temperatureFile, "%s%s",
-			filenameBase,
-			TEMPERATURE_FILE_SUFFIX))
-		die("Could not create temperature file name string!\n");
+	char *temperatureFile = asprintfOrDie("%s%s", filenameBase,
+						TEMPERATURE_FILE_SUFFIX);
 	Measurement tempMeas;
 	tempMeas.sampler = temperatureSampler();
 	tempMeas.measConf = measurementConf; /* struct copy */
