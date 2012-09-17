@@ -783,8 +783,17 @@ static bool feelExclusion(Particle *p1, Particle *p2)
 
 	/* Use the ordering of the type enum:
 	 * PHOSPHATE, SUGAR, BASE_X */
-	if (t1 > t2)
-		return feelExclusion(p2, p1);
+	if (t1 > t2) {
+		ParticleType tempType = t1;
+		t1 = t2;
+		t2 = tempType;
+
+		int tempIndex = i1;
+		i1 = i2;
+		i2 = tempIndex;
+
+		/* p1 and p2 not used anymore, so no need to swap. */
+	}
 
 	switch (t1) {
 	case PHOSPHATE: /* t2 is PHOSPHATE, SUGAR or BASE */
