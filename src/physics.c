@@ -310,52 +310,6 @@ static double VdihedralS3P5SB(Particle *s1, Particle *p,
 	assert(0 <= b->type && b->type < 4);
 	return Vdihedral(s1, p, s2, b, dihedralsBases[b->type].S3P5SB);
 }
-/* Return the dihedral force to the target particle. */
-static Vec3 FdihedralNumDiffParticle(Particle *target, 
-		Particle *p1, Particle *p2, Particle *p3, Particle *p4, 
-		double Vorig, DihedralCache phi0)
-{
-	double hfactor = 1e-8; /* roughly sqrt(epsilon) for a double */
-	double h;
-	Vec3 F;
-
-	h = target->pos.x * hfactor;
-	target->pos.x += h;
-	F.x = (Vorig - Vdihedral(p1, p2, p3, p4, phi0)) / h;
-	target->pos.x -= h;
-
-	h = target->pos.y * hfactor;
-	target->pos.y += h;
-	F.y = (Vorig - Vdihedral(p1, p2, p3, p4, phi0)) / h;
-	target->pos.y -= h;
-
-	h = target->pos.z * hfactor;
-	target->pos.z += h;
-	F.z = (Vorig - Vdihedral(p1, p2, p3, p4, phi0)) / h;
-	target->pos.z -= h;
-
-	debugVectorSanity(F, "FdihedralNumDiffParticle");
-
-	return F;
-}
-static void FdihedralNumericalDiff(Particle *p1, Particle *p2,
-			Particle *p3, Particle *p4, DihedralCache phi0)
-{
-	if (!interactions.enableDihedral)
-		return;
-
-	/* This is a *mess* to do analytically, so we do a numerical 
-	 * differentiation instead. */
-	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
-	Vec3 F1 = FdihedralNumDiffParticle(p1, p1, p2, p3, p4, Vorig, phi0);
-	Vec3 F2 = FdihedralNumDiffParticle(p2, p1, p2, p3, p4, Vorig, phi0);
-	Vec3 F3 = FdihedralNumDiffParticle(p3, p1, p2, p3, p4, Vorig, phi0);
-	Vec3 negF4 = add(F1, add(F2, F3)); /* -F4 = F1 + F2 + F3 */
-	p1->F = add(p1->F, F1);
-	p2->F = add(p2->F, F2);
-	p3->F = add(p3->F, F3);
-	p4->F = sub(p4->F, negF4);
-}
 
 /*
  * Returns the *transposed* Jacobian matrix of the matrix cross product
@@ -506,38 +460,7 @@ static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	p2->F = add(p2->F, F2);
 	p3->F = sub(p3->F, negF3);
 	p4->F = add(p4->F, F4);
-
-
-#if 0
-#ifdef DEBUG
-	/* NOTE: lots of false positives if one component of the force is 
-	 * small! */
-
-	double eps = 0.01;
-
-	/* Explicitly calculate F3 as well. */
-	/* F3 */
-	Mat3 J_r3A = crossProdTransposedJacobian(r12, r23, 3); /* [J_r3(A)]^t */
-	Mat3 J_r3B = crossProdTransposedJacobian(r23, r34, 2); /* [J_r3(B)]^t */
-	Vec3 F3 = add(matApply(J_r3A, negGrad_AV), matApply(J_r3B, negGrad_BV));
-	assertVecEqualsEpsilon(scale(negF3, -1), F3, eps);
-
-	/* Check with numerical differentiation code */
-	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
-	Vec3 correctF1 = FdihedralNumDiffParticle(p1, p1, p2, p3, p4, Vorig, phi0);
-	Vec3 correctF2 = FdihedralNumDiffParticle(p2, p1, p2, p3, p4, Vorig, phi0);
-	Vec3 correctF3 = FdihedralNumDiffParticle(p3, p1, p2, p3, p4, Vorig, phi0);
-	Vec3 correctF4 = FdihedralNumDiffParticle(p4, p1, p2, p3, p4, Vorig, phi0);
-	assertVecEqualsEpsilon(F1, correctF1, eps);
-	assertVecEqualsEpsilon(F2, correctF2, eps);
-	assertVecEqualsEpsilon(F3, correctF3, eps);
-	assertVecEqualsEpsilon(F4, correctF4, eps);
-#endif
-#endif
 }
-
-
-
 
 static void FdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
