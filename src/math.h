@@ -193,31 +193,22 @@ static __inline__ double dihedral(Vec3 v1, Vec3 v2, Vec3 v3)
 static __inline__ void sinCosDihedral(Vec3 v1, Vec3 v2, Vec3 v3, 
 					double *sinPhi, double *cosPhi)
 {
-	/*
-	 *    sin(phi) = sin(atan(tan(phi))
-	 *             = tan(phi) / sqrt(tan(phi)^2 + 1)
-	 * and
-	 *    cos(phi) = cos(atan(tan(phi))
-	 *             =     1    / sqrt(tan(phi)^2 + 1)
-	 */
-
+	double theSin, theCos;
 	Vec3 v1xv2 = cross(v1, v2);
 	Vec3 v2xv3 = cross(v2, v3);
-	double y = length(v2) * dot(v1, v2xv3);
-	double x = dot(v1xv2, v2xv3);
-	double tanPhi = y/x;
-	double denom = sqrt(SQUARE(tanPhi) + 1);
-
-	/* Because tanPhi is degenerate over additions of pi, we need to 
-	 * make this distinction to get back to the full 2pi range of phi 
-	 * and the correct sin or cos values change by a sign. */
-	if (x > 0) {
-		*sinPhi = tanPhi / denom;
-		*cosPhi =    1   / denom;
+	double lv1xv2llv2xv3l = sqrt(length2(v1xv2) * length2(v2xv3));
+	theCos = dot(v1xv2, v2xv3) / lv1xv2llv2xv3l;
+	if (UNLIKELY(SQUARE(theCos) >= 1)) {
+		theCos = 1;
+		theSin = 0;
 	} else {
-		*sinPhi = -tanPhi / denom;
-		*cosPhi =    -1   / denom;
+		if (dot(v1xv2, v3) > 0)
+			theSin = sqrt(1 - SQUARE(theCos));
+		else
+			theSin = -sqrt(1 - SQUARE(theCos));
 	}
+	*sinPhi = theSin;
+	*cosPhi = theCos;
 }
 
 /* Returns the vector clamped to periodic boundary conditions.
