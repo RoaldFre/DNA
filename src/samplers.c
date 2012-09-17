@@ -1,6 +1,8 @@
 #include <string.h>
+#include <stdio.h>
 #include "samplers.h"
 #include "physics.h"
+#include "integrator.h"
 #include "spgrid.h"
 #include "octave.h"
 
@@ -25,7 +27,7 @@ static SamplerSignal tempSample(SamplerData *sd, void *data)
 {
 	UNUSED(sd);
 	UNUSED(data);
-	printf("%e %f %f\n", getTime(), config.thermostatTemp,
+	printf("%e %f %f\n", getTime(), getHeatBathTemperature(),
 					getKineticTemperature());
 	return SAMPLER_OK;
 }
@@ -36,6 +38,8 @@ Sampler temperatureSampler(void)
 	sampler.start  = NULL;
 	sampler.sample = &tempSample;
 	sampler.stop   = NULL;
+	sampler.header ="# <time> <heat bath temperature> "
+			"<kinetic temperature>\n";
 	return sampler;
 }
 
@@ -109,6 +113,7 @@ static SamplerSignal particlesCOMSample(SamplerData *sd, void *data)
 	UNUSED(sd);
 	ParticlesCOMSamplerConf *pcsc = (ParticlesCOMSamplerConf*) data;
 	Vec3 COM = getCOM(pcsc->ps, pcsc->num);
+	printf("%e ", getTime());
 	printVectorExp(COM);
 	printf("\n");
 	return SAMPLER_OK;
@@ -125,6 +130,7 @@ static Sampler particlesCOMSampler(Particle *ps, int num)
 	sampler.start  = &passConf;
 	sampler.sample = &particlesCOMSample;
 	sampler.stop   = &freeState;
+	sampler.header = "# <time> <position vector of COM>\n";
 	return sampler;
 }
 
@@ -191,6 +197,7 @@ static Sampler particlesSquaredDisplacementSampler(Particle *ps, int num)
 	sampler.start  = &particlesSquaredDisplacementStart;
 	sampler.sample = &particlesSquaredDisplacementSample;
 	sampler.stop   = &freeState;
+	sampler.header = "# <time> <position vector of COM>\n";
 	return sampler;
 }
 
@@ -236,6 +243,7 @@ Sampler endToEndDistSampler(Strand *strand)
 	sampler.start  = &passConf;
 	sampler.sample = &endToEndDistSample;
 	sampler.stop   = &freeState;
+	sampler.header = "# <time> <end to end distance>\n";
 	return sampler;
 }
 
@@ -303,7 +311,7 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 	hfd->zippingPhaseStartTime = getTime();
 
 	/* Set temperature for zipping */
-	config.thermostatTemp = hfc->zippingTemperature;
+	setHeatBathTemperature(hfc->zippingTemperature);
 
 	/* Dump info */
 	int n = world.strands[0].numMonomers;
@@ -314,7 +322,7 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 	octaveScalar("requiredBoundBPs",        hfc->requiredBoundBPs);
 	octaveScalar("allowedBoundBPs",         hfc->allowedBoundBPs);
 	octaveScalar("numMonomers",             n);
-	octaveScalar("timestep",                config.timeStep);
+	octaveScalar("timestep",                getTimeStep());
 	octaveScalar("sampleInterval",          sd->sampleInterval);
 
 	return hfd;
@@ -399,7 +407,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		}
 
 		/* We are still zipped! Go to next phase. */
-		config.thermostatTemp = hfc->unzippingTemperature;
+		setHeatBathTemperature(hfc->unzippingTemperature);
 		octaveScalar("unzippingPhaseStartTime", time);
 		hfd->unzippingPhaseStartTime = time;
 		hfd->status = WAITING_TO_UNZIP;
@@ -502,11 +510,11 @@ static void* hairpinMeltingTempStart(SamplerData *sd, void *conf)
 					hmtc->numSteps);
 	int n = world.strands[0].numMonomers;
 	octaveScalar("sampleStartTime",   getTime());
-	octaveScalar("temperature",       config.thermostatTemp);
+	octaveScalar("temperature",       getHeatBathTemperature());
 	octaveScalar("relaxationTime",    hmtc->relaxationTime);
 	octaveScalar("measureTime",       hmtc->measureTime);
 	octaveScalar("numMonomers",       n);
-	octaveScalar("timestep",          config.timeStep);
+	octaveScalar("timestep",          getTimeStep());
 	octaveScalar("sampleInterval",    sd->sampleInterval);
 
 	octaveMatrixHeader("temperatures", hmtc->numSteps, 1);
@@ -551,8 +559,8 @@ static SamplerSignal hairpinMeltingTempSample(SamplerData *sd, void *state)
 		hmtd->relaxStartTime = time;
 		hmtd->status = WAITING_TO_RELAX;
 		/* Set temperature */
-		config.thermostatTemp = hmtc->Tstart
-				+ hmtd->currentStep * hmtc->Tstep;
+		setHeatBathTemperature(hmtc->Tstart
+				+ hmtd->currentStep * hmtc->Tstep);
 		break;
 	case WAITING_TO_RELAX:
 		if (time - hmtd->relaxStartTime < hmtc->relaxationTime)

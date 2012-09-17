@@ -1,5 +1,5 @@
-#ifndef KOSMOS_QUATERNION_H
-#define KOSMOS_QUATERNION_H
+#ifndef RENDER_QUATERNION_H
+#define RENDER_QUATERNION_H
 
 #include "matrix.h"
 #include "vector.h"
@@ -20,8 +20,8 @@ Quaternion quat_multiply(Quaternion p, Quaternion q);
 Quaternion quat_from_angle_axis(double angle, double ax,
 		double ay, double az);
 Quaternion quat_trackball(int dx, int dy, double radius);
-Quaternion quat_from_mat3(Mat3 m);
-void mat3_from_quat(Mat3 m, Quaternion p);
+Quaternion quat_from_mat3(RenderMat3 m);
+void mat3_from_quat(RenderMat3 m, Quaternion p);
 Vec3 quat_transform(Quaternion q, Vec3 v);
 Quaternion quat_nlerp(Quaternion a, Quaternion b, double t);
 Quaternion quat_slerp(Quaternion a, Quaternion b, double t);

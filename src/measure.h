@@ -16,7 +16,7 @@ typedef struct {
 	double measureWait;
 
 	/* Path to a file to dump the measurement in. NULL means dump to 
-	 * stdout. */
+	 * stdout. The directory of the destination file MUST exist! */
 	const char *measureFile;
 
 	/* Print status and progress of the measurement to stdout. */
@@ -29,6 +29,13 @@ typedef struct {
 
 	/* Pixel coordinates to render the above string at */
 	int renderStrX, renderStrY;
+
+	/* This string will form the header of every measurement file. Use 
+	 * this to describe the settings of the measurement so it can be 
+	 * reproduced, for instance.
+	 * Each line should start with a '#'.
+	 * If you don't need or want a header, make this NULL. */
+	const char *measureHeader;
 } MeasurementConf;
 
 typedef struct {
@@ -76,6 +83,11 @@ typedef struct {
 	/* Called at the end of the measurement. The total number of 
 	 * samples that were actually measured is given in n.*/
 	void (*stop)  (SamplerData *sd, void *state);
+
+	/* Optional header string that gets printed before the output of 
+	 * the sampler. Each line should start with '#'. No such header is 
+	 * printed when this is NULL. */
+	const char *header;
 } Sampler;
 
 /* Everything we need to know about a measurement. */

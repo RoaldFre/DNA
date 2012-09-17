@@ -1,6 +1,6 @@
 #include "measure.h"
+#include "integrator.h"
 #include "render.h"
-#include "main.h" //for TIME_FACTOR, TODO put somewhere else
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -73,13 +73,21 @@ static void *samplerStart(MeasTaskState *measState)
 {
 	Sampler *sampler = &measState->sampler;
 	StreamState *streamState = &measState->streamState;
-
-	if (sampler->start == NULL)
-		return NULL;
+	void *ret;
 
 	switchStdout(streamState); /* Switch stdout to file */
-	void *ret = sampler->start(&measState->samplerData, 
+	if (measState->measConf.measureHeader != NULL)
+		printf("%s", measState->measConf.measureHeader);
+
+	if (sampler->header != NULL)
+		printf("%s", sampler->header);
+
+	if (sampler->start == NULL)
+		ret = NULL;
+	else
+		ret = sampler->start(&measState->samplerData, 
 					sampler->samplerConf);
+
 	switchStdout(streamState); /* Switch stdout back */
 
 	return ret;
@@ -185,7 +193,7 @@ static TaskSignal measTick(void *state)
 	double measTime     = measConf->measureTime;
 	double endTime      = measTime + measWait;
 	bool verbose        = measConf->verbose;
-	double time = getTime();
+	double time         = getTime();
 
 	SamplerSignal samplerSignal = SAMPLER_OK;
 
@@ -195,7 +203,7 @@ static TaskSignal measTick(void *state)
 
 	switch (measState->measStatus) {
 	case RELAXING:
-		if (verbose && fmod(time, measWait / 100) < config.timeStep) {
+		if (verbose && fmod(time, measWait / 100) < getTimeStep()) {
 			printf("\rRelax time %.3f of %.3f nanoseconds",
 					(time + measWait/100) / NANOSECONDS, 
 					measWait / NANOSECONDS);
@@ -215,7 +223,7 @@ static TaskSignal measTick(void *state)
 		}
 		break;
 	case SAMPLING:
-		measState->intervalTime += config.timeStep; //TODO nicer?
+		measState->intervalTime += getTimeStep(); //TODO nicer?
 
 		if (measState->intervalTime < measInterval)
 			break;

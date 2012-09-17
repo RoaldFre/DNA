@@ -4,35 +4,17 @@
 #include <stdbool.h>
 #include <string.h>
 #include "physics.h"
+#include "integrator.h"
 #include "world.h"
 #include "spgrid.h"
 
-
-/* Static global, gets set in integratorTaskStart. */
 static InteractionSettings interactions;
+static double truncationLenSq; /* Cached: interactions.truncationLen^2 */
 
-
-/* Enable for debugging purposes. If an interaction generates an invalid 
- * vector, we will trigger a segfault. Only usefull if you run the code 
- * from a debugger or enable core dumps.
- *
- * This is useful for rare bugs because it only checks for vector sanity, 
- * whereas compiling with assertions checks all assertions and is therefore 
- * slower. */
-#define DEBUG_VECTOR_SANITY false
-
-static void debugVectorSanity(Vec3 v, const char *location)
+void registerInteractionSettings(InteractionSettings interactionSettings)
 {
-	if (!DEBUG_VECTOR_SANITY)
-		return;
-
-	if (isSaneVector(v))
-		return;
-
-	fprintf(stderr, "Found invalid vector at '%s'!\n"
-			"Triggering segfault!\n", location);
-	int *nil = (int*)NULL;
-	*nil = 1; /* segfaults */
+	interactions = interactionSettings;
+	truncationLenSq = SQUARE(interactionSettings.truncationLen);
 }
 
 
@@ -204,7 +186,7 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	double adotb = dot(a, b);
 	double costheta = adotb / (lal * lbl);
 
-	if (fabs(costheta) >= 1 - 1e-5)
+	if (UNLIKELY(fabs(costheta) >= 1 - 1e-5))
 		/* Note, sometimes |costheta| > 1, due to numerical errors!
 		 * Either way, if |costheta| almost equal to 1: theta is 
 		 * almost equal to 0 or pi and we are at an (unstable) 
@@ -253,37 +235,47 @@ static void FangleP3SB(Particle *p, Particle *s, Particle *b)
 
 /* DIHEDRAL */
 typedef struct {
-	double dihedralBS3P5S;
-	double dihedralS3P5SB;
+	double sinDihedral;
+	double cosDihedral;
+} DihedralCache;
+
+typedef struct {
+	DihedralCache BS3P5S;
+	DihedralCache S3P5SB;
 } DihedralBaseInfo;
-static DihedralBaseInfo getDihedralBaseInfo(ParticleType base)
+
+static DihedralBaseInfo dihedralsBases[NUM_BASE_TYPES];
+static DihedralCache dihedralP5S3P5S;
+static DihedralCache dihedralS3P5S3P;
+
+static DihedralCache makeDihedralCache(double dihedralAngle)
 {
-	DihedralBaseInfo info;
-	switch (base) {
-	case BASE_A:
-		info.dihedralBS3P5S = DIHEDRAL_A_S3_P_5S;
-		info.dihedralS3P5SB = DIHEDRAL_S3_P_5S_A;
-		break;
-	case BASE_T:
-		info.dihedralBS3P5S = DIHEDRAL_T_S3_P_5S;
-		info.dihedralS3P5SB = DIHEDRAL_S3_P_5S_T;
-		break;
-	case BASE_C:
-		info.dihedralBS3P5S = DIHEDRAL_C_S3_P_5S;
-		info.dihedralS3P5SB = DIHEDRAL_S3_P_5S_C;
-		break;
-	case BASE_G:
-		info.dihedralBS3P5S = DIHEDRAL_G_S3_P_5S;
-		info.dihedralS3P5SB = DIHEDRAL_S3_P_5S_G;
-		break;
-	default:
-		fprintf(stderr, "Unknown base type in getDihedralBaseInfo!\n");
-		assert(false);
-	}
-	return info;
+	DihedralCache ret;
+	ret.sinDihedral = sin(dihedralAngle);
+	ret.cosDihedral = cos(dihedralAngle);
+	return ret;
 }
+static void initDihedralCache(void)
+{
+	dihedralsBases[BASE_A].BS3P5S = makeDihedralCache(DIHEDRAL_A_S3_P_5S);
+	dihedralsBases[BASE_A].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_A);
+
+	dihedralsBases[BASE_T].BS3P5S = makeDihedralCache(DIHEDRAL_T_S3_P_5S);
+	dihedralsBases[BASE_T].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_T);
+
+	dihedralsBases[BASE_C].BS3P5S = makeDihedralCache(DIHEDRAL_C_S3_P_5S);
+	dihedralsBases[BASE_C].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_C);
+
+	dihedralsBases[BASE_G].BS3P5S = makeDihedralCache(DIHEDRAL_G_S3_P_5S);
+	dihedralsBases[BASE_G].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_G);
+
+	dihedralP5S3P5S = makeDihedralCache(DIHEDRAL_P_5S3_P_5S);
+	dihedralS3P5S3P = makeDihedralCache(DIHEDRAL_S3_P_5S3_P);
+}
+
+/* V = k * (1 - cos(phi - phi0)) */
 static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
-								double phi0)
+							DihedralCache phi0)
 {
 	if (!interactions.enableDihedral)
 		return 0;
@@ -291,25 +283,37 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	Vec3 r1 = nearestImageVector(p1->pos, p2->pos);
 	Vec3 r2 = nearestImageVector(p2->pos, p3->pos);
 	Vec3 r3 = nearestImageVector(p3->pos, p4->pos);
-	
-	double phi = dihedral(r1, r2, r3);
-	return DIHEDRAL_COUPLING * (1 - cos(phi - phi0));
+
+	/* Trigonometric magic:
+	 * We need to compute cos(phi - phi0).
+	 * We can easily compute cos(phi) and sin(phi) and we have:
+	 *    cos(phi - phi0) = cos(phi)cos(phi0) + sin(phi)sin(phi0)
+	 */
+	double sinPhi, cosPhi;
+	sinCosDihedral(r1, r2, r3, &sinPhi, &cosPhi);
+
+	double sinPhi0 = phi0.sinDihedral;
+	double cosPhi0 = phi0.cosDihedral;
+
+	double cosPhiPhi0 = cosPhi*cosPhi0 + sinPhi*sinPhi0;
+	return DIHEDRAL_COUPLING * (1 - cosPhiPhi0);
 }
 static double VdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
 {
-	DihedralBaseInfo info = getDihedralBaseInfo(b->type);
-	return Vdihedral(b, s1, p, s2, info.dihedralBS3P5S);
+	assert(0 <= b->type && b->type < 4);
+	return Vdihedral(b, s1, p, s2, dihedralsBases[b->type].BS3P5S);
 }
 static double VdihedralS3P5SB(Particle *s1, Particle *p,
 				Particle *s2, Particle *b)
 {
-	DihedralBaseInfo info = getDihedralBaseInfo(b->type);
-	return Vdihedral(s1, p, s2, b, info.dihedralS3P5SB);
+	assert(0 <= b->type && b->type < 4);
+	return Vdihedral(s1, p, s2, b, dihedralsBases[b->type].S3P5SB);
 }
-static void FdihedralParticle(Particle *target, 
+/* Return the dihedral force to the target particle. */
+static Vec3 FdihedralNumDiffParticle(Particle *target, 
 		Particle *p1, Particle *p2, Particle *p3, Particle *p4, 
-		double Vorig, double phi0)
+		double Vorig, DihedralCache phi0)
 {
 	double hfactor = 1e-8; /* roughly sqrt(epsilon) for a double */
 	double h;
@@ -330,12 +334,12 @@ static void FdihedralParticle(Particle *target,
 	F.z = (Vorig - Vdihedral(p1, p2, p3, p4, phi0)) / h;
 	target->pos.z -= h;
 
-	debugVectorSanity(F, "FdihedralParticle");
+	debugVectorSanity(F, "FdihedralNumDiffParticle");
 
-	target->F = add(target->F, F);
+	return F;
 }
-static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
-								double phi0)
+static void FdihedralNumericalDiff(Particle *p1, Particle *p2,
+			Particle *p3, Particle *p4, DihedralCache phi0)
 {
 	if (!interactions.enableDihedral)
 		return;
@@ -343,22 +347,207 @@ static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	/* This is a *mess* to do analytically, so we do a numerical 
 	 * differentiation instead. */
 	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
-	FdihedralParticle(p1, p1, p2, p3, p4, Vorig, phi0);
-	FdihedralParticle(p2, p1, p2, p3, p4, Vorig, phi0);
-	FdihedralParticle(p3, p1, p2, p3, p4, Vorig, phi0);
-	FdihedralParticle(p4, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 F1 = FdihedralNumDiffParticle(p1, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 F2 = FdihedralNumDiffParticle(p2, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 F3 = FdihedralNumDiffParticle(p3, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 negF4 = add(F1, add(F2, F3)); /* -F4 = F1 + F2 + F3 */
+	p1->F = add(p1->F, F1);
+	p2->F = add(p2->F, F2);
+	p3->F = add(p3->F, F3);
+	p4->F = sub(p4->F, negF4);
 }
+
+/*
+ * Returns the *transposed* Jacobian matrix of the matrix cross product
+ *    r12 x r23  =  (r2 - r1) x (r3 - r2)
+ * where r1, r2 and r3 are vectors and differentiation is done with regards 
+ * to ri (with i the given parameter) with all other rj (j != i) assumed to 
+ * be fixed and independent of ri.
+ *
+ * The math is worked out in:
+ * http://www-personal.umich.edu/~riboch/pubfiles/riboch-JacobianofCrossProduct.pdf
+ * The result:
+ *   J_ri(r12 x r23) = r12^x * J_ri(r23) - r23^x * J_ri(r12)
+ * where r12^x and r23^x are the matrix form of the cross product:
+ *         ( 0   -Az   Ay)
+ *   A^x = ( Az   0   -Ax)
+ *         (-Ay   Ax   0 )
+ * and J_ri(r12) and J_ri(r23) are the jacobi matrices for r12 and r23, 
+ * which are either 0, or +/- the identity matrix.
+ * We have:
+ *   J_r1(r12) = -1,    J_r2(r12) = +1,    J_r3(r12) =  0,
+ *   J_r1(r23) =  0,    J_r2(r23) = -1,    J_r3(r23) = +1.
+ */
+static __inline__ Mat3 crossProdTransposedJacobian(Vec3 r12, Vec3 r23, int i)
+{
+	/* *Transposed* matrix form of the cross product. */
+	Mat3 r12matrCrossProd = mat3(   0,    r12.z, -r12.y,
+	                             -r12.z,    0,    r12.x,
+	                              r12.y, -r12.x,    0   );
+	/* *Transposed* matrix form of the cross product. */
+	Mat3 r23matrCrossProd = mat3(   0,    r23.z, -r23.y,
+	                             -r23.z,    0,    r23.x,
+	                              r23.y, -r23.x,    0   );
+
+	switch (i) {
+	case 1:
+		return r23matrCrossProd;
+	case 2:
+		return matScale(matAdd(r12matrCrossProd, r23matrCrossProd), -1);
+	case 3:
+		return r12matrCrossProd;
+	default:
+		assert(false); die("Internal error!\n");
+		return mat3(0,0,0,0,0,0,0,0,0); /* To make compiler happy. */
+	}
+}
+
+/* Derivative of the dihedral potential. This shit gets quite involved.
+ *
+ * We want to compute
+ *   Fi = -grad_ri V(r1, r2, r3, r4)
+ * Fi the force on the i'th particle and rj the position of the j'th 
+ * particle.
+ * 
+ * We can rather easily write V as a function of
+ *   A = r12 x r23  =  (r2 - r1) x (r3 - r2)
+ * and
+ *   B = r23 x r34  =  (r3 - r2) x (r4 - r3)
+ *
+ * Indeed, we have:
+ *   V = DIHEDRAL_COUPLING * (1 - cos(phi - phi0))
+ * where
+ *   phi = acos(A dot B / |A| * |B|)
+ *
+ * We can then write Fi as:
+ *   Fi = -grad_ri Vi(A(r1, r2, r3), B(r2, r3, r4))
+ * and use the appropriate chain rule:
+ *   Fi = - [J_ri(A)]^t * (grad_A V)
+ *        - [J_ri(B)]^t * (grad_B V)
+ * where [J_ri(X)]^t is the transpose of the Jacobian matrix of the vector 
+ * function X with regards to ri.
+ *
+ * After some calculus and algebra, we get
+ *   grad_A V = DIHEDRAL_COUPLING
+ *                * [ sin(phi0)/sin(phi) * (A dot B)/(|A|^2 |B|^2)
+ *                                  - cos(phi0) / (|A||B|) ]
+ *                * [B - A (A dot B) / (|B||A|)]
+ * and due to the symmetry in V of A and B, grad_B V is exactly the same, 
+ * but with A and B interchanged.
+ *   grad_B V = DIHEDRAL_COUPLING
+ *                * [ sin(phi0)/sin(phi) * (A dot B)/(|A|^2 |B|^2)
+ *                                  - cos(phi0) / (|A||B|) ]
+ *                * [A - B (A dot B) / (|B||A|)]
+ *
+ *
+ * NOTE: when debugging the dihedral force for energy conservation, you 
+ * also need to enable angle and bond interactions (which should be 
+ * debugged first), otherwise you get a badly conditioned problem and you 
+ * will experience blow up.
+ */
+static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
+							DihedralCache phi0)
+{
+	if (!interactions.enableDihedral)
+		return;
+
+	Vec3 r12 = nearestImageVector(p1->pos, p2->pos);
+	Vec3 r23 = nearestImageVector(p2->pos, p3->pos);
+	Vec3 r34 = nearestImageVector(p3->pos, p4->pos);
+
+	double sinPhi, cosPhi; //TODO find better algorithm to only compute sinPhi
+	sinCosDihedral(r12, r23, r34, &sinPhi, &cosPhi);
+	if (UNLIKELY(fabs(sinPhi) < 1e-5)) //TODO just check for ==0? -> saves an fabs!
+		return; /* (Unstable) equilibrium. */
+
+	double sinPhi0 = phi0.sinDihedral;
+	double cosPhi0 = phi0.cosDihedral;
+
+	Vec3 A = cross(r12, r23);
+	Vec3 B = cross(r23, r34);
+
+	double lAl2 = length2(A);
+	double lBl2 = length2(B);
+	double lAl2lBl2 = lAl2 * lBl2;
+	double lAllBl = sqrt(lAl2lBl2);
+	double AdB = dot(A, B);
+	double negGradPrefactor = DIHEDRAL_COUPLING * (cosPhi0 / lAllBl
+					- sinPhi0/sinPhi * AdB/lAl2lBl2);
+	/* -grad_A(V) */
+	Vec3 negGrad_AV = scale(
+			sub(B, scale(A, AdB/lAl2)),
+			negGradPrefactor);
+	/* -grad_B(V) */
+	Vec3 negGrad_BV = scale(
+			sub(A, scale(B, AdB/lBl2)),
+			negGradPrefactor);
+
+	/* F1 */
+	Mat3 J_r1A = crossProdTransposedJacobian(r12, r23, 1); /* [J_r1(A)]^t */
+	/* [J_r1(B)]^t = 0*/
+	Vec3 F1 = matApply(J_r1A, negGrad_AV);
+
+	/* F2 */
+	Mat3 J_r2A = crossProdTransposedJacobian(r12, r23, 2); /* [J_r2(A)]^t */
+	Mat3 J_r2B = crossProdTransposedJacobian(r23, r34, 1); /* [J_r2(B)]^t */
+	Vec3 F2 = add(matApply(J_r2A, negGrad_AV), matApply(J_r2B, negGrad_BV));
+
+	/* F4 (not F3 because that has two non-zero jacobi matrices, 
+	 * whereas F4 has only one non-zero jacobi matrix, so it's 
+	 * faster to compute)*/
+	/* [J_r4(A)]^t = 0*/
+	Mat3 J_r4B = crossProdTransposedJacobian(r23, r34, 3); /* [J_r4(B)]^t */
+	Vec3 F4 = matApply(J_r4B, negGrad_BV);
+
+	/* -F3 */
+	Vec3 negF3 = add(add(F1, F2), F4);
+
+	p1->F = add(p1->F, F1);
+	p2->F = add(p2->F, F2);
+	p3->F = sub(p3->F, negF3);
+	p4->F = add(p4->F, F4);
+
+
+#if 0
+#ifdef DEBUG
+	/* NOTE: lots of false positives if one component of the force is 
+	 * small! */
+
+	double eps = 0.01;
+
+	/* Explicitly calculate F3 as well. */
+	/* F3 */
+	Mat3 J_r3A = crossProdTransposedJacobian(r12, r23, 3); /* [J_r3(A)]^t */
+	Mat3 J_r3B = crossProdTransposedJacobian(r23, r34, 2); /* [J_r3(B)]^t */
+	Vec3 F3 = add(matApply(J_r3A, negGrad_AV), matApply(J_r3B, negGrad_BV));
+	assertVecEqualsEpsilon(scale(negF3, -1), F3, eps);
+
+	/* Check with numerical differentiation code */
+	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
+	Vec3 correctF1 = FdihedralNumDiffParticle(p1, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 correctF2 = FdihedralNumDiffParticle(p2, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 correctF3 = FdihedralNumDiffParticle(p3, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 correctF4 = FdihedralNumDiffParticle(p4, p1, p2, p3, p4, Vorig, phi0);
+	assertVecEqualsEpsilon(F1, correctF1, eps);
+	assertVecEqualsEpsilon(F2, correctF2, eps);
+	assertVecEqualsEpsilon(F3, correctF3, eps);
+	assertVecEqualsEpsilon(F4, correctF4, eps);
+#endif
+#endif
+}
+
+
+
+
 static void FdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
 {
-	DihedralBaseInfo info = getDihedralBaseInfo(b->type);
-	Fdihedral(b, s1, p, s2, info.dihedralBS3P5S);
+	Fdihedral(b, s1, p, s2, dihedralsBases[b->type].BS3P5S);
 }
 static void FdihedralS3P5SB(Particle *s1, Particle *p,
 				Particle *s2, Particle *b)
 {
-	DihedralBaseInfo info = getDihedralBaseInfo(b->type);
-	Fdihedral(s1, p, s2, b, info.dihedralS3P5SB);
+	Fdihedral(s1, p, s2, b, dihedralsBases[b->type].S3P5SB);
 }
 
 
@@ -424,15 +613,13 @@ static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 		return 0;
 
 	double rSq = nearestImageDistance2(p1->pos, p2->pos);
-	double truncSq = SQUARE(config.truncationLen); //TODO cache this result!
-	if (rSq > truncSq)
+	if (rSq > truncationLenSq)
 		return 0;
 
 	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
 						monomerDistance);
 	double V = calcVLJ(STACK_COUPLING, rEqSq, rSq)
-			- calcVLJ(STACK_COUPLING, rEqSq, truncSq); //TODO cache correction!
-	//printf("rfrac2=%f\tr2=%e, rEq2=%e, V=%f\n", rSq/rEqSq, rSq, rEqSq, V/EPSILON);
+			- calcVLJ(STACK_COUPLING, rEqSq, truncationLenSq); //TODO cache correction!
 	return V;
 }
 static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
@@ -444,8 +631,7 @@ static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 
 	Vec3 r = nearestImageVector(p1->pos, p2->pos);
 	double rSq = length2(r);
-	double truncSq = SQUARE(config.truncationLen); //TODO cache this result!
-	if (rSq > truncSq)
+	if (rSq > truncationLenSq)
 		return;
 
 	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
@@ -536,11 +722,10 @@ double VbasePair(Particle *p1, Particle *p2)
 		return 0; /* Wrong pair */
 	
 	double rsq = nearestImageDistance2(p1->pos, p2->pos);
-	double truncSq = SQUARE(config.truncationLen);
-	if (rsq > truncSq)
+	if (rsq > truncationLenSq)
 		return 0; /* Too far away */
 
-	return calcVbasePair(bpi, rsq) - calcVbasePair(bpi, truncSq);
+	return calcVbasePair(bpi, rsq) - calcVbasePair(bpi, truncationLenSq);
 }
 
 static double calcFbasePair(BasePairInfo bpi, double r)
@@ -565,7 +750,7 @@ static void FbasePair(Particle *p1, Particle *p2)
 	
 	Vec3 rVec = nearestImageVector(p1->pos, p2->pos);
 	double r = length(rVec);
-	if (r > config.truncationLen)
+	if (r > interactions.truncationLen)
 		return; /* Too far away */
 
 	Vec3 direction = scale(rVec, 1/r);
@@ -598,8 +783,17 @@ static bool feelExclusion(Particle *p1, Particle *p2)
 
 	/* Use the ordering of the type enum:
 	 * PHOSPHATE, SUGAR, BASE_X */
-	if (t1 > t2)
-		return feelExclusion(p2, p1);
+	if (t1 > t2) {
+		ParticleType tempType = t1;
+		t1 = t2;
+		t2 = tempType;
+
+		int tempIndex = i1;
+		i1 = i2;
+		i2 = tempIndex;
+
+		/* p1 and p2 not used anymore, so no need to swap. */
+	}
 
 	switch (t1) {
 	case PHOSPHATE: /* t2 is PHOSPHATE, SUGAR or BASE */
@@ -663,8 +857,8 @@ static void Fexclusion(Particle *p1, Particle *p2)
 /* COULOMB */
 static double calcInvDebyeLength(void)
 {
-	double T = config.thermostatTemp;
-	double saltCon = config.saltConcentration;
+	double T = getHeatBathTemperature();
+	double saltCon = interactions.saltConcentration;
 	double lambdaBDenom, lambdaB;
 
 	if (T == 0)
@@ -696,7 +890,7 @@ static double VCoulomb(Particle *p1, Particle *p2)
 	if (!isChargedPair(p1->type, p2->type))
 		return 0;
 
-	double truncLength = config.truncationLen;
+	double truncLength = interactions.truncationLen;
 	double r = nearestImageDistance(p1->pos, p2->pos);
 
 	if (r > truncLength)
@@ -722,7 +916,7 @@ static void FCoulomb(Particle *p1, Particle *p2)
 	if (!isChargedPair(p1->type, p2->type))
 		return;
 
-	double truncLen = config.truncationLen;
+	double truncLen = interactions.truncationLen;
 	double r = nearestImageDistance(p2->pos, p1->pos);
 	if (r > truncLen)
 		return; /* Too far away */
@@ -774,16 +968,16 @@ static void strandForces(Strand *s) {
 		FdihedralBS3P5S(&s->Bs[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1]);
 		FdihedralS3P5SB(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1]);
 		Fdihedral(&s->Ps[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
-							DIHEDRAL_P_5S3_P_5S);
+							dihedralP5S3P5S);
 
 		if (i < 2) continue;
 		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
-							DIHEDRAL_S3_P_5S3_P);
+							dihedralS3P5S3P);
 		Fstack(&s->Bs[i], &s->Bs[i-2], 2);
 	}
 }
 
-static void mutiallyExclusivePairForces(Particle *p1, Particle *p2)
+static void mutuallyExclusivePairForces(Particle *p1, Particle *p2)
 {
 	/* Nonbonded pair interactions are mutually exclusive. See Knotts.
 	 * Note that this screws up energy conservation!! */
@@ -807,7 +1001,7 @@ static void pairForces(Particle *p1, Particle *p2)
 	Fexclusion(p1, p2);
 }
 
-static void calculateForces(void)
+void calculateForces(void)
 {
 	/* Reset forces */
 	forEveryParticle(&resetForce);
@@ -818,7 +1012,7 @@ static void calculateForces(void)
 
 	/* Particle-based forces */
 	if (interactions.mutuallyExclusivePairForces)
-		forEveryPair(&mutiallyExclusivePairForces);
+		forEveryPair(&mutuallyExclusivePairForces);
 	else
 		forEveryPair(&pairForces);
 }
@@ -888,11 +1082,11 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 		Vd += VdihedralBS3P5S(&s->Bs[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1]);
 		Vd += VdihedralS3P5SB(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Bs[i-1]);
 		Vd += Vdihedral(&s->Ps[i], &s->Ss[ i ], &s->Ps[i-1], &s->Ss[i-1],
-							DIHEDRAL_P_5S3_P_5S);
+							dihedralP5S3P5S);
 
 		if (i < 2) continue;
 		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
-							DIHEDRAL_S3_P_5S3_P);
+							dihedralS3P5S3P);
 		Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 2);
 	}
 
@@ -961,241 +1155,13 @@ bool physicsCheck(void)
 {
 	Vec3 P = momentum();
 	double PPP = length(P) / numParticles();
-	printf("%e\n",PPP);
+	//printf("%e\n",PPP);
 	if (PPP > 1e-20) {
 		fprintf(stderr, "\nMOMENTUM CONSERVATION VIOLATED! "
 				"Momentum per particle: |P| = %e\n", PPP);
 		return false;
 	}
 	return true;
-}
-
-
-
-
-/* ===== INTEGRATOR ===== */
-
-static void thermostatHelper(Particle *p, void *data)
-{
-	double lambda = *(double*) data;
-	p->vel = scale(p->vel, lambda);
-}
-static void thermostat(void)
-{
-	if (config.thermostatTau <= 0)
-		return;
-
-	/* Mass and Boltzmann constant are 1 */ 
-	double Tk  = getKineticTemperature();
-	assert(isSaneNumber(Tk));
-	double T0  = config.thermostatTemp;
-	double dt  = config.timeStep;
-	double tau = config.thermostatTau;
-	double lambda2 = 1 + dt/tau * (T0/Tk - 1);
-	double lambda;
-	if (lambda2 >= 0)
-		lambda = sqrt(lambda2);
-	else
-		lambda = 1e-20; //TODO sane?
-
-	forEveryParticleD(&thermostatHelper, (void*) &lambda);
-}
-
-static void verletHelper1(Particle *p)
-{
-	double dt = config.timeStep;
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "start verletHelper1");
-		debugVectorSanity(p->vel, "start verletHelper1");
-		debugVectorSanity(p->F,   "start verletHelper1");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-		assert(isSaneVector(p->F));
-	}
-
-	/* vel(t + dt/2) = vel(t) + acc(t)*dt/2 */
-	p->vel = add(p->vel, scale(p->F, dt / (2 * p->m)));
-
-	/* pos(t + dt) = pos(t) + vel(t + dt/2)*dt */
-	p->pos = add(p->pos, scale(p->vel, dt));
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "end verletHelper1");
-		debugVectorSanity(p->vel, "end verletHelper1");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-	}
-}
-static void verletHelper2(Particle *p)
-{
-	double dt = config.timeStep;
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "start verletHelper2");
-		debugVectorSanity(p->vel, "start verletHelper2");
-		debugVectorSanity(p->F,   "start verletHelper2");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-		assert(isSaneVector(p->F));
-	}
-
-	/* vel(t + dt) = vel(t + dt/2) + acc(t + dt)*dt/2 */
-	p->vel = add(p->vel, scale(p->F, dt / (2*p->m)));
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->vel, "end verletHelper2");
-	} else {
-		assert(isSaneVector(p->vel));
-	}
-}
-static void verlet(void)
-{
-	// The compiler better inlines all of this. TODO if not: force it.
-	forEveryParticle(&verletHelper1);
-	calculateForces(); /* acc(t + dt) */
-	forEveryParticle(&verletHelper2);
-}
-
-
-static void langevinBBKhelper(Particle *p)
-{
-	double dt    = config.timeStep;
-	double gamma = config.langevinGamma;
-	double T     = config.thermostatTemp;
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "start langevinBBKhelper");
-		debugVectorSanity(p->vel, "start langevinBBKhelper");
-		debugVectorSanity(p->F,   "start langevinBBKhelper");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-		assert(isSaneVector(p->F));
-	}
-
-	/* Regular forces have been calculated. Add the random force due 
-	 * to collisions to the total force. The result is:
-	 * p->F = F(t + dt) + R(t + dt) */
-	/* TODO check that compiler inlines this and precalculates the 
-	 * prefactor before p->m when looping over all particles. */
-	double Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * gamma * p->m / dt);
-	Vec3 R = randNormVec(Rstddev);
-	debugVectorSanity(R, "randNormVec in langevinBBKhelper");
-	p->F = add(p->F, R);
-
-	Vec3 tmp;
-	tmp = scale(p->pos, 2);
-	tmp = add(tmp, scale(p->prevPos, (gamma*dt/2 - 1)));
-	tmp = add(tmp, scale(p->F, dt*dt / p->m));
-	Vec3 newPos = scale(tmp, 1 / (1 + gamma*dt/2));
-
-	p->vel = scale(sub(newPos, p->pos), 1/dt);
-	p->prevPos = p->pos;
-	p->pos = newPos;
-
-	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos, "end langevinBBKhelper");
-		debugVectorSanity(p->vel, "end langevinBBKhelper");
-		debugVectorSanity(p->F,   "end langevinBBKhelper");
-	} else {
-		assert(isSaneVector(p->pos));
-		assert(isSaneVector(p->vel));
-		assert(isSaneVector(p->F));
-	}
-}
-
-/* BBK integrator for Langevin dynamics.
- * See http://localscf.com/LangevinDynamics.aspx 
- * (relocated to http://localscf.com/localscf.com/LangevinDynamics.aspx.html atm) */
-static void langevinBBK(void)
-{
-	calculateForces();
-	forEveryParticle(&langevinBBKhelper);
-}
-
-
-
-static void stepPhysics(Integrator integrator)
-{
-	assert(worldSanityCheck());
-
-	switch(integrator) {
-	case VERLET:
-		verlet();
-		assert(physicsCheck());
-		thermostat();
-		assert(physicsCheck());
-		break;
-	case LANGEVIN:
-		langevinBBK();
-		break;
-	default:
-		fprintf(stderr, "ERROR: Unknown integrator!\n");
-		assert(false);
-		break;
-	}
-}
-
-typedef struct
-{
-	Integrator integrator;
-	double reboxInterval;
-	double lastReboxTime;
-} IntegratorState;
-/* The integrator task is responsible for handeling the space partition 
- * grid */
-static void *integratorTaskStart(void *initialData)
-{
-	IntegratorConf *ic = (IntegratorConf*) initialData;
-
-	if(!allocGrid(ic->numBoxes, world.worldSize))
-		return NULL;
-
-	forEveryParticle(&addToGrid);
-
-	interactions = ic->interactionSettings;
-
-	IntegratorState *state = malloc(sizeof(*state));
-	state->integrator = ic->integrator;
-	state->reboxInterval = ic->reboxInterval;
-	state->lastReboxTime = 0;
-
-	free(initialData);
-	return state;
-}
-static TaskSignal integratorTaskTick(void *state)
-{
-	IntegratorState *is = (IntegratorState*) state;
-	stepPhysics(is->integrator);
-
-	if (getTime() > is->lastReboxTime + is->reboxInterval) {
-		reboxParticles();
-		is->lastReboxTime = getTime();
-	}
-
-	return TASK_OK;
-}
-static void integratorTaskStop(void *state)
-{
-	UNUSED(state);
-	freeGrid();
-}
-
-Task makeIntegratorTask(IntegratorConf *conf)
-{
-	Task task;
-	IntegratorConf *confCpy = malloc(sizeof(*confCpy));
-	memcpy(confCpy, conf, sizeof(*confCpy));
-
-	task.initialData = confCpy;
-	task.start = &integratorTaskStart;
-	task.tick  = &integratorTaskTick;
-	task.stop  = &integratorTaskStop;
-	return task;
 }
 
 
@@ -1216,6 +1182,11 @@ void dumpStats()
 
 
 /* ===== MISC FUNCTIONS ===== */
+
+void initPhysics(void)
+{
+	initDihedralCache();
+}
 
 Vec3 getCOM(Particle *ps, int num)
 {

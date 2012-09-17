@@ -1,15 +1,8 @@
+#include <stdarg.h>
 #include "system.h"
 #include "task.h"
 
-Config config;
-
-static double sim_time = 0;
 static long iteration = 0;
-
-double getTime(void)
-{
-	return sim_time;
-}
 
 long getIteration(void)
 {
@@ -24,7 +17,6 @@ bool run(Task *task)
 	TaskSignal taskSig = TASK_OK;
 	while (taskSig == TASK_OK) {
 		taskSig = taskTick(task, state);
-		sim_time += config.timeStep;
 		iteration++;
 	}
 	taskStop(task, state);
@@ -32,5 +24,32 @@ bool run(Task *task)
 	return taskSig != TASK_ERROR;
 }
 
+void die(const char *fmt, ...)
+{
+	va_list args;
 
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
+	va_end(args);
 
+	exit(1);
+}
+void dieMem()
+{
+	die("Eek! Looks like we are out of memory! Bailing out!\n");
+}
+
+char *asprintfOrDie(const char *fmt, ...)
+{
+	va_list args;
+	char *ret;
+
+	va_start(args, fmt);
+	int err = vasprintf(&ret, fmt, args);
+	va_end(args);
+
+	if (err < 0)
+		dieMem();
+
+	return ret;
+}

@@ -1,5 +1,5 @@
-#ifndef KOSMOS_VECTOR_H
-#define KOSMOS_VECTOR_H
+#ifndef RENDER_VECTOR_H
+#define RENDER_VECTOR_H
 
 #include "../math.h" /* For Vec3 definition */
 

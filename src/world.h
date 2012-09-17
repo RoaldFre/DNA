@@ -5,16 +5,27 @@
 
 typedef enum particleType
 {
-	PHOSPHATE,
-	SUGAR,
-	BASE_A,
-	BASE_T,
-	BASE_C,
-	BASE_G,
-	/* WARNING, if for some reason you want to change the ordering of 
+	PHOSPHATE = -2,
+	SUGAR = -1,
+	BASE_A = 0,
+	BASE_T = 1,
+	BASE_C = 2,
+	BASE_G = 3,
+	/* WARNING:
+	 * If for some reason you want to change the ordering of 
 	 * this enum, watch out to avoid breaking getConnectedParticle(), 
-	 * isBase() and feelExclusion() ! */
+	 * isBase() and feelExclusion()
+	 * WARNING:
+	 * If for some reason you change the base types to not be numbered 
+	 * 0 to 3, then also change the dihedral angle cacheing code in 
+	 * physics.c.
+	 * WARNING:
+	 * Finally, if for some reason you change the number of base types, 
+	 * also change the define below, pretty much everything in the code 
+	 * that involves particle types... */
 } ParticleType;
+
+#define NUM_BASE_TYPES 4 /* Number of base types in the enum above. */
 
 static __inline__ bool isBase(ParticleType t)
 {
@@ -88,6 +99,10 @@ void fillComplementaryStrand(Strand *s, const char *baseSequence);
 /* Returns the base sequence of this strand. Don't forget to free the 
  * pointer afterwards! */
 char *getSequence(Strand *s);
+/* Returns a string containing information of the world. Each line is 
+ * prefixed with '#'. You should free the returned pointer when you don't 
+ * need it any more. */
+char *getWorldInfo(void);
 void freeWorld(void);
 void freeStrand(Strand *strand);
 

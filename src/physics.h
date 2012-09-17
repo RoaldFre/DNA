@@ -10,7 +10,7 @@
 
 /* Units */
 #define DEGREE		(M_PI / 180)	/* Convert to radians */
-#define A		(1e-10)		/* Angstrom */
+#define ANGSTROM	(1e-10)
 #define AU		(1.660539e-27)	/* Atomic unit */
 #define MILLISECONDS	1e-3
 #define MICROSECONDS	1e-6
@@ -28,7 +28,7 @@
 
 /* STRUCTURE OF THE HELIX. SEE TABLE I IN KNOTTS */
 /* Vertical spacing between layers */
-#define HELIX_DELTA_Z   (3.38 * A)
+#define HELIX_DELTA_Z   (3.38 * ANGSTROM)
 /* Twist at each consecutive layer */
 #define HELIX_DELTA_PHI (36 * DEGREE)
 /* Angles */
@@ -39,19 +39,19 @@
 #define C_PHI (85.027 * DEGREE)
 #define G_PHI (40.691 * DEGREE)
 /* Radial distance */
-#define P_R (8.916 * A)
-#define S_R (6.981 * A)
-#define A_R (0.773 * A)
-#define T_R (2.349 * A)
-#define C_R (2.296 * A)
-#define G_R (0.828 * A)
+#define P_R (8.916 * ANGSTROM)
+#define S_R (6.981 * ANGSTROM)
+#define A_R (0.773 * ANGSTROM)
+#define T_R (2.349 * ANGSTROM)
+#define C_R (2.296 * ANGSTROM)
+#define G_R (0.828 * ANGSTROM)
 /* Heights */
-#define P_Z (2.186 * A)
-#define S_Z (1.280 * A)
-#define A_Z (0.051 * A)
-#define T_Z (0.191 * A)
-#define C_Z (0.187 * A)
-#define G_Z (0.053 * A)
+#define P_Z (2.186 * ANGSTROM)
+#define S_Z (1.280 * ANGSTROM)
+#define A_Z (0.051 * ANGSTROM)
+#define T_Z (0.191 * ANGSTROM)
+#define C_Z (0.187 * ANGSTROM)
+#define G_Z (0.053 * ANGSTROM)
 /* Masses (in kg) */
 #define P_M (94.97 * AU)
 #define S_M (83.11 * AU)
@@ -61,14 +61,14 @@
 #define G_M (150.1 * AU)
 
 /* BOND INTERACTION */
-#define BOND_K1   (  1e20 * EPSILON) /* in J/A^2 */
-#define BOND_K2   (100e20 * EPSILON) /* in J/A^4 */
-#define BOND_S5_P (3.899*A)
-#define BOND_S3_P (3.559*A)
-#define BOND_S_A  (6.430*A)
-#define BOND_S_T  (4.880*A)
-#define BOND_S_C  (4.921*A)
-#define BOND_S_G  (6.392*A)
+#define BOND_K1   (  1e20 * EPSILON) /* in J/ANGSTROM^2 */
+#define BOND_K2   (100e20 * EPSILON) /* in J/ANGSTROM^4 */
+#define BOND_S5_P (3.899*ANGSTROM)
+#define BOND_S3_P (3.559*ANGSTROM)
+#define BOND_S_A  (6.430*ANGSTROM)
+#define BOND_S_T  (4.880*ANGSTROM)
+#define BOND_S_C  (4.921*ANGSTROM)
+#define BOND_S_G  (6.392*ANGSTROM)
 
 /* ANGLE INTERACTION */
 #define ANGLE_COUPLING	(400 * EPSILON) /* per radian^2 */
@@ -101,8 +101,8 @@
 #define BASE_PAIR_COUPLING_G_C (4.16 * KCAL_PER_MOL) /* Knotts */
 //#define BASE_PAIR_COUPLING_A_T (3.90 * KCAL_PER_MOL) /* Florescu & Joyeux */
 //#define BASE_PAIR_COUPLING_G_C (4.37 * KCAL_PER_MOL) /* Florescu & Joyeux */
-#define BASE_PAIR_DISTANCE_A_T (2.9002*A)
-#define BASE_PAIR_DISTANCE_G_C (2.8694*A)
+#define BASE_PAIR_DISTANCE_A_T (2.9002*ANGSTROM)
+#define BASE_PAIR_DISTANCE_G_C (2.8694*ANGSTROM)
 
 /* STACKING INTERACTION */
 #define STACK_COUPLING	EPSILON
@@ -111,8 +111,8 @@
 
 /* EXLUSION INTERACTION */
 #define EXCLUSION_COUPLING	(0.1 * EPSILON)
-#define EXCLUSION_DISTANCE	(5.50*A) /* 6.86A in Knotts */
-#define EXCLUSION_DISTANCE_BASE	(1.00*A)
+#define EXCLUSION_DISTANCE	(5.50*ANGSTROM) /* 6.86A in Knotts */
+#define EXCLUSION_DISTANCE_BASE	(1.00*ANGSTROM)
 
 /* COULOMB INTERACTION (between phosphates) */
 #define VACUUM_PERMITTIVITY	8.8541e-12 /* Farad/m */
@@ -122,11 +122,8 @@
 #define BOLTZMANN_CONSTANT	1.38065e-23
 #define AVOGADRO		6.023e23
 
-
-typedef enum {
-	LANGEVIN,
-	VERLET
-} Integrator;
+/* This needs to be called before doing any physics calculations! */
+void initPhysics(void);
 
 typedef struct {
 	bool enableBond;
@@ -155,17 +152,14 @@ typedef struct {
 		 * pairing. */
 		BASE_PAIR_DOUBLE_STRAND,
 	} basePairInteraction;
+
+	double saltConcentration; /* Na+ concentration, in mol/m^3 */
+	double truncationLen; /* Length at which potentials are truncated */
 } InteractionSettings;
 
-typedef struct {
-	Integrator integrator;
-	InteractionSettings interactionSettings;
-	int numBoxes; /* For space partition grid */
-	double reboxInterval; /* time interval after which to rebox the particles */
-} IntegratorConf;
+void registerInteractionSettings(InteractionSettings interactionSettings);
 
-void dumpStats(void);
-bool physicsCheck(void);
+void calculateForces(void);
 
 double getKineticTemperature(void);
 
@@ -186,6 +180,7 @@ double VbasePair(Particle *p1, Particle *p2);
 double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2);
 double getExclusionCutOff(ParticleType t1, ParticleType t2);
 
-Task makeIntegratorTask(IntegratorConf *conf);
+void dumpStats(void);
+bool physicsCheck(void);
 
 #endif
