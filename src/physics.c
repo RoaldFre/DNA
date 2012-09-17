@@ -296,16 +296,7 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	double cosPhi0 = phi0.cosDihedral;
 
 	double cosPhiPhi0 = cosPhi*cosPhi0 + sinPhi*sinPhi0;
-	double V = DIHEDRAL_COUPLING * (1 - cosPhiPhi0);
-
-#ifdef DEBUG
-	/* Check with explicit goniometric formulas. */
-	double phi = dihedral(r1, r2, r3);
-	double Vcheck = DIHEDRAL_COUPLING * (1 - cos(phi - phi0));
-	assert(equalsEpsilon(V, Vcheck));
-#endif
-
-	return V;
+	return DIHEDRAL_COUPLING * (1 - cosPhiPhi0);
 }
 static double VdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
