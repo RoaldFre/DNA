@@ -133,7 +133,7 @@ Quaternion quat_trackball(int dx, int dy, double radius)
 	return q;
 }
 
-Quaternion quat_from_mat3(Mat3 m)
+Quaternion quat_from_mat3(RenderMat3 m)
 {
 	Quaternion q;
 	double T;
@@ -177,7 +177,7 @@ Quaternion quat_from_mat3(Mat3 m)
 }
 
 /* The Euler-Rodrigues formula */
-void mat3_from_quat(Mat3 m, Quaternion p)
+void mat3_from_quat(RenderMat3 m, Quaternion p)
 {
 	double w = p.w, x = p.x, y = p.y, z = p.z;
 
@@ -198,7 +198,7 @@ void mat3_from_quat(Mat3 m, Quaternion p)
 
 Vec3 quat_transform(Quaternion q, Vec3 v)
 {
-	Mat3 m;
+	RenderMat3 m;
 
 	mat3_from_quat(m, q);
 	return mat3_transform(m, v);
@@ -241,7 +241,7 @@ Quaternion quat_slerp(Quaternion a, Quaternion b, double t)
 
 Quaternion quat_euler(double t1, double t2, double t3)
 {
-	Mat3 mat;
+	RenderMat3 mat;
 
 	mat3_euler(t1, t2, t3, mat);
 

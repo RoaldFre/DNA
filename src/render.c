@@ -535,7 +535,7 @@ static void renderStrand(Strand *s, RenderConf *rc) {
 	}
 }
 
-static void mat4_from_mat3(double m[16], Mat3 n)
+static void mat4_from_mat3(double m[16], RenderMat3 n)
 {
 #define M(i, j) m[4*j + i]
 #define N(i, j) n[3*j + i]
@@ -561,7 +561,7 @@ static void renderString(const char *str, int x, int y)
 static void render(RenderConf *rc)
 {
 	double ws = world.worldSize;
-	Mat3 m3;
+	RenderMat3 m3;
 	double m4[16];
 
 	calcFps();

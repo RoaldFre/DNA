@@ -2,7 +2,7 @@
 #include "matrix.h"
 
 
-void mat3_mult(Mat3 a, Mat3 b, Mat3 c)
+void mat3_mult(RenderMat3 a, RenderMat3 b, RenderMat3 c)
 {
 	int i, j;
 
@@ -21,7 +21,7 @@ void mat3_mult(Mat3 a, Mat3 b, Mat3 c)
 
 }
 
-Vec3 mat3_transform(Mat3 a, Vec3 v)
+Vec3 mat3_transform(RenderMat3 a, Vec3 v)
 {
 	Vec3 w;
 
@@ -34,7 +34,7 @@ Vec3 mat3_transform(Mat3 a, Vec3 v)
 	return w;
 }
 
-void mat3_euler(double t1, double t2, double t3, Mat3 mat)
+void mat3_euler(double t1, double t2, double t3, RenderMat3 mat)
 {
 	double c1, c2, c3, s1, s2, s3;
 
