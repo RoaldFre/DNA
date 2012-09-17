@@ -186,7 +186,7 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	double adotb = dot(a, b);
 	double costheta = adotb / (lal * lbl);
 
-	if (fabs(costheta) >= 1 - 1e-5)
+	if (UNLIKELY(fabs(costheta) >= 1 - 1e-5))
 		/* Note, sometimes |costheta| > 1, due to numerical errors!
 		 * Either way, if |costheta| almost equal to 1: theta is 
 		 * almost equal to 0 or pi and we are at an (unstable) 
@@ -310,9 +310,8 @@ static double VdihedralS3P5SB(Particle *s1, Particle *p,
 	assert(0 <= b->type && b->type < 4);
 	return Vdihedral(s1, p, s2, b, dihedralsBases[b->type].S3P5SB);
 }
-/* Apply the dihedral force to the target particle. Also returs the added 
- * force on the target. */
-static Vec3 FdihedralParticle(Particle *target, 
+/* Return the dihedral force to the target particle. */
+static Vec3 FdihedralNumDiffParticle(Particle *target, 
 		Particle *p1, Particle *p2, Particle *p3, Particle *p4, 
 		double Vorig, DihedralCache phi0)
 {
@@ -335,14 +334,12 @@ static Vec3 FdihedralParticle(Particle *target,
 	F.z = (Vorig - Vdihedral(p1, p2, p3, p4, phi0)) / h;
 	target->pos.z -= h;
 
-	debugVectorSanity(F, "FdihedralParticle");
-
-	target->F = add(target->F, F);
+	debugVectorSanity(F, "FdihedralNumDiffParticle");
 
 	return F;
 }
-static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
-							DihedralCache phi0)
+static void FdihedralNumericalDiff(Particle *p1, Particle *p2,
+			Particle *p3, Particle *p4, DihedralCache phi0)
 {
 	if (!interactions.enableDihedral)
 		return;
@@ -350,12 +347,198 @@ static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	/* This is a *mess* to do analytically, so we do a numerical 
 	 * differentiation instead. */
 	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
-	Vec3 F1 = FdihedralParticle(p1, p1, p2, p3, p4, Vorig, phi0);
-	Vec3 F2 = FdihedralParticle(p2, p1, p2, p3, p4, Vorig, phi0);
-	Vec3 F3 = FdihedralParticle(p3, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 F1 = FdihedralNumDiffParticle(p1, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 F2 = FdihedralNumDiffParticle(p2, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 F3 = FdihedralNumDiffParticle(p3, p1, p2, p3, p4, Vorig, phi0);
 	Vec3 negF4 = add(F1, add(F2, F3)); /* -F4 = F1 + F2 + F3 */
+	p1->F = add(p1->F, F1);
+	p2->F = add(p2->F, F2);
+	p3->F = add(p3->F, F3);
 	p4->F = sub(p4->F, negF4);
 }
+
+/*
+ * Returns the *transposed* Jacobian matrix of the matrix cross product
+ *    r12 x r23  =  (r2 - r1) x (r3 - r2)
+ * where r1, r2 and r3 are vectors and differentiation is done with regards 
+ * to ri (with i the given parameter) with all other rj (j != i) assumed to 
+ * be fixed and independent of ri.
+ *
+ * The math is worked out in:
+ * http://www-personal.umich.edu/~riboch/pubfiles/riboch-JacobianofCrossProduct.pdf
+ * The result:
+ *   J_ri(r12 x r23) = r12^x * J_ri(r23) - r23^x * J_ri(r12)
+ * where r12^x and r23^x are the matrix form of the cross product:
+ *         ( 0   -Az   Ay)
+ *   A^x = ( Az   0   -Ax)
+ *         (-Ay   Ax   0 )
+ * and J_ri(r12) and J_ri(r23) are the jacobi matrices for r12 and r23, 
+ * which are either 0, or +/- the identity matrix.
+ * We have:
+ *   J_r1(r12) = -1,    J_r2(r12) = +1,    J_r3(r12) =  0,
+ *   J_r1(r23) =  0,    J_r2(r23) = -1,    J_r3(r23) = +1.
+ */
+static __inline__ Mat3 crossProdTransposedJacobian(Vec3 r12, Vec3 r23, int i)
+{
+	/* *Transposed* matrix form of the cross product. */
+	Mat3 r12matrCrossProd = mat3(   0,    r12.z, -r12.y,
+	                             -r12.z,    0,    r12.x,
+	                              r12.y, -r12.x,    0   );
+	/* *Transposed* matrix form of the cross product. */
+	Mat3 r23matrCrossProd = mat3(   0,    r23.z, -r23.y,
+	                             -r23.z,    0,    r23.x,
+	                              r23.y, -r23.x,    0   );
+
+	switch (i) {
+	case 1:
+		return r23matrCrossProd;
+	case 2:
+		return matScale(matAdd(r12matrCrossProd, r23matrCrossProd), -1);
+	case 3:
+		return r12matrCrossProd;
+	default:
+		assert(false); die("Internal error!\n");
+		return mat3(0,0,0,0,0,0,0,0,0); /* To make compiler happy. */
+	}
+}
+
+/* Derivative of the dihedral potential. This shit gets quite involved.
+ *
+ * We want to compute
+ *   Fi = -grad_ri V(r1, r2, r3, r4)
+ * Fi the force on the i'th particle and rj the position of the j'th 
+ * particle.
+ * 
+ * We can rather easily write V as a function of
+ *   A = r12 x r23  =  (r2 - r1) x (r3 - r2)
+ * and
+ *   B = r23 x r34  =  (r3 - r2) x (r4 - r3)
+ *
+ * Indeed, we have:
+ *   V = DIHEDRAL_COUPLING * (1 - cos(phi - phi0))
+ * where
+ *   phi = acos(A dot B / |A| * |B|)
+ *
+ * We can then write Fi as:
+ *   Fi = -grad_ri Vi(A(r1, r2, r3), B(r2, r3, r4))
+ * and use the appropriate chain rule:
+ *   Fi = - [J_ri(A)]^t * (grad_A V)
+ *        - [J_ri(B)]^t * (grad_B V)
+ * where [J_ri(X)]^t is the transpose of the Jacobian matrix of the vector 
+ * function X with regards to ri.
+ *
+ * After some calculus and algebra, we get
+ *   grad_A V = DIHEDRAL_COUPLING
+ *                * [ sin(phi0)/sin(phi) * (A dot B)/(|A|^2 |B|^2)
+ *                                  - cos(phi0) / (|A||B|) ]
+ *                * [B - A (A dot B) / (|B||A|)]
+ * and due to the symmetry in V of A and B, grad_B V is exactly the same, 
+ * but with A and B interchanged.
+ *   grad_B V = DIHEDRAL_COUPLING
+ *                * [ sin(phi0)/sin(phi) * (A dot B)/(|A|^2 |B|^2)
+ *                                  - cos(phi0) / (|A||B|) ]
+ *                * [A - B (A dot B) / (|B||A|)]
+ *
+ *
+ * NOTE: when debugging the dihedral force for energy conservation, you 
+ * also need to enable angle and bond interactions (which should be 
+ * debugged first), otherwise you get a badly conditioned problem and you 
+ * will experience blow up.
+ */
+static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
+							DihedralCache phi0)
+{
+	if (!interactions.enableDihedral)
+		return;
+
+	Vec3 r12 = nearestImageVector(p1->pos, p2->pos);
+	Vec3 r23 = nearestImageVector(p2->pos, p3->pos);
+	Vec3 r34 = nearestImageVector(p3->pos, p4->pos);
+
+	double sinPhi, cosPhi; //TODO find better algorithm to only compute sinPhi
+	sinCosDihedral(r12, r23, r34, &sinPhi, &cosPhi);
+	if (UNLIKELY(fabs(sinPhi) < 1e-5)) //TODO just check for ==0? -> saves an fabs!
+		return; /* (Unstable) equilibrium. */
+
+	double sinPhi0 = phi0.sinDihedral;
+	double cosPhi0 = phi0.cosDihedral;
+
+	Vec3 A = cross(r12, r23);
+	Vec3 B = cross(r23, r34);
+
+	double lAl2 = length2(A);
+	double lBl2 = length2(B);
+	double lAl2lBl2 = lAl2 * lBl2;
+	double lAllBl = sqrt(lAl2lBl2);
+	double AdB = dot(A, B);
+	double negGradPrefactor = DIHEDRAL_COUPLING * (cosPhi0 / lAllBl
+					- sinPhi0/sinPhi * AdB/lAl2lBl2);
+	/* -grad_A(V) */
+	Vec3 negGrad_AV = scale(
+			sub(B, scale(A, AdB/lAl2)),
+			negGradPrefactor);
+	/* -grad_B(V) */
+	Vec3 negGrad_BV = scale(
+			sub(A, scale(B, AdB/lBl2)),
+			negGradPrefactor);
+
+	/* F1 */
+	Mat3 J_r1A = crossProdTransposedJacobian(r12, r23, 1); /* [J_r1(A)]^t */
+	/* [J_r1(B)]^t = 0*/
+	Vec3 F1 = matApply(J_r1A, negGrad_AV);
+
+	/* F2 */
+	Mat3 J_r2A = crossProdTransposedJacobian(r12, r23, 2); /* [J_r2(A)]^t */
+	Mat3 J_r2B = crossProdTransposedJacobian(r23, r34, 1); /* [J_r2(B)]^t */
+	Vec3 F2 = add(matApply(J_r2A, negGrad_AV), matApply(J_r2B, negGrad_BV));
+
+	/* F4 (not F3 because that has two non-zero jacobi matrices, 
+	 * whereas F4 has only one non-zero jacobi matrix, so it's 
+	 * faster to compute)*/
+	/* [J_r4(A)]^t = 0*/
+	Mat3 J_r4B = crossProdTransposedJacobian(r23, r34, 3); /* [J_r4(B)]^t */
+	Vec3 F4 = matApply(J_r4B, negGrad_BV);
+
+	/* -F3 */
+	Vec3 negF3 = add(add(F1, F2), F4);
+
+	p1->F = add(p1->F, F1);
+	p2->F = add(p2->F, F2);
+	p3->F = sub(p3->F, negF3);
+	p4->F = add(p4->F, F4);
+
+
+#if 0
+#ifdef DEBUG
+	/* NOTE: lots of false positives if one component of the force is 
+	 * small! */
+
+	double eps = 0.01;
+
+	/* Explicitly calculate F3 as well. */
+	/* F3 */
+	Mat3 J_r3A = crossProdTransposedJacobian(r12, r23, 3); /* [J_r3(A)]^t */
+	Mat3 J_r3B = crossProdTransposedJacobian(r23, r34, 2); /* [J_r3(B)]^t */
+	Vec3 F3 = add(matApply(J_r3A, negGrad_AV), matApply(J_r3B, negGrad_BV));
+	assertVecEqualsEpsilon(scale(negF3, -1), F3, eps);
+
+	/* Check with numerical differentiation code */
+	double Vorig = Vdihedral(p1, p2, p3, p4, phi0);
+	Vec3 correctF1 = FdihedralNumDiffParticle(p1, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 correctF2 = FdihedralNumDiffParticle(p2, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 correctF3 = FdihedralNumDiffParticle(p3, p1, p2, p3, p4, Vorig, phi0);
+	Vec3 correctF4 = FdihedralNumDiffParticle(p4, p1, p2, p3, p4, Vorig, phi0);
+	assertVecEqualsEpsilon(F1, correctF1, eps);
+	assertVecEqualsEpsilon(F2, correctF2, eps);
+	assertVecEqualsEpsilon(F3, correctF3, eps);
+	assertVecEqualsEpsilon(F4, correctF4, eps);
+#endif
+#endif
+}
+
+
+
+
 static void FdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
 {
@@ -963,7 +1146,7 @@ bool physicsCheck(void)
 {
 	Vec3 P = momentum();
 	double PPP = length(P) / numParticles();
-	printf("%e\n",PPP);
+	//printf("%e\n",PPP);
 	if (PPP > 1e-20) {
 		fprintf(stderr, "\nMOMENTUM CONSERVATION VIOLATED! "
 				"Momentum per particle: |P| = %e\n", PPP);

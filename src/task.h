@@ -5,8 +5,6 @@
 
 #include "system.h"
 
-#define UNUSED(x) ((void) x)
-
 /* Generate a new Task that executes all given tasks in sequence. The list 
  * of tasks will be copied to an internal structure, so it is safe to free 
  * the data after calling this function.

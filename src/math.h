@@ -8,6 +8,10 @@
 #include <assert.h>
 #include "tinymt/tinymt64.h"
 
+#ifndef M_PI
+#define M_PI	3.14159265358979323846
+#endif
+
 /* tiny MT state */
 extern tinymt64_t tinymt;
 void seedRandomWith(uint64_t seed);
@@ -20,9 +24,24 @@ typedef struct Vec3
 	double x, y, z;
 } Vec3;
 
-#ifndef M_PI
-#define M_PI	3.14159265358979323846
-#endif
+static __inline__ void fprintVector(FILE *stream, Vec3 v)
+{
+	fprintf(stream, "%10f\t%10f\t%10f\t", v.x, v.y, v.z);
+}
+
+static __inline__ void printVector(Vec3 v)
+{
+	fprintVector(stdout, v);
+}
+
+static __inline__ void fprintVectorExp(FILE *stream, Vec3 v)
+{
+	fprintf(stream, "%15e %15e %15e", v.x, v.y, v.z);
+}
+static __inline__ void printVectorExp(Vec3 v)
+{
+	fprintVectorExp(stdout, v);
+}
 
 /* Warning, you can't 'call' the macros below with functions that have side 
  * effects as arguments!
@@ -38,6 +57,9 @@ typedef struct Vec3
  * and your compiler doesn't support them. */
 #define LIKELY(x)       __builtin_expect((x),1)
 #define UNLIKELY(x)     __builtin_expect((x),0)
+
+/* To stop compiler from issuing unused warnings when it is intentional. */
+#define UNUSED(x) ((void) x)
 
 /* In header for inlining */
 
@@ -75,27 +97,39 @@ static __inline__ void debugVectorSanity(Vec3 v, const char *location)
 }
 
 /* Check for equality of doubles (up to some small error). */
-static __inline__ bool equalsEpsilon(double a, double b)
+static __inline__ bool equalsEpsilon(double a, double b, double eps)
 {
 	if (a + b == 0)
 		return a == 0;
 
-	return fabs((a-b) / (a+b)) < 1e-5;
+	return fabs((a-b) / (a+b)) < eps;
 }
 
-static __inline__ void fprintVector(FILE *stream, Vec3 v)
+/* Check for equality of vectors (up to some small error). */
+static __inline__ bool vecEqualsEpsilon(Vec3 a, Vec3 b, double eps)
 {
-	fprintf(stream, "%10f\t%10f\t%10f\t", v.x, v.y, v.z);
+	return equalsEpsilon(a.x, b.x, eps)
+	    && equalsEpsilon(a.y, b.y, eps)
+	    && equalsEpsilon(a.z, b.z, eps);
 }
-
-static __inline__ void printVector(Vec3 v)
+static __inline__ void assertVecEqualsEpsilon(Vec3 a, Vec3 b, double eps)
 {
-	fprintVector(stdout, v);
-}
+#ifndef DEBUG
+	UNUSED(a);
+	UNUSED(b);
+	UNUSED(eps);
+	return;
+#else
+	if (vecEqualsEpsilon(a, b, eps))
+		return;
 
-static __inline__ void printVectorExp(Vec3 v)
-{
-	printf("%15e %15e %15e", v.x, v.y, v.z);
+	fprintf(stderr, "Different vectors!\n");
+	fprintVectorExp(stderr, a);
+	fprintf(stderr, "\n");
+	fprintVectorExp(stderr, b);
+	fprintf(stderr, "\n");
+	assert(false);
+#endif
 }
 
 static __inline__ Vec3 add(Vec3 a, Vec3 b)
@@ -397,4 +431,57 @@ static __inline__ Vec3 rotate(Vec3 v, Vec3 axis, double theta)
 	return res;
 }
 
+
+typedef struct Mat3
+{
+	Vec3 r1, r2, r3; /* Rows of the matrix */
+} Mat3;
+
+static __inline__ Mat3 mat3(double m11, double m12, double m13,
+                            double m21, double m22, double m23,
+                            double m31, double m32, double m33)
+{
+	Mat3 m;
+	m.r1 = (Vec3) {m11, m12, m13};
+	m.r2 = (Vec3) {m21, m22, m23};
+	m.r3 = (Vec3) {m31, m32, m33};
+	return m;
+}
+
+static __inline__ Mat3 matScale(Mat3 m, double lambda)
+{
+	Mat3 s;
+	s.r1 = scale(m.r1, lambda);
+	s.r2 = scale(m.r2, lambda);
+	s.r3 = scale(m.r3, lambda);
+	return s;
+}
+
+static __inline__ Mat3 matAdd(Mat3 a, Mat3 b)
+{
+	Mat3 c;
+	c.r1 = add(a.r1, b.r1);
+	c.r2 = add(a.r2, b.r2);
+	c.r3 = add(a.r3, b.r3);
+	return c;
+}
+
+static __inline__ Mat3 matSub(Mat3 a, Mat3 b)
+{
+	Mat3 c;
+	c.r1 = sub(a.r1, b.r1);
+	c.r2 = sub(a.r2, b.r2);
+	c.r3 = sub(a.r3, b.r3);
+	return c;
+}
+
+/* Multiply the matrix m with the column vector v. */
+static __inline__ Vec3 matApply(Mat3 m, Vec3 v)
+{
+	Vec3 w;
+	w.x = dot(m.r1, v);
+	w.y = dot(m.r2, v);
+	w.z = dot(m.r3, v);
+	return w;
+}
 #endif

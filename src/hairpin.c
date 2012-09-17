@@ -101,7 +101,7 @@ static bool measureTemperature = false;
 static RenderConf renderConf =
 {
 	.framerate = DEF_RENDER_FRAMERATE,
-	.radius    = DEF_RENDER_RADIUS * A,
+	.radius    = DEF_RENDER_RADIUS * ANGSTROM,
 	.drawForces = false,
 };
 static bool render;
@@ -132,7 +132,7 @@ static InteractionSettings interactionSettings = {
 	.mutuallyExclusivePairForces = true,
 	.basePairInteraction = BASE_PAIR_HAIRPIN,
 	.saltConcentration   = DEF_SALT_CONCENTRATION,
-	.truncationLen       = DEF_TRUNCATION_LENGTH * A,
+	.truncationLen       = DEF_TRUNCATION_LENGTH * ANGSTROM,
 };
 
 static const char* baseSequence = DEF_BASE_SEQUENCE;
@@ -285,7 +285,7 @@ static void parseArguments(int argc, char **argv)
 			render = true;
 			break;
 		case 'R':
-			renderConf.radius = atof(optarg) * A;
+			renderConf.radius = atof(optarg) * ANGSTROM;
 			if (renderConf.radius <= 0)
 				die("Invalid radius %s\n", optarg);
 			break;
@@ -293,10 +293,10 @@ static void parseArguments(int argc, char **argv)
 			renderConf.drawForces = true;
 			break;
 		case 'l':
-			interactionSettings.truncationLen = atof(optarg) * A;
+			interactionSettings.truncationLen = atof(optarg) * ANGSTROM;
 			break;
 		case 'S':
-			worldSize = atof(optarg) * A;
+			worldSize = atof(optarg) * ANGSTROM;
 			if (worldSize <= 0)
 				die("Invalid world size %s\n", optarg);
 			break;
@@ -435,7 +435,7 @@ static void parseArguments(int argc, char **argv)
 
 	if (worldSize < 0)
 		worldSize = ((strlen(baseSequence) + 2)
-					* DEF_MONOMER_WORLDSIZE_FACTOR) * A;
+					* DEF_MONOMER_WORLDSIZE_FACTOR) * ANGSTROM;
 
 	if (verletSettings.tau < 0)
 		verletSettings.tau = DEF_COUPLING_TIMESTEP_FACTOR
@@ -479,8 +479,8 @@ static void parseArguments(int argc, char **argv)
 	if (worldSize / integratorConf.numBoxes < interactionSettings.truncationLen)
 		die("The boxsize (%e) is smaller than the potential "
 			"truncation radius (%e)!\n",
-			worldSize / integratorConf.numBoxes / A,
-			interactionSettings.truncationLen / A);
+			worldSize / integratorConf.numBoxes / ANGSTROM,
+			interactionSettings.truncationLen / ANGSTROM);
 }
 
 int main(int argc, char **argv)
