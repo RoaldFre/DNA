@@ -3,7 +3,9 @@
 
 /* SPgrid: Space Partition grid */
 
+#include "world.h"
 #include "physics.h" //TODO separate in particle.h (= all we need)?
+
 
 /* Allocates a grid [0, size] x [0, size] x [0, size] with 'numBoxes' boxes 
  * in each dimension.

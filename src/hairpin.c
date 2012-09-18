@@ -21,7 +21,7 @@
 /* Defaults */
 #define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
 #define DEF_TIMESTEP 			15.0
-#define DEF_REBOX_INTERVAL		200.0
+#define DEF_REBOX_INTERVAL		100.0
 #define DEF_INITIAL_TEMPERATURE		"20C"
 #define DEF_SALT_CONCENTRATION		100.0  /* mol/m^3 */
 #define DEF_LANGEVIN_GAMMA		5e12

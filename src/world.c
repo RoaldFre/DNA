@@ -1,4 +1,3 @@
-#include "system.h"
 #include "world.h"
 #include "spgrid.h"
 #include "physics.h"

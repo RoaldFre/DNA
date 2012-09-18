@@ -1,7 +1,7 @@
 #ifndef _WORLD_H_
 #define _WORLD_H_
 #include "system.h"
-
+#include "spgridBootstrap.h"
 
 typedef enum particleType
 {
@@ -43,6 +43,7 @@ typedef struct particle
 	struct particle *prev, *next; /* Previous/Next particle in box */
 	struct strand *strand; /* The strand I belong to */
 	int strandIndex; /* My index in the appropriate array of my strand */
+	struct box *myBox; /* The space patition box that I am in */
 } Particle;
 
 typedef struct strand

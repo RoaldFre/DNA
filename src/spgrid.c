@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct box
+struct box
 {
 	Particle *p;	/* (Linked list of) particles in this box */
 	int n;		/* number of particles in this box */
@@ -21,7 +21,8 @@ typedef struct box
 	struct box *nextY;
 	struct box *prevZ;
 	struct box *nextZ;
-} Box;
+};
+typedef struct box Box;
 
 
 static void addToBox(Particle *p, Box *b);
@@ -185,10 +186,20 @@ static void periodicPosition(Particle *p)
 	/* Fix the previous position */
 	p->prevPos = add(p->pos, diffPos);
 }
+
+static void reboxParticle(Particle *p)
+{
+	periodicPosition(p);
+
+	Box *correctBox = boxFromParticle(p);
+	if (correctBox == p->myBox)
+		return;
+
+	removeFromBox(p, p->myBox);
+	addToBox(p, correctBox);
+}
 void reboxParticles(void)
 {
-	int reboxedPartices = 0;
-
 	if (nb == 1) {
 		forEveryParticle(&periodicPosition);
 		return;
@@ -196,36 +207,9 @@ void reboxParticles(void)
 
 	assert(spgridSanityCheck(false, true));
 
-	for (int i = 0; i < nb*nb*nb; i++) {
-		Box *currentBox = &grid[i];
-		Particle *p = currentBox->p;
+	forEveryParticle(&reboxParticle);
 
-		if (p == NULL)
-			continue; /* Empty box */
-
-		int n = currentBox->n; /* Save original number, it can 
-					  decrease during the loop if we 
-					  swap out particles! */
-		for (int j = 0; j < n; j++) {
-			/* Force periodic boundary condition. */
-			periodicPosition(p);
-
-			/* Since p might be removed from the current box, 
-			 * we keep a pointer to its successor. */
-			Particle *next = p->next;
-
-			Box *correctBox = boxFromParticle(p);
-			if (currentBox != correctBox) {
-				removeFromBox(p, currentBox);
-				addToBox(p, correctBox);
-				reboxedPartices++;
-			}
-
-			p = next;
-		}
-	}
 	assert(spgridSanityCheck(true, true));
-	//fprintf(stderr, "reboxed particles: %d\n", reboxedPartices);
 }
 
 /* Precondition: particle must be within the grid. */
@@ -288,7 +272,8 @@ static Box *boxFromIndex(int ix, int iy, int iz)
 
 static void removeFromBox(Particle *p, Box *b)
 {
-	assert(p != NULL);
+	assert(p != NULL && b != NULL);
+	assert(p->myBox == b);
 	assert(b->n >= 0);
 
 	b->n--;
@@ -310,12 +295,14 @@ static void removeFromBox(Particle *p, Box *b)
 
 	p->prev = NULL;
 	p->next = NULL;
+	p->myBox = NULL;
 }
 
 static void addToBox(Particle *p, Box *b)
 {
 	assert(p->prev == NULL);
 	assert(p->next == NULL);
+	assert(p->myBox == NULL);
 
 	b->n++;
 
@@ -332,6 +319,7 @@ static void addToBox(Particle *p, Box *b)
 		p->prev->next = p;
 		p->next->prev = p;
 	}
+	p->myBox = b;
 }
 
 /* Loop between particles of adjacent boxes of box.  We need a total 
