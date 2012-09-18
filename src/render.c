@@ -74,7 +74,6 @@ static char fps_string[FPS_STRING_CHARS];
 static Quaternion cam_orientation;
 static Vec3 cam_position;
 
-
 typedef struct stringList {
 	RenderStringConfig rsc;
 	struct stringList *next;
@@ -83,6 +82,9 @@ typedef struct stringList {
 /* Global that holds a linked list to all the strings that should be 
  * rendered. */
 static StringList *strings = NULL;
+
+/* Render the space partitioning boxes? */
+static double renderSPGridBoxes = false;
 
 
 static void drawPoint(Vec3 p)
@@ -162,6 +164,56 @@ static void renderConnection(Particle *p1, Particle *p2, RenderConf *rc)
 		return; /* To avoid periodic boundary clutter */
 	drawCilinder(p1->pos, p2->pos, CILINDER_FACES,
 			rc->radius / CILINDER_RADIUS_DIVISOR);
+}
+static void renderBoxes(int numBoxes)
+{
+	double ws = world.worldSize;
+	double delta = ws / numBoxes;
+	Vec3 xStep = (Vec3) {delta, 0, 0};
+	Vec3 yStep = (Vec3) {0, delta, 0};
+	Vec3 zStep = (Vec3) {0, 0, delta};
+
+	double resetDelta = -(numBoxes + 1) * delta;
+	Vec3 xResetStep = (Vec3) {resetDelta, 0, 0};
+	Vec3 yResetStep = (Vec3) {0, resetDelta, 0};
+	Vec3 zResetStep = (Vec3) {0, 0, resetDelta};
+
+	/* _Start is starting point for line in _ direction */
+	Vec3 xStart = (Vec3) {-ws/2, -ws/2, -ws/2};
+	Vec3 yStart = (Vec3) {-ws/2, -ws/2, -ws/2};
+	Vec3 zStart = (Vec3) {-ws/2, -ws/2, -ws/2};
+
+	/* Should be added to the starting point to reach the other side of 
+	 * the world. */
+	Vec3 xLength = (Vec3) {ws, 0, 0};
+	Vec3 yLength = (Vec3) {0, ws, 0};
+	Vec3 zLength = (Vec3) {0, 0, ws};
+
+	/* Shoot lines from three 2D grids: from the three perpendicular 
+	 * faces of the 'worldcube' to the opposide faces. */
+	glBegin(GL_LINES);
+	glColor3f(0.8, 0.8, 0.8);
+	for (int i = 0; i <= numBoxes; i++) {
+		for (int j = 0; j <= numBoxes; j++) {
+			drawLine(xStart, add(xStart, xLength));
+			drawLine(yStart, add(yStart, yLength));
+			drawLine(zStart, add(zStart, zLength));
+
+			xStart = add(xStart, yStep);
+			yStart = add(yStart, zStep);
+			zStart = add(zStart, xStep);
+		}
+		/* Undo the stepping of the previous loop */
+		xStart = add(xStart, yResetStep);
+		yStart = add(yStart, zResetStep);
+		zStart = add(zStart, xResetStep);
+
+		/* Advance one step in the other direction */
+		xStart = add(xStart, zStep);
+		yStart = add(yStart, xStep);
+		zStart = add(zStart, yStep);
+	}
+	glEnd();
 }
 
 static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numInd,
@@ -373,6 +425,9 @@ static bool handleEvents(void)
 				setHeatBathTemperature(getHeatBathTemperature() / 1.02);
 				printf("Temperature: %f\n", getHeatBathTemperature());
 				break;
+			case SDLK_b:
+				renderSPGridBoxes = !renderSPGridBoxes;
+				break;
 			case SDLK_RETURN:
 				SDL_WM_ToggleFullScreen(surface);
 				break;
@@ -579,21 +634,25 @@ static void render(RenderConf *rc)
 	glTranslatef(-cam_position.x, -cam_position.y, -cam_position.z);
 
 
-	/* Line loops for world box */
-	glColor3f(0.0, 1.0, 0.0);
-	glBegin(GL_LINE_LOOP);
-		glVertex3f(-ws/2, -ws/2, -ws/2);
-		glVertex3f(-ws/2, -ws/2, +ws/2);
-		glVertex3f(-ws/2, +ws/2, +ws/2);
-		glVertex3f(-ws/2, +ws/2, -ws/2);
-	glEnd();
+	if (renderSPGridBoxes) {
+		renderBoxes(rc->numBoxes);
+	} else {
+		/* Line loops for world box */
+		glColor3f(0.0, 1.0, 0.0);
+		glBegin(GL_LINE_LOOP);
+			glVertex3f(-ws/2, -ws/2, -ws/2);
+			glVertex3f(-ws/2, -ws/2, +ws/2);
+			glVertex3f(-ws/2, +ws/2, +ws/2);
+			glVertex3f(-ws/2, +ws/2, -ws/2);
+		glEnd();
 
-	glBegin(GL_LINE_LOOP);
-		glVertex3f(+ws/2, -ws/2, -ws/2);
-		glVertex3f(+ws/2, -ws/2, +ws/2);
-		glVertex3f(+ws/2, +ws/2, +ws/2);
-		glVertex3f(+ws/2, +ws/2, -ws/2);
-	glEnd();
+		glBegin(GL_LINE_LOOP);
+			glVertex3f(+ws/2, -ws/2, -ws/2);
+			glVertex3f(+ws/2, -ws/2, +ws/2);
+			glVertex3f(+ws/2, +ws/2, +ws/2);
+			glVertex3f(+ws/2, +ws/2, -ws/2);
+		glEnd();
+	}
 
 
 	/* Strands */

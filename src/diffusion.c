@@ -350,6 +350,8 @@ static void parseArguments(int argc, char **argv)
 			"truncation radius (%e)!\n",
 			worldSize / integratorConf.numBoxes / ANGSTROM,
 			interactionSettings.truncationLen / ANGSTROM);
+
+	renderConf.numBoxes = integratorConf.numBoxes;
 }
 
 int main(int argc, char **argv)

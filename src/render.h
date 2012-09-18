@@ -13,6 +13,8 @@ typedef struct
 	int framerate; /* The desired framerate */
 	double radius; /* The radius of the particles to render */
 	bool drawForces; /* Draw the forces on the particles? */
+	int numBoxes;  /* Number of boxes (in each dimension) to render 
+			  when pressing 'b'. */
 } RenderConf;
 
 Task makeRenderTask(RenderConf *rc);
