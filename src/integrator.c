@@ -142,8 +142,6 @@ static void langevinBBKhelper(Particle *p, void *data)
 	/* Regular forces have been calculated. Add the random force due 
 	 * to collisions to the total force. The result is:
 	 * p->F = F(t + dt) + R(t + dt) */
-	/* TODO check that compiler inlines this and precalculates the 
-	 * prefactor before p->m when looping over all particles. */
 	double Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * g * p->m / dt);
 	Vec3 R = randNormVec(Rstddev);
 	debugVectorSanity(R, "randNormVec in langevinBBKhelper");
