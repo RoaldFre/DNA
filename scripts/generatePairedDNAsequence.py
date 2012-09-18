@@ -13,11 +13,33 @@ except:
     print "Usage: "+sys.argv[0]+" <N>"
     exit(1)
 
-string = ''
+seq = ''
 
 for x in range(N):
-    string += random.choice("CG")
-    string += random.choice("AT")
+    seq += random.choice("CG")
+    seq += random.choice("AT")
     
-print string
+print seq
+print
+
+
+# Check length of longest possible mismatch in a hairpin structure
+
+longestMismatch = 0;
+mismatchStart = -1;
+for i in range(1, len(seq)):
+    n = 0;
+    while i+n < len(seq)  and  seq[i+n] == seq[n]:
+        n += 1
+    if (n > longestMismatch):
+        longestMismatch = n
+        mismatchStart = i
+
+if longestMismatch == 0:
+    print "No mismatches possible in a hairpin!"
+else:
+    print "Longest mismatch in a hairpin: ",longestMismatch," bases, starting at base ",mismatchStart,"."
+    print seq
+    print " " * (mismatchStart - 1), seq
+    print " " * (mismatchStart - 1), "~" * longestMismatch
 
