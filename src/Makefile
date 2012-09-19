@@ -23,7 +23,7 @@ GCC_OPTIM = -O4 -flto -fwhole-program -mmmx -msse -msse2 -msse3 -fexcess-precisi
 GCC_CFLAGS = $(WARNINGS) -std=gnu99 -pipe -march=native -ggdb $(GCC_OPTIM) $(DEBUG) $(DEFINES) -I/usr/include/freetype2
 
 CLANG_OPTIM = -O4 -march=core2
-CLANG_CFLAGS = $(CLANG_OPTIM) $(DEBUG) $(DEFINES) -I/usr/include/freetype2 
+CLANG_CFLAGS = $(CLANG_OPTIM) $(DEBUG) $(DEFINES) -ggdb -I/usr/include/freetype2 
 
 
 #use 'make target CLANG=' to build with clang instead of gcc
