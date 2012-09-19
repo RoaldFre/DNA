@@ -1,7 +1,5 @@
 #Disable building with rendering by passing RENDER= to make
 RENDER = yes
-#Enable profiling with google-perftools by passing GPERF=
-GPERF = no
 
 DEFINES=-D_GNU_SOURCE
 
@@ -28,15 +26,6 @@ CLANG_OPTIM = -O4 -march=core2
 CLANG_CFLAGS = $(CLANG_OPTIM) $(DEBUG) $(DEFINES) -I/usr/include/freetype2 
 
 
-
-ifneq ($(GPERF), no)
-	DEFINES += -DGOOGLE_PERFTOOLS
-	LIBS += -lprofiler
-	PROFILE += -fno-omit-frame-pointer
-endif
-
-
-
 #use 'make target CLANG=' to build with clang instead of gcc
 CLANG=no
 ifneq ($(CLANG), no)
@@ -45,11 +34,6 @@ ifneq ($(CLANG), no)
 else
 	CC = gcc
 	CFLAGS = $(GCC_CFLAGS)
-endif
-
-ifneq ($(GPERF), no)
-	DEFINES += -DGOOGLE_PERFTOOLS
-	LIBS += -lprofiler
 endif
 
 
