@@ -74,6 +74,7 @@ Sampler averageTemperatureSampler(void)
 	sampler.start  = &avgTempStart;
 	sampler.sample = &avgTempSample;
 	sampler.stop   = &avgTempStop;
+	sampler.header = "# Average temperature:\n";
 	return sampler;
 }
 
@@ -96,6 +97,7 @@ Sampler dumpStatsSampler(void)
 	sampler.start  = NULL;
 	sampler.sample = &dumpStatsSample;
 	sampler.stop   = NULL;
+	sampler.header = NULL;
 	return sampler;
 }
 
@@ -467,6 +469,8 @@ Sampler hairpinFormationSampler(HairpinFormationSamplerConfig *hfc)
 	sampler.start  = &hairpinFormationStart;
 	sampler.sample = &hairpinFormationSample;
 	sampler.stop   = &freeState;
+	sampler.header = "# Hairpin formation measurement. This file is "
+			"readable by Octave.\n";
 	return sampler;
 }
 
@@ -621,6 +625,8 @@ Sampler hairpinMeltingTempSampler(HairpinMeltingTempSamplerConfig *hmtc)
 	sampler.start  = &hairpinMeltingTempStart;
 	sampler.sample = &hairpinMeltingTempSample;
 	sampler.stop   = &freeState;
+	sampler.header = "# Hairpin melting temperature measurement. This "
+			"file is readable by Octave.\n";
 	return sampler;
 }
 
@@ -709,6 +715,8 @@ Sampler basePairingSampler(BasePairingConfig *bpc)
 	sampler.start  = &passConf;
 	sampler.sample = &basePairingSample;
 	sampler.stop   = &freeState;
+	sampler.header = "# <base pairs state> <time> <# bound BPs> "
+						"[# correctly bound BPs]\n";
 	return sampler;
 }
 
@@ -721,7 +729,8 @@ Sampler trivialSampler(void) {
 			.samplerConf = NULL,
 			.start = NULL,
 			.sample = NULL,
-			.stop = NULL
+			.stop = NULL,
+			.header = NULL,
 	};
 	return sampler;
 }
