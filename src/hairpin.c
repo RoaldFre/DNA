@@ -612,6 +612,7 @@ int main(int argc, char **argv)
 	free(basePairFile);
 	free(endToEndFile);
 	free(temperatureFile);
+	free(measHeader);
 
 	if (!everythingOK)
 		return 1;

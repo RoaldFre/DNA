@@ -451,6 +451,7 @@ int main(int argc, char **argv)
 	freeWorld();
 	free(endToEndFile);
 	free(temperatureFile);
+	free(measHeader);
 
 	if (!everythingOK)
 		return 1;
