@@ -876,7 +876,6 @@ static void strandForces(Strand *s) {
 	FangleP5SB(&s->Ps[0], &s->Ss[0], &s->Bs[0]);
 
 	/* Rest of the monomers */
-	OPENMP(parallel for)
 	for (int i = 1; i < s->numMonomers; i++) {
 		FbondSB(&s->Ss[i], &s->Bs[i]);
 		Fbond(&s->Ss[i], &s->Ps[i],   BOND_S5_P);

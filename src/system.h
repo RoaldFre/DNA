@@ -4,13 +4,6 @@
 #include <stdbool.h>
 #include "math.h"
 
-#ifdef WITH_OPENMP
-#  define OPENMP(pragmaLine) DO_PRAGMA(omp pragmaLine)
-#  define DO_PRAGMA(x) _Pragma(#x)
-#else
-#  define OPENMP(pragmaLine)
-#endif
-
 
 /* Tasks are used to do stuff during the simulation, such as (accumulating) 
  * measurements. */

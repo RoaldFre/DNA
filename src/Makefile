@@ -1,12 +1,6 @@
 #Disable building with rendering by passing RENDER= to make
 RENDER = yes
 
-#Enable building with openmp parallelization by passing OPENMP= to make
-OPENMP = no
-
-#use 'make target CLANG=' to build target with clang instead of gcc
-CLANG=no
-
 DEFINES=-D_GNU_SOURCE
 
 OBJECTS = system.o math.o task.o measure.o samplers.o physics.o integrator.o world.o spgrid.o tinymt/tinymt64.o render.o octave.o
@@ -32,6 +26,8 @@ CLANG_OPTIM = -O4 -march=core2
 CLANG_CFLAGS = $(CLANG_OPTIM) $(DEBUG) $(DEFINES) -ggdb -I/usr/include/freetype2 
 
 
+#use 'make target CLANG=' to build with clang instead of gcc
+CLANG=no
 ifneq ($(CLANG), no)
 	CC = clang
 	CFLAGS = $(CLANG_CFLAGS)
@@ -40,10 +36,6 @@ else
 	CFLAGS = $(GCC_CFLAGS)
 endif
 
-ifneq ($(OPENMP), no)
-	DEFINES += -DWITH_OPENMP
-	CFLAGS += -fopenmp
-endif
 
 all: hairpin
 

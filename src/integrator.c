@@ -214,7 +214,7 @@ static void langevinBBKhelper(Particle *p, void *data)
 static void langevinBBK(LangevinSettings *settings)
 {
 	calculateForces();
-	forEveryParticleParD(&langevinBBKhelper, settings);
+	forEveryParticleD(&langevinBBKhelper, settings);
 }
 
 
