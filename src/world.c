@@ -302,6 +302,40 @@ void forEveryParticleOfD(Strand *s,
 		f(&s->all[i], data);
 }
 
+
+/* ===== PARALLEL ITERATION FUNCTIONS ===== */
+
+/* loop over every particle in the world in parallel */
+void forEveryParticlePar(void (*f)(Particle *p))
+{
+	for (int s = 0; s < world.numStrands; s++)
+		forEveryParticleOfPar(&world.strands[s], f);
+}
+/* loop over every particle in the world in parallel, pass [D]ata to the 
+ * function */
+void forEveryParticleParD(void (*f)(Particle *p, void *data), void *data)
+{
+	for (int s = 0; s < world.numStrands; s++)
+		forEveryParticleOfParD(&world.strands[s], f, data);
+}
+/* loop over every particle in the strand in parallel */
+void forEveryParticleOfPar(Strand *s, void (*f)(Particle *p))
+{
+	OPENMP(parallel for)
+	for (int i = 0; i < 3 * s->numMonomers; i++)
+		f(&s->all[i]);
+}
+/* loop over every particle in the strand, pass [D]ata to the function */
+void forEveryParticleOfParD(Strand *s,
+			void (*f)(Particle *p, void *data), void *data)
+{
+	OPENMP(parallel for)
+	for (int i = 0; i < 3 * s->numMonomers; i++)
+		f(&s->all[i], data);
+}
+
+
+
 Particle *getConnectedParticle(Particle *p)
 {
 	Strand *s = p->strand;

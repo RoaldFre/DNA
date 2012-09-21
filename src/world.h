@@ -114,6 +114,15 @@ void forEveryParticleOf(Strand *s, void (*f)(Particle *p));
 void forEveryParticleOfD(Strand *s,
 			void (*f)(Particle *p, void *data), void *data);
 
+/* Parallel */
+void forEveryParticlePar(void (*f)(Particle *p));
+void forEveryParticleParD(void (*f)(Particle *p, void *data), void *data);
+void forEveryParticleOfPar(Strand *s, void (*f)(Particle *p));
+void forEveryParticleOfParD(Strand *s,
+			void (*f)(Particle *p, void *data), void *data);
+
+
+
 /* Returns the connected particle to the given one, as determined by the 
  * strand it's in. Returns NULL if no such particle exists.
  * Particles are ordered to avoid doubles: this has the pleasant 
