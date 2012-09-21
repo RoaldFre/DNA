@@ -3,6 +3,8 @@
 
 #include "system.h"
 
+/* Integrator stuff */
+
 typedef enum {
 	LANGEVIN,
 	VERLET
@@ -43,7 +45,27 @@ void setTimeStep(double dt);
 /* Get the simulated time. */
 double getTime(void);
 
+
+
+/* Heat bath stuff */
+
 double getHeatBathTemperature(void);
 void setHeatBathTemperature(double temperature);
+
+typedef struct {
+	/* Set the heat bath temperature to <temperature> at time <time>. */
+	double time;
+	double temperature;
+} TemperatureSetpoint;
+
+typedef struct {
+	/* <setpoints> is a list that is SORTED ON INCREASING TIME and 
+	 * consists in total of <numSetpoints> temperature setpoints. The 
+	 * pointer must remain valid throughout the simulation run. */
+	TemperatureSetpoint* setpoints;
+	int numSetpoints;
+} TemperatureTable;
+
+Task makeTemperatureTask(TemperatureTable table);
 
 #endif
