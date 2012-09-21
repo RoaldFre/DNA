@@ -41,18 +41,20 @@ typedef struct {
 	int index;
 } TemperatureState;
 
-static void temperatureTaskTick(void *state)
+static TaskSignal temperatureTaskTick(void *state)
 {
 	TemperatureState *ts = (TemperatureState*) state;
 	if (ts->index >= ts->table.numSetpoints)
-		return;
+		return TASK_OK;
 
 	TemperatureSetpoint setpoint = ts->table.setpoints[ts->index];
 	if (setpoint.time < getTime())
-		return;
+		return TASK_OK;
 
 	setHeatBathTemperature(setpoint.temperature);
 	ts->index++;
+
+	return TASK_OK;
 }
 
 Task makeTemperatureTask(TemperatureTable table)
