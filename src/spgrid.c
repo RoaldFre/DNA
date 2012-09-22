@@ -39,11 +39,11 @@ static Box *grid; /* All boxes in the spgrid. */
 static Box *occupiedBoxes; /* First element in linked list of boxes that 
 			      contain particles, or NULL if all boxes are 
 			      empty. */
-static double boxSize = 0; /* Linear length of one box. */
+static real boxSize = 0; /* Linear length of one box. */
 static int nb = 0; /* Number of Boxes in one dimension. Total number of 
 		      boxes is nb^3. Total volume of the grid is 
 		      (nb*boxSize)^3. */
-static double gridSize; /* nb * boxSize -- cached for performance */
+static real gridSize; /* nb * boxSize -- cached for performance */
 static int gridNumParticles = 0; /* Total number of particles in the grid. For 
 				consistency checking only! */
 
@@ -101,7 +101,7 @@ static void removeNonOccupiedBox(Box *emptyBox)
 }
 
 
-bool allocGrid(int numBoxes, double size)
+bool allocGrid(int numBoxes, real size)
 {
 	assert(grid == NULL && nb == 0);
 	grid = calloc(numBoxes * numBoxes * numBoxes, sizeof(*grid));
@@ -215,19 +215,19 @@ void reboxParticles(void)
 /* Precondition: particle must be within the grid. */
 static Box *boxFromParticle(const Particle *p)
 {
-	double gs = gridSize;
+	real gs = gridSize;
 	/* shift coordinates from [-gs/2 to gs/2] to [0 to gs] */
-	Vec3 shifted = add(p->pos, (Vec3) {gs/2.0, gs/2.0, gs/2.0});
+	Vec3 shifted = add(p->pos, vec3(gs/2.0, gs/2.0, gs/2.0));
 
 	assert(p != NULL);
-	assert(!isnan(p->pos.x) && !isnan(p->pos.y) && !isnan(p->pos.z));
-	assert(0 <= shifted.x  &&  shifted.x < gs);
-	assert(0 <= shifted.y  &&  shifted.y < gs);
-	assert(0 <= shifted.z  &&  shifted.z < gs);
+	assert(!isnan(p->pos.xyz[X]) && !isnan(p->pos.xyz[Y]) && !isnan(p->pos.xyz[Z]));
+	assert(0 <= shifted.xyz[X]  &&  shifted.xyz[X] < gs);
+	assert(0 <= shifted.xyz[Y]  &&  shifted.xyz[Y] < gs);
+	assert(0 <= shifted.xyz[Z]  &&  shifted.xyz[Z] < gs);
 
-	int ix = shifted.x / boxSize;
-	int iy = shifted.y / boxSize;
-	int iz = shifted.z / boxSize;
+	int ix = shifted.xyz[X] / boxSize;
+	int iy = shifted.xyz[Y] / boxSize;
+	int iz = shifted.xyz[Z] / boxSize;
 
 	return boxFromIndex(ix, iy, iz);
 }
@@ -235,14 +235,14 @@ static Box *boxFromParticle(const Particle *p)
 static Box *boxFromNonPeriodicParticle(const Particle *p)
 {
 	assert(p != NULL);
-	assert(!isnan(p->pos.x) && !isnan(p->pos.y) && !isnan(p->pos.z));
+	assert(!isnan(p->pos.xyz[X]) && !isnan(p->pos.xyz[Y]) && !isnan(p->pos.xyz[Z]));
 
-	double gs = gridSize;
-	Vec3 shifted = add(p->pos, (Vec3) {gs/2.0, gs/2.0, gs/2.0});
+	real gs = gridSize;
+	Vec3 shifted = add(p->pos, vec3(gs/2.0, gs/2.0, gs/2.0));
 
-	int ix = shifted.x / boxSize;
-	int iy = shifted.y / boxSize;
-	int iz = shifted.z / boxSize;
+	int ix = shifted.xyz[X] / boxSize;
+	int iy = shifted.xyz[Y] / boxSize;
+	int iz = shifted.xyz[Z] / boxSize;
 
 	return boxFromNonPeriodicIndex(ix, iy, iz);
 }
@@ -335,7 +335,7 @@ static void visitNeighbours(Box *box, Box *neighbour,
 		/* if neighbour == box: it's our own box!
 		 * else: only check boxes that have a 
 		 * strictly larger pointer value to avoid 
-		 * double work. */
+		 * real work. */
 
 	if (neighbour->n == 0)
 		return;
@@ -537,11 +537,11 @@ Vec3 nearestImageVector(Vec3 v1, Vec3 v2)
 	return fastPeriodic(gridSize, sub(v2, v1));
 }
 
-double nearestImageDistance(Vec3 v1, Vec3 v2)
+real nearestImageDistance(Vec3 v1, Vec3 v2)
 {
 	return length(nearestImageVector(v1, v2));
 }
-double nearestImageDistance2(Vec3 v1, Vec3 v2)
+real nearestImageDistance2(Vec3 v1, Vec3 v2)
 {
 	return length2(nearestImageVector(v1, v2));
 }
@@ -614,7 +614,7 @@ bool forEveryPairCheck(void)
 					/* if b == box: it's our own box!
 					 * else: only check boxes that have 
 					 * a strictly larger pointer value 
-					 * to avoid double counting. */
+					 * to avoid real counting. */
 				int n2 = b->n;
 				correctCount += n1 * n2;
 			}

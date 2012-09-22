@@ -3,31 +3,31 @@
 #include "integrator.h"
 #include "spgrid.h"
 
-static double heatBathTemperature;
+static real heatBathTemperature;
 
-__inline__ void setHeatBathTemperature(double temperature)
+__inline__ void setHeatBathTemperature(real temperature)
 {
 	heatBathTemperature = temperature;
 }
-__inline__ double getHeatBathTemperature(void)
+__inline__ real getHeatBathTemperature(void)
 {
 	return heatBathTemperature;
 }
 
-static double timeStep;
+static real timeStep;
 
-__inline__ double getTimeStep(void)
+__inline__ real getTimeStep(void)
 {
 	return timeStep;
 }
-__inline__ void setTimeStep(double dt)
+__inline__ void setTimeStep(real dt)
 {
 	timeStep = dt;
 }
 
-static double simulationTime = 0;
+static real simulationTime = 0;
 
-double getTime(void)
+real getTime(void)
 {
 	return simulationTime;
 }
@@ -78,22 +78,22 @@ Task makeTemperatureTask(TemperatureTable table)
 
 static void thermostatHelper(Particle *p, void *data)
 {
-	double lambda = *(double*) data;
+	real lambda = *(real*) data;
 	p->vel = scale(p->vel, lambda);
 }
 /* Berendsen thermostat */
-static void thermostat(double tau)
+static void thermostat(real tau)
 {
 	if (tau <= 0)
 		return;
 
 	/* Mass and Boltzmann constant are 1 */ 
-	double Tk = getKineticTemperature();
+	real Tk = getKineticTemperature();
 	assert(isSaneNumber(Tk));
-	double T0 = getHeatBathTemperature();
-	double dt = getTimeStep();
-	double lambda2 = 1 + dt/tau * (T0/Tk - 1);
-	double lambda;
+	real T0 = getHeatBathTemperature();
+	real dt = getTimeStep();
+	real lambda2 = 1 + dt/tau * (T0/Tk - 1);
+	real lambda;
 	if (lambda2 >= 0)
 		lambda = sqrt(lambda2);
 	else
@@ -104,7 +104,7 @@ static void thermostat(double tau)
 
 static void verletHelper1(Particle *p)
 {
-	double dt = getTimeStep();
+	real dt = getTimeStep();
 
 	if (DEBUG_VECTOR_SANITY) {
 		debugVectorSanity(p->pos, "start verletHelper1");
@@ -132,7 +132,7 @@ static void verletHelper1(Particle *p)
 }
 static void verletHelper2(Particle *p)
 {
-	double dt = getTimeStep();
+	real dt = getTimeStep();
 
 	if (DEBUG_VECTOR_SANITY) {
 		debugVectorSanity(p->pos, "start verletHelper2");
@@ -165,9 +165,9 @@ static void langevinBBKhelper(Particle *p, void *data)
 {
 	LangevinSettings *settings = (LangevinSettings*) data;
 
-	double dt = getTimeStep();
-	double g  = settings->gamma;
-	double T  = getHeatBathTemperature();
+	real dt = getTimeStep();
+	real g  = settings->gamma;
+	real T  = getHeatBathTemperature();
 
 	if (DEBUG_VECTOR_SANITY) {
 		debugVectorSanity(p->pos, "start langevinBBKhelper");
@@ -182,7 +182,7 @@ static void langevinBBKhelper(Particle *p, void *data)
 	/* Regular forces have been calculated. Add the random force due 
 	 * to collisions to the total force. The result is:
 	 * p->F = F(t + dt) + R(t + dt) */
-	double Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * g * p->m / dt);
+	real Rstddev = sqrt(2 * BOLTZMANN_CONSTANT * T * g * p->m / dt);
 	Vec3 R = randNormVec(Rstddev);
 	debugVectorSanity(R, "randNormVec in langevinBBKhelper");
 	p->F = add(p->F, R);
@@ -245,8 +245,8 @@ static void stepPhysics(Integrator integrator)
 typedef struct
 {
 	Integrator integrator;
-	double reboxInterval;
-	double lastReboxTime;
+	real reboxInterval;
+	real lastReboxTime;
 } IntegratorState;
 /* The integrator task is responsible for handeling the space partition 
  * grid */

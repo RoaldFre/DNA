@@ -9,7 +9,7 @@
 #include "spgrid.h"
 
 static InteractionSettings interactions;
-static double truncationLenSq; /* Cached: interactions.truncationLen^2 */
+static real truncationLenSq; /* Cached: interactions.truncationLen^2 */
 
 void registerInteractionSettings(InteractionSettings interactionSettings)
 {
@@ -27,12 +27,12 @@ void registerInteractionSettings(InteractionSettings interactionSettings)
  *   r2   = (actual distance r)^2
  * result:
  *   V = epsilon * [ (r_eq / r)^12  -  2*(r_eq / r)^6] */
-static double calcVLJ(double epsilon, double rEq2, double r2)
+static real calcVLJ(real epsilon, real rEq2, real r2)
 {
-	double rfrac2  = rEq2 / r2;
-	double rfrac4  = SQUARE(rfrac2);
-	double rfrac6  = rfrac4 * rfrac2;
-	double rfrac12 = SQUARE(rfrac6);
+	real rfrac2  = rEq2 / r2;
+	real rfrac4  = SQUARE(rfrac2);
+	real rfrac6  = rfrac4 * rfrac2;
+	real rfrac12 = SQUARE(rfrac6);
 	return epsilon * (rfrac12 - 2*rfrac6);
 }
 /* Generic Lennard-Jones with potential depth epsilon. Returns the Force 
@@ -43,12 +43,12 @@ static double calcVLJ(double epsilon, double rEq2, double r2)
  *   r2   = (actual distance r)^2
  * result:
  *   F/r = 12 * epsilon * [ r_eq^6 / r^8  -  r_eq^12 / r^14 ] */
-static double calcFLJperDistance(double epsilon, double rEq2, double r2)
+static real calcFLJperDistance(real epsilon, real rEq2, real r2)
 {
-	double rfrac2  = rEq2 / r2;
-	double rfrac4  = SQUARE(rfrac2);
-	double rfrac6  = rfrac4 * rfrac2;
-	double rfrac12 = SQUARE(rfrac6);
+	real rfrac2  = rEq2 / r2;
+	real rfrac4  = SQUARE(rfrac2);
+	real rfrac6  = rfrac4 * rfrac2;
+	real rfrac12 = SQUARE(rfrac6);
 	return 12 * epsilon * (rfrac6 - rfrac12) / r2;
 }
 
@@ -56,27 +56,27 @@ static double calcFLJperDistance(double epsilon, double rEq2, double r2)
 /* BOND */
 /* V = k1 * (dr - d0)^2  +  k2 * (d - d0)^4
  * where dr is the distance between the particles */
-static double Vbond(Particle *p1, Particle *p2, double d0)
+static real Vbond(Particle *restrict p1, Particle *restrict p2, real d0)
 {
 	if (!interactions.enableBond)
 		return 0;
-	double k1 = BOND_K1;
-	double k2 = BOND_K2;
-	double d = nearestImageDistance(p1->pos, p2->pos) - d0;
-	double d2 = d * d;
-	double d4 = d2 * d2;
+	real k1 = BOND_K1;
+	real k2 = BOND_K2;
+	real d = nearestImageDistance(p1->pos, p2->pos) - d0;
+	real d2 = d * d;
+	real d4 = d2 * d2;
 	return k1 * d2  +  k2 * d4;
 }
-static void Fbond(Particle *p1, Particle *p2, double d0)
+static void Fbond(Particle *restrict p1, Particle *restrict p2, real d0)
 {
 	if (!interactions.enableBond)
 		return;
-	double k1 = BOND_K1;
-	double k2 = BOND_K2;
+	real k1 = BOND_K1;
+	real k2 = BOND_K2;
 	Vec3 drVec = nearestImageVector(p1->pos, p2->pos);
-	double dr = length(drVec);
-	double d  = dr - d0;
-	double d3 = d * d * d;
+	real dr = length(drVec);
+	real d  = dr - d0;
+	real d3 = d * d * d;
 
 	Vec3 drVecNormalized = scale(drVec, 1/dr);
 	Vec3 F = scale(drVecNormalized, 2*k1*d + 4*k2*d3);
@@ -86,7 +86,7 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
 	p1->F = add(p1->F, F);
 	p2->F = sub(p2->F, F);
 }
-static double getSugarBaseBondDistance(ParticleType base)
+static real getSugarBaseBondDistance(ParticleType base)
 {
 	switch (base) {
 		case BASE_A: return BOND_S_A;
@@ -97,12 +97,12 @@ static double getSugarBaseBondDistance(ParticleType base)
 	}
 }
 /* Bond between a sugar and a base */
-static double VbondSB(Particle *sugar, Particle *base)
+static real VbondSB(Particle *restrict sugar, Particle *restrict base)
 {
 	assert(sugar->type == SUGAR);
 	return Vbond(sugar, base, getSugarBaseBondDistance(base->type));
 }
-static void FbondSB(Particle *sugar, Particle *base)
+static void FbondSB(Particle *restrict sugar, Particle *restrict base)
 {
 	assert(sugar->type == SUGAR);
 	Fbond(sugar, base, getSugarBaseBondDistance(base->type));
@@ -118,8 +118,8 @@ static void FbondSB(Particle *sugar, Particle *base)
  *        p2
  */
 typedef struct {
-	double P5SB;
-	double P3SB;
+	real P5SB;
+	real P3SB;
 } AngleBaseInfo;
 static AngleBaseInfo getAngleBaseInfo(ParticleType base)
 {
@@ -148,43 +148,43 @@ static AngleBaseInfo getAngleBaseInfo(ParticleType base)
 	return info;
 }
 
-static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
+static real Vangle(Particle *restrict p1, Particle *restrict p2, Particle *restrict p3, real theta0)
 {
 	if (!interactions.enableAngle)
 		return 0;
 	Vec3 a, b;
-	double ktheta = ANGLE_COUPLING;
+	real ktheta = ANGLE_COUPLING;
 	
 	a = nearestImageVector(p2->pos, p1->pos);
 	b = nearestImageVector(p2->pos, p3->pos);
 
-	double dtheta = angle(a, b) - theta0;
+	real dtheta = angle(a, b) - theta0;
 	return ktheta/2 * dtheta*dtheta;
 }
-static double VangleP5SB(Particle *p, Particle *s, Particle *b)
+static real VangleP5SB(Particle *restrict p, Particle *restrict s, Particle *restrict b)
 {
 	AngleBaseInfo info = getAngleBaseInfo(b->type);
 	return Vangle(p, s, b, info.P5SB);
 }
-static double VangleP3SB(Particle *p, Particle *s, Particle *b)
+static real VangleP3SB(Particle *restrict p, Particle *restrict s, Particle *restrict b)
 {
 	AngleBaseInfo info = getAngleBaseInfo(b->type);
 	return Vangle(p, s, b, info.P3SB);
 }
-static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
+static void Fangle(Particle *restrict p1, Particle *restrict p2, Particle *restrict p3, real theta0)
 {
 	if (!interactions.enableAngle)
 		return;
 	Vec3 a, b;
-	double ktheta = ANGLE_COUPLING;
+	real ktheta = ANGLE_COUPLING;
 	
 	a = nearestImageVector(p2->pos, p1->pos);
 	b = nearestImageVector(p2->pos, p3->pos);
 	
-	double lal = length(a);
-	double lbl = length(b);
-	double adotb = dot(a, b);
-	double costheta = adotb / (lal * lbl);
+	real lal = length(a);
+	real lbl = length(b);
+	real adotb = dot(a, b);
+	real costheta = adotb / (lal * lbl);
 
 	if (UNLIKELY(fabs(costheta) >= 1 - 1e-5))
 		/* Note, sometimes |costheta| > 1, due to numerical errors!
@@ -195,8 +195,8 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 		 * below. */
 		return;
 
-	double theta = acos(costheta);
-	double sintheta = sqrt(1 - costheta*costheta);
+	real theta = acos(costheta);
+	real sintheta = sqrt(1 - costheta*costheta);
 	/* Note: the positive sign for the square root is always correct, 
 	 * because the angle is always less than 180 degrees! */
 
@@ -218,15 +218,15 @@ static void Fangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
 	debugVectorSanity(F2, "Fangle F2");
 	p2->F = sub(p2->F, F2);	
 
-	assert(fabs(dot(a, F1) / length(a) / length(F1)) < 1e-5);
-	assert(fabs(dot(b, F3) / length(b) / length(F3)) < 1e-5);
+	assert(fabs(dot(a, F1) / length(a) / length(F1)) < REAL_EPSILON);
+	assert(fabs(dot(b, F3) / length(b) / length(F3)) < REAL_EPSILON);
 }
-static void FangleP5SB(Particle *p, Particle *s, Particle *b)
+static void FangleP5SB(Particle *restrict p, Particle *restrict s, Particle *restrict b)
 {
 	AngleBaseInfo info = getAngleBaseInfo(b->type);
 	Fangle(p, s, b, info.P5SB);
 }
-static void FangleP3SB(Particle *p, Particle *s, Particle *b)
+static void FangleP3SB(Particle *restrict p, Particle *restrict s, Particle *restrict b)
 {
 	AngleBaseInfo info = getAngleBaseInfo(b->type);
 	Fangle(p, s, b, info.P3SB);
@@ -235,8 +235,8 @@ static void FangleP3SB(Particle *p, Particle *s, Particle *b)
 
 /* DIHEDRAL */
 typedef struct {
-	double sinDihedral;
-	double cosDihedral;
+	real sinDihedral;
+	real cosDihedral;
 } DihedralCache;
 
 typedef struct {
@@ -248,7 +248,7 @@ static DihedralBaseInfo dihedralsBases[NUM_BASE_TYPES];
 static DihedralCache dihedralP5S3P5S;
 static DihedralCache dihedralS3P5S3P;
 
-static DihedralCache makeDihedralCache(double dihedralAngle)
+static DihedralCache makeDihedralCache(real dihedralAngle)
 {
 	DihedralCache ret;
 	ret.sinDihedral = sin(dihedralAngle);
@@ -274,7 +274,7 @@ static void initDihedralCache(void)
 }
 
 /* V = k * (1 - cos(phi - phi0)) */
-static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
+static real Vdihedral(Particle *restrict p1, Particle *restrict p2, Particle *restrict p3, Particle *restrict p4,
 							DihedralCache phi0)
 {
 	if (!interactions.enableDihedral)
@@ -289,23 +289,23 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	 * We can easily compute cos(phi) and sin(phi) and we have:
 	 *    cos(phi - phi0) = cos(phi)cos(phi0) + sin(phi)sin(phi0)
 	 */
-	double sinPhi, cosPhi;
+	real sinPhi, cosPhi;
 	sinCosDihedral(r1, r2, r3, &sinPhi, &cosPhi);
 
-	double sinPhi0 = phi0.sinDihedral;
-	double cosPhi0 = phi0.cosDihedral;
+	real sinPhi0 = phi0.sinDihedral;
+	real cosPhi0 = phi0.cosDihedral;
 
-	double cosPhiPhi0 = cosPhi*cosPhi0 + sinPhi*sinPhi0;
+	real cosPhiPhi0 = cosPhi*cosPhi0 + sinPhi*sinPhi0;
 	return DIHEDRAL_COUPLING * (1 - cosPhiPhi0);
 }
-static double VdihedralBS3P5S(Particle *b, Particle *s1,
-				Particle *p, Particle *s2)
+static real VdihedralBS3P5S(Particle *restrict b, Particle *restrict s1,
+				Particle *restrict p, Particle *restrict s2)
 {
 	assert(0 <= b->type && b->type < 4);
 	return Vdihedral(b, s1, p, s2, dihedralsBases[b->type].BS3P5S);
 }
-static double VdihedralS3P5SB(Particle *s1, Particle *p,
-				Particle *s2, Particle *b)
+static real VdihedralS3P5SB(Particle *restrict s1, Particle *restrict p,
+				Particle *restrict s2, Particle *restrict b)
 {
 	assert(0 <= b->type && b->type < 4);
 	return Vdihedral(s1, p, s2, b, dihedralsBases[b->type].S3P5SB);
@@ -335,13 +335,13 @@ static double VdihedralS3P5SB(Particle *s1, Particle *p,
 static __inline__ Mat3 crossProdTransposedJacobian(Vec3 r12, Vec3 r23, int i)
 {
 	/* *Transposed* matrix form of the cross product. */
-	Mat3 r12matrCrossProd = mat3(   0,    r12.z, -r12.y,
-	                             -r12.z,    0,    r12.x,
-	                              r12.y, -r12.x,    0   );
+	Mat3 r12matrCrossProd = mat3(   0,    r12.xyz[Z], -r12.xyz[Y],
+	                             -r12.xyz[Z],    0,    r12.xyz[X],
+	                              r12.xyz[Y], -r12.xyz[X],    0   );
 	/* *Transposed* matrix form of the cross product. */
-	Mat3 r23matrCrossProd = mat3(   0,    r23.z, -r23.y,
-	                             -r23.z,    0,    r23.x,
-	                              r23.y, -r23.x,    0   );
+	Mat3 r23matrCrossProd = mat3(   0,    r23.xyz[Z], -r23.xyz[Y],
+	                             -r23.xyz[Z],    0,    r23.xyz[X],
+	                              r23.xyz[Y], -r23.xyz[X],    0   );
 
 	switch (i) {
 	case 1:
@@ -399,7 +399,7 @@ static __inline__ Mat3 crossProdTransposedJacobian(Vec3 r12, Vec3 r23, int i)
  * debugged first), otherwise you get a badly conditioned problem and you 
  * will experience blow up.
  */
-static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
+static void Fdihedral(Particle *restrict p1, Particle *restrict p2, Particle *restrict p3, Particle *restrict p4,
 							DihedralCache phi0)
 {
 	if (!interactions.enableDihedral)
@@ -409,23 +409,23 @@ static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	Vec3 r23 = nearestImageVector(p2->pos, p3->pos);
 	Vec3 r34 = nearestImageVector(p3->pos, p4->pos);
 
-	double sinPhi, cosPhi; //TODO find better algorithm to only compute sinPhi
+	real sinPhi, cosPhi; //TODO find better algorithm to only compute sinPhi
 	sinCosDihedral(r12, r23, r34, &sinPhi, &cosPhi);
 	if (UNLIKELY(fabs(sinPhi) < 1e-5)) //TODO just check for ==0? -> saves an fabs!
 		return; /* (Unstable) equilibrium. */
 
-	double sinPhi0 = phi0.sinDihedral;
-	double cosPhi0 = phi0.cosDihedral;
+	real sinPhi0 = phi0.sinDihedral;
+	real cosPhi0 = phi0.cosDihedral;
 
 	Vec3 A = cross(r12, r23);
 	Vec3 B = cross(r23, r34);
 
-	double lAl2 = length2(A);
-	double lBl2 = length2(B);
-	double lAl2lBl2 = lAl2 * lBl2;
-	double lAllBl = sqrt(lAl2lBl2);
-	double AdB = dot(A, B);
-	double negGradPrefactor = DIHEDRAL_COUPLING * (cosPhi0 / lAllBl
+	real lAl2 = length2(A);
+	real lBl2 = length2(B);
+	real lAl2lBl2 = lAl2 * lBl2;
+	real lAllBl = sqrt(lAl2lBl2);
+	real AdB = dot(A, B);
+	real negGradPrefactor = DIHEDRAL_COUPLING * (cosPhi0 / lAllBl
 					- sinPhi0/sinPhi * AdB/lAl2lBl2);
 	/* -grad_A(V) */
 	Vec3 negGrad_AV = scale(
@@ -462,13 +462,13 @@ static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 	p4->F = add(p4->F, F4);
 }
 
-static void FdihedralBS3P5S(Particle *b, Particle *s1,
-				Particle *p, Particle *s2)
+static void FdihedralBS3P5S(Particle *restrict b, Particle *restrict s1,
+				Particle *restrict p, Particle *restrict s2)
 {
 	Fdihedral(b, s1, p, s2, dihedralsBases[b->type].BS3P5S);
 }
-static void FdihedralS3P5SB(Particle *s1, Particle *p,
-				Particle *s2, Particle *b)
+static void FdihedralS3P5SB(Particle *restrict s1, Particle *restrict p,
+				Particle *restrict s2, Particle *restrict b)
 {
 	Fdihedral(s1, p, s2, b, dihedralsBases[b->type].S3P5SB);
 }
@@ -476,7 +476,7 @@ static void FdihedralS3P5SB(Particle *s1, Particle *p,
 
 /* STACKING */
 typedef struct {
-	double r, phi, z;
+	real r, phi, z;
 } HelixInfo;
 static HelixInfo getHelixInfo(ParticleType t)
 {
@@ -492,13 +492,13 @@ static HelixInfo getHelixInfo(ParticleType t)
 	}
 	return info;
 }
-static double helixDistance2(HelixInfo bot, HelixInfo top,
-		double delta_z, double delta_phi)
+static real helixDistance2(HelixInfo bot, HelixInfo top,
+		real delta_z, real delta_phi)
 {
-	double dz = top.z - bot.z + delta_z;
-	double dphi = top.phi - bot.phi + delta_phi;
-	Vec3 low  = (Vec3) {bot.r, 0, 0};
-	Vec3 high = (Vec3) {top.r * cos(dphi), top.r * sin(dphi), dz};
+	real dz = top.z - bot.z + delta_z;
+	real dphi = top.phi - bot.phi + delta_phi;
+	Vec3 low  = vec3(bot.r, 0, 0);
+	Vec3 high = vec3(top.r * cos(dphi), top.r * sin(dphi), dz);
 	return distance2(low, high);
 }
 
@@ -515,7 +515,7 @@ static double helixDistance2(HelixInfo bot, HelixInfo top,
  *   1 for immediate neighbours i and i+1
  *   2 for   next    neighbours i and i+2
  *   n for           neighbours i and i+n */
-static double neighbourStackDistance2(ParticleType t1, ParticleType t2, int monomerDistance)
+static real neighbourStackDistance2(ParticleType t1, ParticleType t2, int monomerDistance)
 {
 	HelixInfo hi1 = getHelixInfo(t1);
 	HelixInfo hi2 = getHelixInfo(t2);
@@ -528,24 +528,24 @@ static double neighbourStackDistance2(ParticleType t1, ParticleType t2, int mono
 /* monomerDistance:
  *   1 for immediate neighbours (i and i+1)
  *   2 for   next    neighbours (i and i+2) */
-static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
+static real Vstack(Particle *restrict p1, Particle *restrict p2, int monomerDistance)
 {
 	assert(isBase(p1->type) && isBase(p2->type));
 
 	if (!interactions.enableStack)
 		return 0;
 
-	double rSq = nearestImageDistance2(p1->pos, p2->pos);
+	real rSq = nearestImageDistance2(p1->pos, p2->pos);
 	if (rSq > truncationLenSq)
 		return 0;
 
-	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
+	real rEqSq = neighbourStackDistance2(p1->type, p2->type,
 						monomerDistance);
-	double V = calcVLJ(STACK_COUPLING, rEqSq, rSq)
+	real V = calcVLJ(STACK_COUPLING, rEqSq, rSq)
 			- calcVLJ(STACK_COUPLING, rEqSq, truncationLenSq); //TODO cache correction!
 	return V;
 }
-static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
+static void Fstack(Particle *restrict p1, Particle *restrict p2, int monomerDistance)
 {
 	assert(isBase(p1->type) && isBase(p2->type));
 
@@ -553,13 +553,13 @@ static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 		return;
 
 	Vec3 r = nearestImageVector(p1->pos, p2->pos);
-	double rSq = length2(r);
+	real rSq = length2(r);
 	if (rSq > truncationLenSq)
 		return;
 
-	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
+	real rEqSq = neighbourStackDistance2(p1->type, p2->type,
 						monomerDistance);
-	double FperDist = calcFLJperDistance(STACK_COUPLING, rEqSq, rSq);
+	real FperDist = calcFLJperDistance(STACK_COUPLING, rEqSq, rSq);
 	Vec3 F = scale(r, FperDist);
 	debugVectorSanity(F, "Fstack");
 	p1->F = add(p1->F, F);
@@ -569,8 +569,8 @@ static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 
 /* BASE PAIRING */
 typedef struct {
-	double coupling; /* Coupling strength */
-	double distance2; /* Coupling distance squared */
+	real coupling; /* Coupling strength */
+	real distance2; /* Coupling distance squared */
 } BasePairInfo;
 /* Returns the BasePairInfo for the given types. If the given types do not 
  * constitute a valid base pair, then coupling and distance are set to -1. */
@@ -620,22 +620,22 @@ static BasePairInfo getBasePairInfo(Particle *p1, Particle *p2)
 	return bpi;
 }
 /* Returns true for pairs of particles that can form a base pair binding. */
-static bool isBondedBasePair(Particle *p1, Particle *p2)
+static bool isBondedBasePair(Particle *restrict p1, Particle *restrict p2)
 {
 	BasePairInfo bpi = getBasePairInfo(p1, p2);
 	return bpi.coupling > 0;
 }
-static double calcVbasePair(BasePairInfo bpi, double rsquared)
+static real calcVbasePair(BasePairInfo bpi, real rsquared)
 {
-	double rfrac2 = bpi.distance2 / rsquared;
-	double rfrac4 = rfrac2 * rfrac2;
-	double rfrac8 = rfrac4 * rfrac4;
-	double rfrac10 = rfrac8 * rfrac2;
-	double rfrac12 = rfrac8 * rfrac4;
+	real rfrac2 = bpi.distance2 / rsquared;
+	real rfrac4 = rfrac2 * rfrac2;
+	real rfrac8 = rfrac4 * rfrac4;
+	real rfrac10 = rfrac8 * rfrac2;
+	real rfrac12 = rfrac8 * rfrac4;
 	
 	return bpi.coupling * (5*rfrac12 - 6*rfrac10 + 1);
 }
-double VbasePair(Particle *p1, Particle *p2)
+real VbasePair(Particle *restrict p1, Particle *restrict p2)
 {
 	if (!interactions.enableBasePair)
 		return 0;
@@ -644,25 +644,25 @@ double VbasePair(Particle *p1, Particle *p2)
 	if (bpi.coupling < 0)
 		return 0; /* Wrong pair */
 	
-	double rsq = nearestImageDistance2(p1->pos, p2->pos);
+	real rsq = nearestImageDistance2(p1->pos, p2->pos);
 	if (rsq > truncationLenSq)
 		return 0; /* Too far away */
 
 	return calcVbasePair(bpi, rsq) - calcVbasePair(bpi, truncationLenSq);
 }
 
-static double calcFbasePair(BasePairInfo bpi, double r)
+static real calcFbasePair(BasePairInfo bpi, real r)
 {
-	double rfrac2 = bpi.distance2 / (r * r);
-	double rfrac4 = rfrac2 * rfrac2;
-	double rfrac8 = rfrac4 * rfrac4;
-	double rfrac10 = rfrac8 * rfrac2;
-	double rfrac12 = rfrac10 * rfrac2;
+	real rfrac2 = bpi.distance2 / (r * r);
+	real rfrac4 = rfrac2 * rfrac2;
+	real rfrac8 = rfrac4 * rfrac4;
+	real rfrac10 = rfrac8 * rfrac2;
+	real rfrac12 = rfrac10 * rfrac2;
 				
 	return bpi.coupling * 60 * (rfrac12 - rfrac10) / r;
 }
 
-static void FbasePair(Particle *p1, Particle *p2)
+static void FbasePair(Particle *restrict p1, Particle *restrict p2)
 {
 	if (!interactions.enableBasePair)
 		return;
@@ -672,13 +672,13 @@ static void FbasePair(Particle *p1, Particle *p2)
 		return; /* Wrong pair */
 	
 	Vec3 rVec = nearestImageVector(p1->pos, p2->pos);
-	double r = length(rVec);
+	real r = length(rVec);
 	if (r > interactions.truncationLen)
 		return; /* Too far away */
 
 	Vec3 direction = scale(rVec, 1/r);
 
-	double force = calcFbasePair(bpi, r);
+	real force = calcFbasePair(bpi, r);
 	Vec3 forceVec = scale(direction, force);
 	debugVectorSanity(forceVec, "FbasePair");
 
@@ -691,7 +691,7 @@ static void FbasePair(Particle *p1, Particle *p2)
 /* EXCLUSION */
 /* Two particles feel exclusion forces if they are not connected by a 
  * direct bond. */
-static bool feelExclusion(Particle *p1, Particle *p2)
+static bool feelExclusion(Particle *restrict p1, Particle *restrict p2)
 {
 	if (p1->strand != p2->strand)
 		return true;
@@ -732,7 +732,7 @@ static bool feelExclusion(Particle *p1, Particle *p2)
 
 /* Return (the exclusion cut off distance)^2. This is the distance where 
  * the repulsive part of the Lennard Jones potential stops. */
-static double getExclusionCutOff2(ParticleType t1, ParticleType t2){
+static real getExclusionCutOff2(ParticleType t1, ParticleType t2){
 	if (isBase(t1) && isBase(t2))
 		return SQUARE(EXCLUSION_DISTANCE_BASE);
 	else
@@ -740,7 +740,7 @@ static double getExclusionCutOff2(ParticleType t1, ParticleType t2){
 }
 /* Only the repulsive part of a Lennard-Jones potential. (The potential 
  * gets lifted so it's zero at infinity.) */
-static double Vexclusion(Particle *p1, Particle *p2)
+static real Vexclusion(Particle *restrict p1, Particle *restrict p2)
 {
 	if (!interactions.enableExclusion)
 		return 0;
@@ -748,14 +748,14 @@ static double Vexclusion(Particle *p1, Particle *p2)
 	if (!feelExclusion(p1, p2))
 		return 0;
 
-	double cutOffSq = getExclusionCutOff2(p1->type, p2->type);
-	double rSq = nearestImageDistance2(p1->pos, p2->pos);
+	real cutOffSq = getExclusionCutOff2(p1->type, p2->type);
+	real rSq = nearestImageDistance2(p1->pos, p2->pos);
 	if (rSq > cutOffSq)
 		return 0;
 
 	return calcVLJ(EXCLUSION_COUPLING, cutOffSq, rSq) + EXCLUSION_COUPLING;
 }
-static void Fexclusion(Particle *p1, Particle *p2)
+static void Fexclusion(Particle *restrict p1, Particle *restrict p2)
 {
 	if (!interactions.enableExclusion)
 		return;
@@ -763,13 +763,13 @@ static void Fexclusion(Particle *p1, Particle *p2)
 	if (!feelExclusion(p1, p2))
 		return;
 
-	double cutOffSq = getExclusionCutOff2(p1->type, p2->type);
+	real cutOffSq = getExclusionCutOff2(p1->type, p2->type);
 	Vec3 r = nearestImageVector(p1->pos, p2->pos);
-	double rSq = length2(r);
+	real rSq = length2(r);
 	if (rSq > cutOffSq)
 		return;
 
-	double FperDist = calcFLJperDistance(EXCLUSION_COUPLING, cutOffSq, rSq);
+	real FperDist = calcFLJperDistance(EXCLUSION_COUPLING, cutOffSq, rSq);
 	Vec3 F = scale(r, FperDist);
 	debugVectorSanity(F, "Fexclusion");
 	p1->F = add(p1->F, F);
@@ -778,11 +778,11 @@ static void Fexclusion(Particle *p1, Particle *p2)
 
 
 /* COULOMB */
-static double calcInvDebyeLength(void)
+static real calcInvDebyeLength(void)
 {
-	double T = getHeatBathTemperature();
-	double saltCon = interactions.saltConcentration;
-	double lambdaBDenom, lambdaB;
+	real T = getHeatBathTemperature();
+	real saltCon = interactions.saltConcentration;
+	real lambdaBDenom, lambdaB;
 
 	if (T == 0)
 		return 1e100;
@@ -790,14 +790,14 @@ static double calcInvDebyeLength(void)
 	lambdaBDenom = 4 * M_PI * H2O_PERMETTIVITY
 			* BOLTZMANN_CONSTANT * T;
 	lambdaB = SQUARE(ELECTRON_CHARGE) / lambdaBDenom;
-	double invDebLength = sqrt(8 * M_PI * lambdaB * AVOGADRO * saltCon);
+	real invDebLength = sqrt(8 * M_PI * lambdaB * AVOGADRO * saltCon);
 	return invDebLength;
 }
-static double calcVCoulomb(double r)
+static real calcVCoulomb(real r)
 {
-	double couplingConstant = SQUARE(ELECTRON_CHARGE)
+	real couplingConstant = SQUARE(ELECTRON_CHARGE)
 				/ (4 * M_PI * H2O_PERMETTIVITY);
-	double exponentialPart = exp(-r * calcInvDebyeLength());
+	real exponentialPart = exp(-r * calcInvDebyeLength());
 	
 	return couplingConstant * exponentialPart / r;
 }
@@ -805,7 +805,7 @@ static bool isChargedPair(ParticleType t1, ParticleType t2)
 {
 	return t1 == PHOSPHATE  &&  t2 == PHOSPHATE;
 }
-static double VCoulomb(Particle *p1, Particle *p2)
+static real VCoulomb(Particle *restrict p1, Particle *restrict p2)
 {
 	if (!interactions.enableCoulomb)
 		return 0;
@@ -813,8 +813,8 @@ static double VCoulomb(Particle *p1, Particle *p2)
 	if (!isChargedPair(p1->type, p2->type))
 		return 0;
 
-	double truncLength = interactions.truncationLen;
-	double r = nearestImageDistance(p1->pos, p2->pos);
+	real truncLength = interactions.truncationLen;
+	real r = nearestImageDistance(p1->pos, p2->pos);
 
 	if (r > truncLength)
 		return 0; /* Too far away */
@@ -822,16 +822,16 @@ static double VCoulomb(Particle *p1, Particle *p2)
 	return calcVCoulomb(r) - calcVCoulomb(truncLength);
 }
 
-static double calcFCoulomb(double r)
+static real calcFCoulomb(real r)
 {
-	double couplingConstant = SQUARE(ELECTRON_CHARGE)
+	real couplingConstant = SQUARE(ELECTRON_CHARGE)
 				/ (4 * M_PI * H2O_PERMETTIVITY);
-	double k0 = calcInvDebyeLength(); //TODO cache per iteration (or whenever T changes)
-	double exponentialPart = exp(-r * k0);
+	real k0 = calcInvDebyeLength(); //TODO cache per iteration (or whenever T changes)
+	real exponentialPart = exp(-r * k0);
 	
 	return couplingConstant * exponentialPart * (k0 + 1/r) / r;
 }
-static void FCoulomb(Particle *p1, Particle *p2)
+static void FCoulomb(Particle *restrict p1, Particle *restrict p2)
 {	
 	if (!interactions.enableCoulomb)
 		return;
@@ -839,8 +839,8 @@ static void FCoulomb(Particle *p1, Particle *p2)
 	if (!isChargedPair(p1->type, p2->type))
 		return;
 
-	double truncLen = interactions.truncationLen;
-	double r = nearestImageDistance(p2->pos, p1->pos);
+	real truncLen = interactions.truncationLen;
+	real r = nearestImageDistance(p2->pos, p1->pos);
 	if (r > truncLen)
 		return; /* Too far away */
 	
@@ -859,7 +859,7 @@ static void FCoulomb(Particle *p1, Particle *p2)
 
 static void resetForce(Particle *p)
 {
-	p->F.x = p->F.y = p->F.z = 0;
+	p->F = vec3(0, 0, 0);
 }
 
 /* Calculate the forces on the particles of the strand that are attributed 
@@ -900,7 +900,7 @@ static void strandForces(Strand *s) {
 	}
 }
 
-static void mutuallyExclusivePairForces(Particle *p1, Particle *p2)
+static void mutuallyExclusivePairForces(Particle *restrict p1, Particle *restrict p2)
 {
 	/* Nonbonded pair interactions are mutually exclusive. See Knotts.
 	 * Note that this screws up energy conservation!! */
@@ -915,7 +915,7 @@ static void mutuallyExclusivePairForces(Particle *p1, Particle *p2)
 		Fexclusion(p1, p2);
 }
 
-static void pairForces(Particle *p1, Particle *p2)
+static void pairForces(Particle *restrict p1, Particle *restrict p2)
 {
 	/* Apply all forces at once, this should conserve energy (for the 
 	 * verlet integrator without thermal bath coupling). */
@@ -948,17 +948,17 @@ static void kineticHelper(Particle *p, void *data)
 {
 	assert(isSaneVector(p->vel));
 
-	double *twiceK = (double*) data;
+	real *twiceK = (real*) data;
 	*twiceK += p->m * length2(p->vel);
 }
-static double kineticEnergy(void)
+static real kineticEnergy(void)
 {
-	double twiceK = 0;
+	real twiceK = 0;
 	forEveryParticleD(&kineticHelper, (void*) &twiceK);
 	assert(isSaneNumber(twiceK));
 	return twiceK/2;
 }
-double getKineticTemperature(void)
+real getKineticTemperature(void)
 {
 	return 2.0 / (3.0 * BOLTZMANN_CONSTANT)
 			* kineticEnergy() / numParticles();
@@ -966,9 +966,9 @@ double getKineticTemperature(void)
 
 
 typedef struct PotentialEnergies {
-	double bond, angle, dihedral, stack, basePair, Coulomb, exclusion;
+	real bond, angle, dihedral, stack, basePair, Coulomb, exclusion;
 } PotentialEnergies;
-static void pairPotentials(Particle *p1, Particle *p2, void *data)
+static void pairPotentials(Particle *restrict p1, Particle *restrict p2, void *data)
 {
 	PotentialEnergies *pe = (PotentialEnergies*) data;
 	
@@ -982,10 +982,10 @@ static void pairPotentials(Particle *p1, Particle *p2, void *data)
 /* Add energy stats of given strand, in electronvolts. */
 static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 {
-	double Vb = 0;
-	double Va = 0;
-	double Vd = 0;
-	double Vs = 0;
+	real Vb = 0;
+	real Va = 0;
+	real Vd = 0;
+	real Vs = 0;
 	Vb += VbondSB(&s->Ss[0], &s->Bs[0]);
 	Vb += Vbond(&s->Ss[0], &s->Ps[0], BOND_S5_P);
 
@@ -1053,7 +1053,7 @@ static void momentumHelper(Particle *p, void *data)
 }
 static Vec3 momentum(void)
 {
-	Vec3 Ptot = {0, 0, 0};
+	Vec3 Ptot = vec3(0, 0, 0);
 	forEveryParticleD(&momentumHelper, (void*) &Ptot);
 	return Ptot;
 }
@@ -1077,7 +1077,7 @@ void killMomentum(void)
 bool physicsCheck(void)
 {
 	Vec3 P = momentum();
-	double PPP = length(P) / numParticles();
+	real PPP = length(P) / numParticles();
 	//printf("%e\n",PPP);
 	if (PPP > 1e-20) {
 		fprintf(stderr, "\nMOMENTUM CONSERVATION VIOLATED! "
@@ -1094,9 +1094,9 @@ bool physicsCheck(void)
 void dumpStats()
 {
 	PotentialEnergies pe = calcPotentialEnergies();
-	double K = kineticEnergy() * ENERGY_FACTOR;
-	double T = getKineticTemperature();
-	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.exclusion;
+	real K = kineticEnergy() * ENERGY_FACTOR;
+	real T = getKineticTemperature();
+	real E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.exclusion;
 
 	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Ve = %e, T = %f\n",
 			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.exclusion, T);
@@ -1113,8 +1113,8 @@ void initPhysics(void)
 
 Vec3 getCOM(Particle *ps, int num)
 {
-	Vec3 COM = {0, 0, 0};
-	double M = 0; /* total mass */
+	Vec3 COM = vec3(0, 0, 0);
+	real M = 0; /* total mass */
 	for (int i = 0; i < num; i++) {
 		COM = add(COM, scale(ps[i].pos, ps[i].m));
 		M += ps[i].m;
@@ -1135,7 +1135,7 @@ Vec3 getMonomerCOM(Strand *s, int monomer)
 	return scale(COM, 1/(base->m + sugar->m + phosphate->m));
 }
 
-double parseTemperature(const char *string)
+real parseTemperature(const char *string)
 {
 	if (string == NULL || string[0] == '\0')
 		return -1;
@@ -1151,10 +1151,10 @@ double parseTemperature(const char *string)
 	i--;
 	char unit = str[i];
 	str[i] = '\0';
-	double value = atof(str);
+	real value = atof(str);
 	free(str);
 
-	double temperature;
+	real temperature;
 	switch (unit) {
 		case 'K':
 			temperature = value;

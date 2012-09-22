@@ -26,9 +26,9 @@ Vec3 mat3_transform(RenderMat3 a, Vec3 v)
 	Vec3 w;
 
 #define A(i, j) a[3*j + i]
-	w.x = A(0,0)*v.x + A(0,1)*v.y + A(0,2)*v.z;
-	w.y = A(1,0)*v.x + A(1,1)*v.y + A(1,2)*v.z;
-	w.z = A(2,0)*v.x + A(2,1)*v.y + A(2,2)*v.z;
+	w.xyz[X] = A(0,0)*v.xyz[X] + A(0,1)*v.xyz[Y] + A(0,2)*v.xyz[Z];
+	w.xyz[Y] = A(1,0)*v.xyz[X] + A(1,1)*v.xyz[Y] + A(1,2)*v.xyz[Z];
+	w.xyz[Z] = A(2,0)*v.xyz[X] + A(2,1)*v.xyz[Y] + A(2,2)*v.xyz[Z];
 #undef A
 	
 	return w;

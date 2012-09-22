@@ -84,12 +84,12 @@ typedef struct stringList {
 static StringList *strings = NULL;
 
 /* Render the space partitioning boxes? */
-static double renderSPGridBoxes = false;
+static real renderSPGridBoxes = false;
 
 
 static void drawPoint(Vec3 p)
 {
-	glVertex3f(p.x, p.y, p.z);
+	glVertex3f(p.xyz[X], p.xyz[Y], p.xyz[Z]);
 }
 
 static void drawLine(Vec3 p1, Vec3 p2)
@@ -98,11 +98,11 @@ static void drawLine(Vec3 p1, Vec3 p2)
 	drawPoint(p2);
 }
 
-static void drawCilinder(Vec3 p1, Vec3 p2, int faces, double radius)
+static void drawCilinder(Vec3 p1, Vec3 p2, int faces, real radius)
 {
 	Vec3 d = normalize(sub(p2, p1));
-	Vec3 e1 = {1, 0, 0};
-	Vec3 e2 = {0, 1, 0};
+	Vec3 e1 = vec3(1, 0, 0);
+	Vec3 e2 = vec3(0, 1, 0);
 	/* Make orthogonal basis for cilinders */
 	Vec3 b1, b2;
 	if (dot(e1, d) < 0.8)
@@ -112,8 +112,8 @@ static void drawCilinder(Vec3 p1, Vec3 p2, int faces, double radius)
 	b1 = normalize(b1);
 	b2 = cross(b1, d);
 
-	assert(fabs(length(b1) - 1) < 1e-13);
-	assert(fabs(length(b2) - 1) < 1e-13);
+	assert(fabs(length(b1) - 1) < 1e-6);
+	assert(fabs(length(b2) - 1) < 1e-6);
 
 	b1 = scale(b1, radius);
 	b2 = scale(b2, radius);
@@ -121,7 +121,7 @@ static void drawCilinder(Vec3 p1, Vec3 p2, int faces, double radius)
 	glBegin(GL_QUAD_STRIP);
 		drawLine(add(p1, b1), add(p2, b1));
 		for (int i = 1; i <= faces; i++) {
-			double theta = 2*M_PI * i / faces;
+			real theta = 2*M_PI * i / faces;
 			Vec3 u = scale(b1, cos(theta));
 			Vec3 v = scale(b2, sin(theta));
 			Vec3 dir = add(u, v);
@@ -133,7 +133,7 @@ static void drawCilinder(Vec3 p1, Vec3 p2, int faces, double radius)
 static void renderParticle(Particle *p, RenderConf *rc)
 {
 	glPushMatrix();
-		glTranslatef(p->pos.x, p->pos.y, p->pos.z);
+		glTranslatef(p->pos.xyz[X], p->pos.xyz[Y], p->pos.xyz[Z]);
 		glScalef(rc->radius, rc->radius, rc->radius);
 		glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, sphereIndex);
 	glPopMatrix();
@@ -167,27 +167,27 @@ static void renderConnection(Particle *p1, Particle *p2, RenderConf *rc)
 }
 static void renderBoxes(int numBoxes)
 {
-	double ws = world.worldSize;
-	double delta = ws / numBoxes;
-	Vec3 xStep = (Vec3) {delta, 0, 0};
-	Vec3 yStep = (Vec3) {0, delta, 0};
-	Vec3 zStep = (Vec3) {0, 0, delta};
+	real ws = world.worldSize;
+	real delta = ws / numBoxes;
+	Vec3 xStep = vec3(delta, 0, 0);
+	Vec3 yStep = vec3(0, delta, 0);
+	Vec3 zStep = vec3(0, 0, delta);
 
-	double resetDelta = -(numBoxes + 1) * delta;
-	Vec3 xResetStep = (Vec3) {resetDelta, 0, 0};
-	Vec3 yResetStep = (Vec3) {0, resetDelta, 0};
-	Vec3 zResetStep = (Vec3) {0, 0, resetDelta};
+	real resetDelta = -(numBoxes + 1) * delta;
+	Vec3 xResetStep = vec3(resetDelta, 0, 0);
+	Vec3 yResetStep = vec3(0, resetDelta, 0);
+	Vec3 zResetStep = vec3(0, 0, resetDelta);
 
 	/* _Start is starting point for line in _ direction */
-	Vec3 xStart = (Vec3) {-ws/2, -ws/2, -ws/2};
-	Vec3 yStart = (Vec3) {-ws/2, -ws/2, -ws/2};
-	Vec3 zStart = (Vec3) {-ws/2, -ws/2, -ws/2};
+	Vec3 xStart = vec3(-ws/2, -ws/2, -ws/2);
+	Vec3 yStart = vec3(-ws/2, -ws/2, -ws/2);
+	Vec3 zStart = vec3(-ws/2, -ws/2, -ws/2);
 
 	/* Should be added to the starting point to reach the other side of 
 	 * the world. */
-	Vec3 xLength = (Vec3) {ws, 0, 0};
-	Vec3 yLength = (Vec3) {0, ws, 0};
-	Vec3 zLength = (Vec3) {0, 0, ws};
+	Vec3 xLength = vec3(ws, 0, 0);
+	Vec3 yLength = vec3(0, ws, 0);
+	Vec3 zLength = vec3(0, 0, ws);
 
 	/* Shoot lines from three 2D grids: from the three perpendicular 
 	 * faces of the 'worldcube' to the opposide faces. */
@@ -220,8 +220,8 @@ static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numI
 		GLushort **indices)
 {
 	int i, j, k;
-	double x, y, z;
-	double r;
+	real x, y, z;
+	real r;
 	int stacks;
 	Vertex3 *vert;
 	GLushort *ind;
@@ -237,14 +237,14 @@ static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numI
 	/* All but the top and bottom stack */
 	for (i = 1; i < stacks; i++)
 	{
-		double phi = M_PI * i / (double) stacks - 2*M_PI;
+		real phi = M_PI * i / (real) stacks - 2*M_PI;
 		
 		z = cos(phi);
 		r = sqrt(1 - z*z);
 
 		for (j = 0; j < slices; j++)
 		{
-			double theta = 2*M_PI*j/(double) slices;
+			real theta = 2*M_PI*j/(real) slices;
 			x = r * sin(theta);
 			y = r * cos(theta);
 
@@ -357,8 +357,8 @@ static void calcFps(void)
 
 static void camOrbit(int dx, int dy)
 {
-	const double radius = 200;
-	double dist;
+	const real radius = 200;
+	real dist;
 	Vec3 v = cam_position;
 	Quaternion o = cam_orientation;
 	Quaternion q, q2;
@@ -374,10 +374,10 @@ static void camOrbit(int dx, int dy)
 
 	/* As round-off errors accumulate, the distance between the camera and the
 	 * target would normally fluctuate. We take steps to prevent that here. */
-	dist = vec3_length(v);
+	dist = length(v);
 	v = quat_transform(q2, v);
-	v = vec3_normalize(v);
-	v = vec3_scale(v, dist);
+	v = normalize(v);
+	v = scale(v, dist);
 
 	cam_position = v;
 	cam_orientation = quat_multiply(q2, cam_orientation);
@@ -387,7 +387,7 @@ static void camDolly(int dz)
 {
 	Vec3 v = cam_position;
 
-	v = vec3_scale(v, exp(-0.1*dz));
+	v = scale(v, exp(-0.1*dz));
 	cam_position = v;
 }
 
@@ -526,13 +526,13 @@ static void initRender(void)
 	glVertexPointer(3, GL_FLOAT, sizeof(Vertex3), sphereVertex);
 	glNormalPointer(   GL_FLOAT, sizeof(Vertex3), sphereVertex);
 
-	cam_position = (Vec3) {0, 0, world.worldSize*2.5};
+	cam_position = vec3(0, 0, world.worldSize*2.5);
 	cam_orientation = (Quaternion) {1, 0, 0, 0};
 }
 
 static void renderSet3D(void)
 {
-	double ws = world.worldSize;
+	real ws = world.worldSize;
 
 	glEnable( GL_DEPTH_TEST);
 	glEnable( GL_LIGHTING);
@@ -541,7 +541,7 @@ static void renderSet3D(void)
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(35, SCREEN_W/(double)SCREEN_H, ws/1000, 100*ws);
+	gluPerspective(35, SCREEN_W/(real)SCREEN_H, ws/1000, 100*ws);
 }
 
 static void renderSet2D(void)
@@ -590,7 +590,7 @@ static void renderStrand(Strand *s, RenderConf *rc) {
 	}
 }
 
-static void mat4_from_mat3(double m[16], RenderMat3 n)
+static void mat4_from_mat3(real m[16], RenderMat3 n)
 {
 #define M(i, j) m[4*j + i]
 #define N(i, j) n[3*j + i]
@@ -615,9 +615,9 @@ static void renderString(const char *str, int x, int y)
 /* Renders the frame and calls calcFps() */
 static void render(RenderConf *rc)
 {
-	double ws = world.worldSize;
+	real ws = world.worldSize;
 	RenderMat3 m3;
-	double m4[16];
+	real m4[16];
 
 	calcFps();
 
@@ -630,8 +630,12 @@ static void render(RenderConf *rc)
 	glLoadIdentity();
 	mat3_from_quat(m3, quat_conjugate(cam_orientation));
 	mat4_from_mat3(m4, m3);
+#ifdef USE_SINGLE_PRECISION
+	glMultMatrixf(m4);
+#else
 	glMultMatrixd(m4);
-	glTranslatef(-cam_position.x, -cam_position.y, -cam_position.z);
+#endif
+	glTranslatef(-cam_position.xyz[X], -cam_position.xyz[Y], -cam_position.xyz[Z]);
 
 
 	if (renderSPGridBoxes) {

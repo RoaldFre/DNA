@@ -153,19 +153,19 @@ typedef struct {
 		BASE_PAIR_DOUBLE_STRAND,
 	} basePairInteraction;
 
-	double saltConcentration; /* Na+ concentration, in mol/m^3 */
-	double truncationLen; /* Length at which potentials are truncated */
+	real saltConcentration; /* Na+ concentration, in mol/m^3 */
+	real truncationLen; /* Length at which potentials are truncated */
 } InteractionSettings;
 
 void registerInteractionSettings(InteractionSettings interactionSettings);
 
 void calculateForces(void);
 
-double getKineticTemperature(void);
+real getKineticTemperature(void);
 
 /* Parse a string of the form "<number><C|K>" and return the corresponding 
  * temperature (in Kelvin). Returns -1 in case of error. */
-double parseTemperature(const char *str);
+real parseTemperature(const char *str);
 
 /* Returns the position vector of the Center Of Mass. */
 Vec3 getCOM(Particle *ps, int num);
@@ -175,10 +175,10 @@ Vec3 getMonomerCOM(Strand *s, int monomer);
 /* Sets the total momentum of the world to zero by shifting the velocities. */
 void killMomentum(void);
 
-double VbasePair(Particle *p1, Particle *p2);
+real VbasePair(Particle *p1, Particle *p2);
 
-double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2);
-double getExclusionCutOff(ParticleType t1, ParticleType t2);
+real nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2);
+real getExclusionCutOff(ParticleType t1, ParticleType t2);
 
 void dumpStats(void);
 bool physicsCheck(void);

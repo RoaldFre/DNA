@@ -1,3 +1,5 @@
+#include "math.h"
+
 /* Don't use line breaks in comments. If you need multiple lines, call me 
  * multiple times.
  * Alternatively, call octaveStartComment(), then print stuff *without 
@@ -7,7 +9,7 @@ void octaveComment(const char *fmt, ...);
 void octaveStartComment(void);
 void octaveEndComment(void);
 
-void octaveScalar(const char *name, double value);
+void octaveScalar(const char *name, real value);
 void octaveString(const char *name, const char *string);
 void octaveMatrixHeader(const char *name, int rows, int cols);
 

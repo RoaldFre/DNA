@@ -12,7 +12,7 @@
  * Precondition: grid can't already be allocated (unless it was freed 
  * afterwards).
  * Returns true on succes, false on failure. */
-bool allocGrid(int numBoxes, double size);
+bool allocGrid(int numBoxes, real size);
 
 /* All particles are removed from the grid and the memory gets freed. */
 void freeGrid(void);
@@ -59,7 +59,7 @@ bool spgridSanityCheck(bool checkCorrectBox, bool checkConnections);
 
 /* Test to see if we iterate over the correct number of pairs, and see if 
  * we don't give a single same particle as two constituents of a pair. Does 
- * not explicitly test if we do *all* pairs, nor that we don't do doubles.
+ * not explicitly test if we do *all* pairs, nor that we don't do reals.
  * Returns true if everything is OK, false otherwise. */
 bool forEveryPairCheck(void);
 /* Analogous to forEveryPairCheck() */
@@ -79,7 +79,7 @@ bool forEveryConnectionPairCheck(void);
  * and move the implementation from the .c file to here. */
 Vec3 nearestImageVector(Vec3 v1, Vec3 v2);
 Vec3 nearestImageUnitVector(Vec3 v1, Vec3 v2);
-double nearestImageDistance(Vec3 v1, Vec3 v2);
-double nearestImageDistance2(Vec3 v1, Vec3 v2);
+real nearestImageDistance(Vec3 v1, Vec3 v2);
+real nearestImageDistance2(Vec3 v1, Vec3 v2);
 
 #endif

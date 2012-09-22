@@ -34,7 +34,7 @@ static __inline__ bool isBase(ParticleType t)
 
 typedef struct particle
 {
-	double m; /* Mass */
+	real m; /* Mass */
 	Vec3 pos; /* Position */
 	Vec3 prevPos; /* Position at previous time step */
 	Vec3 vel; /* Velocity */
@@ -82,7 +82,7 @@ typedef struct strand
 
 typedef struct world
 {
-	double worldSize; /* World = periodic cube with edges of this length */
+	real worldSize; /* World = periodic cube with edges of this length */
 			//TODO: worldsize only really relvant for spgrid, though
 	int numStrands;
 	Strand *strands;
@@ -90,7 +90,7 @@ typedef struct world
 
 extern World world;
 
-bool allocWorld(int numStrands, double worldSize);
+bool allocWorld(int numStrands, real worldSize);
 bool allocStrand(Strand *s, int numMonomers);
 /* Allocates the strand and fills it up with the given base sequence. The 
  * strand will be <3'-sequence-5'>, ie the 3' matches the first char of 
@@ -116,7 +116,7 @@ void forEveryParticleOfD(Strand *s,
 
 /* Returns the connected particle to the given one, as determined by the 
  * strand it's in. Returns NULL if no such particle exists.
- * Particles are ordered to avoid doubles: this has the pleasant 
+ * Particles are ordered to avoid reals: this has the pleasant 
  * consequence that there is at most one particle that can be returned.
  * Depending on the given particle, the returned particle is:
  *

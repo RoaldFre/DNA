@@ -33,25 +33,25 @@ Sampler endToEndDistSampler(Strand *strand);
 typedef struct {
 	/* A pair is 'bound' if its base pair potential is lower than the 
 	 * given threshold. */
-	double energyThreshold;
+	real energyThreshold;
 } BasePairingConfig;
 /* Sampler that counts the number of base pair bindings. */
 Sampler basePairingSampler(BasePairingConfig *bpc);
 
 typedef struct {
 	/* Temperature at which to perform the time-to-zipping measurement */
-	double zippingTemperature;
+	real zippingTemperature;
 
 	/* Temperature at which to perform the time-to-unzipping measurement */
-	double unzippingTemperature;
+	real unzippingTemperature;
 
 	/* A pair is 'bound' if its base pair potential is lower than the 
 	 * given threshold. */
-	double energyThreshold;
+	real energyThreshold;
 
 	/* Time the molecule has to be fully zipped(unzipped) in order for 
 	 * it to be considered a stable(melted) hairpin */
-	double confirmationTime;
+	real confirmationTime;
 
 	/* Minimum number of bound basepairs required when determining 
 	 * whether a hairpin is fully zipped */
@@ -65,7 +65,7 @@ typedef struct {
 	 * temperature to 'unzippingTemperature' and waiting for the 
 	 * hairpin to unzip. If after this time, the hairin is not fully 
 	 * zipped, we will wait untill it is and only then start sampling. */
-	double zippedRelaxationTime;
+	real zippedRelaxationTime;
 } HairpinFormationSamplerConfig;
 
 /* When this sampler starts, it sets the temperature to the given 
@@ -81,19 +81,19 @@ Sampler hairpinFormationSampler(HairpinFormationSamplerConfig *hfc);
 typedef struct {
 	/* A pair is 'bound' if its base pair potential is lower than the 
 	 * given threshold. */
-	double energyThreshold;
+	real energyThreshold;
 
 	/* Time to wait for relaxation after bumping temperature */
-	double relaxationTime;
+	real relaxationTime;
 	/* Time to let the system thermally equilibrate before starting to 
 	 * measure */
-	double measureTime;
+	real measureTime;
 
 	/* Start measuring at 'Tstart'. Then change the temperature by a 
 	 * difference 'Tstep' and measure again. Do this until you have 
 	 * measured a total of 'numSteps' times. */
-	double Tstart;
-	double Tstep;
+	real Tstart;
+	real Tstep;
 	int numSteps;
 
 	/* If 'verbose' is true: dump full configuration of hairpin at 

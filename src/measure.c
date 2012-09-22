@@ -63,7 +63,7 @@ typedef struct measTaskState
 	SamplerData samplerData;
 	enum {RELAXING, SAMPLING} measStatus;
 	MeasurementConf measConf;
-	double intervalTime; /* Time since last sample (or start). */
+	real intervalTime; /* Time since last sample (or start). */
 	StreamState streamState; /* For stdout redirection */
 } MeasTaskState;
 
@@ -188,12 +188,12 @@ static TaskSignal measTick(void *state)
 
 	MeasTaskState *measState = (MeasTaskState*) state;
 	MeasurementConf *measConf = &measState->measConf;
-	double measWait     = measConf->measureWait;
-	double measInterval = measConf->measureInterval;
-	double measTime     = measConf->measureTime;
-	double endTime      = measTime + measWait;
+	real measWait     = measConf->measureWait;
+	real measInterval = measConf->measureInterval;
+	real measTime     = measConf->measureTime;
+	real endTime      = measTime + measWait;
 	bool verbose        = measConf->verbose;
-	double time         = getTime();
+	real time         = getTime();
 
 	SamplerSignal samplerSignal = SAMPLER_OK;
 

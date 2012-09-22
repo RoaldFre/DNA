@@ -50,20 +50,20 @@ static void *avgTempStart(SamplerData *sd, void *conf)
 {
 	UNUSED(sd);
 	UNUSED(conf);
-	double *accum = malloc(sizeof *accum); //yes, this is a silly malloc :P
+	real *accum = malloc(sizeof *accum); //yes, this is a silly malloc :P
 	*accum = 0;
 	return accum;
 }
 static SamplerSignal avgTempSample(SamplerData *sd, void *data)
 {
 	UNUSED(sd);
-	double *accum = (double*) data;
+	real *accum = (real*) data;
 	*accum += getKineticTemperature();
 	return SAMPLER_OK;
 }
 static void avgTempStop(SamplerData *sd, void *data)
 {
-	double *accum = (double*) data;
+	real *accum = (real*) data;
 	printf("Average temperature: %f\n", *accum / sd->sample);
 	free(accum);
 }
@@ -154,7 +154,7 @@ typedef struct
 	Particle *ps;
 	int num;
 	Vec3 initialPos;
-	double initialTime;
+	real initialTime;
 } SquaredDisplacementConf;
 
 static void *particlesSquaredDisplacementStart(SamplerData *sd, void *conf)
@@ -172,7 +172,7 @@ static SamplerSignal particlesSquaredDisplacementSample(SamplerData *sd, void *s
 
 	Vec3 COM = getCOM(sdc->ps, sdc->num);
 	Vec3 displacement = sub(COM, sdc->initialPos);
-	double squaredDisplacement = length2(displacement);
+	real squaredDisplacement = length2(displacement);
 	//printf("%e %e", getTime() - sdc->initialTime, squaredDisplacement);
 	printf("%e ", getTime());
 	printVectorExp(COM);
@@ -227,7 +227,7 @@ static SamplerSignal endToEndDistSample(SamplerData *sd, void *state)
 	EndToEndDistConf *etedc = (EndToEndDistConf*) state;
 	Strand *s = etedc->strand;
 
-	double endToEndDist = distance(
+	real endToEndDist = distance(
 			getMonomerCOM(s, 0),
 			getMonomerCOM(s, s->numMonomers - 1));
 	printf("%e\t%e\n", getTime(), endToEndDist);
@@ -256,13 +256,13 @@ Sampler endToEndDistSampler(Strand *strand)
 /* HAIR PIN FORMATION */
 /* Print (half of) the hairpin config and return  the number of correctly 
  * bound base pairs. */
-static int dumpHairpinState(Strand *s, double energyThreshold)
+static int dumpHairpinState(Strand *s, real energyThreshold)
 {
 	int correctlyBound = 0;
 	int n = s->numMonomers;
 	for (int i = 0; i < n/2; i++) {
 		int j = n - 1 - i;
-		double V = VbasePair(&s->Bs[i], &s->Bs[j]);
+		real V = VbasePair(&s->Bs[i], &s->Bs[j]);
 		if (V < energyThreshold) {
 			correctlyBound++;
 			printf("1 ");
@@ -272,13 +272,13 @@ static int dumpHairpinState(Strand *s, double energyThreshold)
 	}
 	return correctlyBound;
 }
-static int getCorrectlyBoundHairpinBasePairs(Strand *s, double energyThreshold)
+static int getCorrectlyBoundHairpinBasePairs(Strand *s, real energyThreshold)
 {
 	int correctlyBound = 0;
 	int n = s->numMonomers;
 	for (int i = 0; i < n/2; i++) {
 		int j = n - 1 - i;
-		double V = VbasePair(&s->Bs[i], &s->Bs[j]);
+		real V = VbasePair(&s->Bs[i], &s->Bs[j]);
 		if (V < energyThreshold)
 			correctlyBound++;
 	}
@@ -293,10 +293,10 @@ typedef struct {
 		WAITING_TO_UNZIP,
 		WAITING_FOR_UNZIPPING_CONFIRMATION,
 	} status;
-	double zippingPhaseStartTime;
-	double unzippingPhaseStartTime;
-	double confirmationStartTime; /* Used for both zipping & unzipping */
-	double timeOfConfirmation; /* Used for both zipping & unzipping */
+	real zippingPhaseStartTime;
+	real unzippingPhaseStartTime;
+	real confirmationStartTime; /* Used for both zipping & unzipping */
+	real timeOfConfirmation; /* Used for both zipping & unzipping */
 	HairpinFormationSamplerConfig conf;
 } HairpinFormationSamplerData;
 
@@ -345,7 +345,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 				"Correct hairpin BPs: %d, thresholds: %d and %d",
 				correctlyBound, allowedBounds, requiredBounds);
 
-	double time = getTime();
+	real time = getTime();
 
 	switch (hfd->status) {
 	case WAITING_TO_ZIP:
@@ -380,7 +380,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 			break; /* Need to wait for confirmation */
 
 		/* We have zipping confirmation! */
-		double timeTillZipping = time - hfd->zippingPhaseStartTime
+		real timeTillZipping = time - hfd->zippingPhaseStartTime
 						- hfc->confirmationTime;
 		octaveComment("Confirmed zipping at %e", time);
 		octaveScalar("timeTillZipping", timeTillZipping);
@@ -446,7 +446,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 			break; /* need to wait for confirmation */
 
 		/* We have unzipping confirmation! */
-		double timeTillUnzipping = time - hfd->unzippingPhaseStartTime
+		real timeTillUnzipping = time - hfd->unzippingPhaseStartTime
 						- hfc->confirmationTime;
 		octaveComment("Confirmed unzipping at %e", time);
 		octaveScalar("timeTillUnzipping", timeTillUnzipping);
@@ -483,13 +483,13 @@ typedef struct {
 		WAITING_TO_RELAX,
 		MEASURING,
 	} status;
-	double relaxStartTime;
-	double measureStartTime;
+	real relaxStartTime;
+	real measureStartTime;
 	int measureIteration;
 	int numMeasureIterations;
 	int currentStep;
 	long accumulatedBoundBasePairs;
-	double *averageBPsPerStep;
+	real *averageBPsPerStep;
 	HairpinMeltingTempSamplerConfig conf;
 } HairpinMeltingTempSamplerData;
 
@@ -556,7 +556,7 @@ static SamplerSignal hairpinMeltingTempSample(SamplerData *sd, void *state)
 		snprintf(sd->string, sd->strBufSize,
 				"Correct hairpin BPs: %d", correctlyBound);
 
-	double time = getTime();
+	real time = getTime();
 
 	switch (hmtd->status) {
 	case START_RELAXATION:
@@ -580,8 +580,8 @@ static SamplerSignal hairpinMeltingTempSample(SamplerData *sd, void *state)
 		if (hmtd->measureIteration > hmtd->numMeasureIterations) {
 			/* End of this measurement run */
 			hmtd->averageBPsPerStep[hmtd->currentStep] = 
-				((double) hmtd->accumulatedBoundBasePairs)
-					/ (double) hmtd->numMeasureIterations;
+				((real) hmtd->accumulatedBoundBasePairs)
+					/ (real) hmtd->numMeasureIterations;
 
 			hmtd->currentStep++;
 			if (hmtd->currentStep >= hmtc->numSteps) {
@@ -638,16 +638,16 @@ Sampler hairpinMeltingTempSampler(HairpinMeltingTempSamplerConfig *hmtc)
 typedef struct
 {
 	int count;
-	double threshold;
+	real threshold;
 } BasePairingCounterData;
-static int dumpDualStrandState(Strand *s1, Strand *s2, double energyThreshold)
+static int dumpDualStrandState(Strand *s1, Strand *s2, real energyThreshold)
 {
 	assert(s1->numMonomers == s2->numMonomers);
 	int n = s1->numMonomers;
 	int correctlyBound = 0;
 	for (int i = 0; i < n; i++) {
 		int j = n - 1 - i; //TODO
-		double V = VbasePair(&s1->Bs[i],
+		real V = VbasePair(&s1->Bs[i],
 				     &s2->Bs[j]);
 		if (V < energyThreshold) {
 			correctlyBound++;
@@ -661,7 +661,7 @@ static int dumpDualStrandState(Strand *s1, Strand *s2, double energyThreshold)
 static void basePairingCounter(Particle *p1, Particle *p2, void *data)
 {
 	BasePairingCounterData *bpcd = (BasePairingCounterData*) data;
-	double V = VbasePair(p1, p2);
+	real V = VbasePair(p1, p2);
 	if (V < bpcd->threshold)
 		bpcd->count++;
 }

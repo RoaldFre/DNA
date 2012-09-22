@@ -81,7 +81,7 @@ static IntegratorConf integratorConf = {
 	.reboxInterval = DEF_REBOX_INTERVAL * FEMTOSECONDS,
 };
 
-static double temperature;
+static real temperature;
 
 static InteractionSettings interactionSettings = {
 	.enableBond	= true,
@@ -98,7 +98,7 @@ static InteractionSettings interactionSettings = {
 };
 
 static const char* baseSequence = DEF_BASE_SEQUENCE;
-static double worldSize = -1; /* guard */
+static real worldSize = -1; /* guard */
 
 
 static void printUsage(void)

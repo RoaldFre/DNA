@@ -24,7 +24,7 @@ void octaveComment(const char *fmt, ...)
 	octaveEndComment();
 }
 
-void octaveScalar(const char *name, double value)
+void octaveScalar(const char *name, real value)
 {
 	printf("\n");
 	printf("# name: %s\n", name);

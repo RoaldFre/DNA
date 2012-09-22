@@ -12,7 +12,7 @@ World world;
  * value in world.
  * Precondition: allocWorld must not already have been called (unless 
  * followed by a freeWorld). */
-bool allocWorld(int numStrands, double worldSize)
+bool allocWorld(int numStrands, real worldSize)
 {
 	assert(world.strands == NULL);
 	world.strands = calloc(numStrands, sizeof(*world.strands));
@@ -92,7 +92,7 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		bool complementarySequence, bool complementaryHelix)
 {
 	/* right order when we are building the complementary strand */
-	double order;
+	real order;
 	if (complementarySequence)
 		order = -1;
 	else
@@ -103,18 +103,16 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	allocStrand(s, n);
 
 	Vec3 offset;
-	offset.x = 0;
-	offset.z = 0;
-	offset.y = -n * HELIX_DELTA_Z / 2.0;
+	offset = vec3(0, -n * HELIX_DELTA_Z / 2.0, 0);
 
 	/* <v^2> = 3 T k_B / m
 	 * -> per dimension: gaussian with variance T k_B / m */
-	double T = getHeatBathTemperature();
-	double velVarPerInvMass = T * BOLTZMANN_CONSTANT;
-	double dt = getTimeStep();
+	real T = getHeatBathTemperature();
+	real velVarPerInvMass = T * BOLTZMANN_CONSTANT;
+	real dt = getTimeStep();
 
-	double phi = 0;
-	double z = 0;
+	real phi = 0;
+	real z = 0;
 	int j;
 	
 	if (complementarySequence) {
@@ -125,10 +123,10 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	for (int i = 0; i < n; i++) {
 		/* Default to Adenine */
 		ParticleType b_t = BASE_A;
-		double b_m = A_M;
-		double b_r = A_R;
-		double b_z = A_Z;
-		double b_phi = A_PHI;
+		real b_m = A_M;
+		real b_r = A_R;
+		real b_z = A_Z;
+		real b_phi = A_PHI;
 		j = i;
 		if (complementarySequence)
 			j = n - 1 - i;

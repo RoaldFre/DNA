@@ -7,13 +7,13 @@
 /* Configuration of a generic measurement */
 typedef struct {
 	/* Total time to sample the system. Negative to go on indefinitely. */
-	double measureTime;
+	real measureTime;
 
 	/* Time between samples. Negative to disable measurement. */
-	double measureInterval; 
+	real measureInterval; 
 
 	/* Time to wait before starting measurement */
-	double measureWait;
+	real measureWait;
 
 	/* Path to a file to dump the measurement in. NULL means dump to 
 	 * stdout. The directory of the destination file MUST exist! */
@@ -51,7 +51,7 @@ typedef struct {
 	int strBufSize;
 
 	/* The time interval at which you are called. */
-	double sampleInterval;
+	real sampleInterval;
 } SamplerData;
 
 typedef enum
