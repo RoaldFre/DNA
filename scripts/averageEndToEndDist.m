@@ -8,17 +8,25 @@ end
 
 [time, dists] = parseEndToEndDists(filesglob, decimateFactor);
 
+% XXX
+% This is a hack to make sure that all times are positive (for stretched 
+% exponential fit). Due to the decimation, it is possible that we end up 
+% with a tiny negative first time value.
+time = time - time(1);
+
+
 nRuns = numel(dists(1,:))
 meanEndToEndDist = mean(dists')';
 errEndToEndDist = std(dists')' / sqrt(nRuns - 1);
 
 initialLength = meanEndToEndDist(1); % This should have no error, as all strands have the same initial length!
 
-[tau, offset, tauStddev, offsetStddev] = endToEndRegressionFixedInitialLength(time, meanEndToEndDist, initialLength, 1e-7, 1e-8, errEndToEndDist);
+[tau, offset, beta, tauStddev, offsetStddev, betaStddev] = endToEndRegressionFixedInitialLength(time, meanEndToEndDist, initialLength, 4.1e-8, 1.28e-8, 0.75, errEndToEndDist);
 tauInfo = [tau, tauStddev]
 offsetInfo = [offset, offsetStddev]
+betaInfo = [beta, betaStddev]
 
-fit = offset + (initialLength - offset) * exp(-time/tau);
+fit = offset + (initialLength - offset) * exp(-(time/tau).^beta);
 
 color = "b";
 clf; hold on;
