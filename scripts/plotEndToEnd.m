@@ -4,7 +4,7 @@ more off;
 dir="~/clusterdata/endToEnd/CACTCAGAGAGTGACTGACTCTCAGACTCACACAGAGAGTCACTGTCTGACTCTCTCTGAGACACTGAGAGTGAGAGTGACTCTGAGTGAGTCACAGTGA/T90C"
 
 Ss = 30:10:50; % Stem lengths (ignore S=20)
-decimateFactor = 10;
+decimateFactor = 11;
 
 taus = zeros(size(Ss));
 tauErrs = zeros(size(Ss));

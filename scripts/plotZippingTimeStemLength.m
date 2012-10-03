@@ -1,12 +1,12 @@
 %filename  = 'hairpinStemScaling_combined' %destination file
 filename  = 'hairpinStemScaling' %destination file
 
-dir="/home/other/roald/clusterdata/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time10000*/";
+dir="/home/other/roald/clusterdata/oldHairpinFormation/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time10000*/";
 
 %NO EXCLUSION, 180C
-%dir="/home/other/roald/clusterdata/hairpinFormationNoExcl/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/";
+%dir="/home/other/roald/clusterdata/oldHairpinFormation/hairpinFormationNoExcl/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/";
 %NO EXCLUSION, 100C
-%dir="/home/other/roald/clusterdata/hairpinFormationNoExcl/formation_zipT20_unzipT100_allowUnb2_allowB2_zippedRel10/dt15_time100000/";
+%dir="/home/other/roald/clusterdata/oldHairpinFormation/hairpinFormationNoExcl/formation_zipT20_unzipT100_allowUnb2_allowB2_zippedRel10/dt15_time100000/";
 Ns = [5 10 15 20 30 40 50 60 80 100];
 fitstart = 3; %start at this index for fitting
 %Ns = [15 20 30 40 50 60 80];
@@ -80,6 +80,6 @@ height    = '500';
 
 %makeGraph(filename,caption,destdir,relImgDir,xlab,ylab,ylabrule,width,height);
 
-presentationDir = '../presentation/images';
-makeGraphPresentation(filename,presentationDir,xlab,ylab,ylabrule,width,height);
+%presentationDir = '../presentation/images';
+%makeGraphPresentation(filename,presentationDir,xlab,ylab,ylabrule,width,height);
 
