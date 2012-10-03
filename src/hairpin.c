@@ -522,6 +522,15 @@ int main(int argc, char **argv)
 	free(measHeaderStrings[0]); free(measHeaderStrings[1]);
 	measurementConf.measureHeader = measHeader;
 
+	/* Measurement config for additional measurements (end to end, base 
+	 * pairing, temperature, ...) */
+	MeasurementConf additionalMeasConf = measurementConf; /* struct copy */
+	additionalMeasConf.verbose = false; /* Let output come from main 
+					       measurement. */
+	additionalMeasConf.measureFile = NULL; /* Don't overwrite! */
+	additionalMeasConf.measureWait = 0; /* Start sampling immediately 
+					       for additional measurements. */
+
 	/* Integrator task */
 	Task integratorTask = makeIntegratorTask(&integratorConf);
 
@@ -536,22 +545,17 @@ int main(int argc, char **argv)
 						BASE_PAIRING_FILE_SUFFIX);
 	Measurement basePairing;
 	basePairing.sampler = basePairingSampler(&bpc);
-	basePairing.measConf = measurementConf; /* struct copy */
+	basePairing.measConf = additionalMeasConf; /* struct copy */
 	basePairing.measConf.measureFile = basePairFile;
-	basePairing.measConf.verbose = false; /* Let output come from
-						hairpin sampler */
 	Task basePairingTask = measurementTask(&basePairing);
-
 
 	/* End to end task */
 	char *endToEndFile = asprintfOrDie("%s%s", filenameBase,
 						END_TO_END_DIST_FILE_SUFFIX);
 	Measurement endToEnd;
 	endToEnd.sampler = endToEndDistSampler(&world.strands[0]);
-	endToEnd.measConf = measurementConf; /* struct copy */
+	endToEnd.measConf = additionalMeasConf; /* struct copy */
 	endToEnd.measConf.measureFile = endToEndFile;
-	endToEnd.measConf.verbose = false; /* Let output come from 
-						 hairpin sampler */
 	Task endToEndTask = measurementTask(&endToEnd);	
 
 	/* Temperature task */
@@ -559,10 +563,8 @@ int main(int argc, char **argv)
 						TEMPERATURE_FILE_SUFFIX);
 	Measurement tempMeas;
 	tempMeas.sampler = temperatureSampler();
-	tempMeas.measConf = measurementConf; /* struct copy */
+	tempMeas.measConf = additionalMeasConf; /* struct copy */
 	tempMeas.measConf.measureFile = temperatureFile;
-	tempMeas.measConf.verbose = false; /* Let output come from 
-						 hairpin sampler */
 	Task temperatureTask = measurementTask(&tempMeas);	
 
 
