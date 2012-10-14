@@ -317,15 +317,17 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 
 	/* Dump info */
 	int n = world.strands[0].numMonomers;
-	octaveScalar("sampleStartTime",         getTime());
-	octaveScalar("zippingPhaseStartTime",   getTime());
-	octaveScalar("zippingTemperature",      hfc->zippingTemperature);
-	octaveScalar("unzippingTemperature",    hfc->unzippingTemperature);
-	octaveScalar("requiredBoundBPs",        hfc->requiredBoundBPs);
-	octaveScalar("allowedBoundBPs",         hfc->allowedBoundBPs);
-	octaveScalar("numMonomers",             n);
-	octaveScalar("timestep",                getTimeStep());
-	octaveScalar("sampleInterval",          sd->sampleInterval);
+	octaveScalar("sampleStartTime",       getTime());
+	octaveScalar("zippingPhaseStartTime", getTime());
+	octaveScalar("zippingTemperature",    hfc->zippingTemperature);
+	octaveScalar("unzippingTemperature",  hfc->unzippingTemperature);
+	octaveScalar("energyThreshold",       hfc->energyThreshold);
+	octaveScalar("requiredBoundBPs",      hfc->requiredBoundBPs);
+	octaveScalar("allowedBoundBPs",       hfc->allowedBoundBPs);
+	octaveScalar("confirmationTime",      hfc->confirmationTime);
+	octaveScalar("numMonomers",           n);
+	octaveScalar("timestep",              getTimeStep());
+	octaveScalar("sampleInterval",        sd->sampleInterval);
 
 	return hfd;
 }
