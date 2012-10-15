@@ -64,7 +64,7 @@ static BasePairingConfig bpc =
 static HairpinFormationSamplerConfig hfc =
 {
 	.energyThreshold = -0.1 * EPSILON,
-	.confirmationTime = 0.5 * NANOSECONDS,
+	.confirmationTime = 0,
 	.requiredBoundBPs = -1, /* guard */
 	.allowedBoundBPs = 1,
 	.zippingTemperature = CELSIUS(20),
