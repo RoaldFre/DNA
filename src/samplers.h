@@ -49,10 +49,6 @@ typedef struct {
 	 * given threshold. */
 	double energyThreshold;
 
-	/* Time the molecule has to be fully zipped(unzipped) in order for 
-	 * it to be considered a stable(melted) hairpin */
-	double confirmationTime;
-
 	/* Minimum number of bound basepairs required when determining 
 	 * whether a hairpin is fully zipped */
 	int requiredBoundBPs; 
@@ -60,6 +56,16 @@ typedef struct {
 	/* Maximum number of bound basepairs to allow when determining 
 	 * whether a hairpin is fully unzipped */
 	int allowedBoundBPs; 
+
+	/* Time the molecule has to be fully zipped (according to the 
+	 * requiredBoundBPs criterium) in order for it to be considered a 
+	 * stable hairpin */
+	double zipConfirmationTime;
+
+	/* Time the molecule has to be fully unzipped (according to the 
+	 * allowedBoundBPs criterium) in order for it to be considered a 
+	 * stable melted hairpin */
+	double unzipConfirmationTime;
 
 	/* Time to wait after having confirmed zipping before switching the 
 	 * temperature to 'unzippingTemperature' and waiting for the 

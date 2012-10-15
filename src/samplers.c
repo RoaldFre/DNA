@@ -324,7 +324,8 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 	octaveScalar("energyThreshold",       hfc->energyThreshold);
 	octaveScalar("requiredBoundBPs",      hfc->requiredBoundBPs);
 	octaveScalar("allowedBoundBPs",       hfc->allowedBoundBPs);
-	octaveScalar("confirmationTime",      hfc->confirmationTime);
+	octaveScalar("zipConfirmationTime",   hfc->zipConfirmationTime);
+	octaveScalar("unzipConfirmationTime", hfc->unzipConfirmationTime);
 	octaveScalar("numMonomers",           n);
 	octaveScalar("timestep",              getTimeStep());
 	octaveScalar("sampleInterval",        sd->sampleInterval);
@@ -378,12 +379,12 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 			break;
 		}
 		if (time - hfd->confirmationStartTime
-						< hfc->confirmationTime)
+						< hfc->zipConfirmationTime)
 			break; /* Need to wait for confirmation */
 
 		/* We have zipping confirmation! */
 		double timeTillZipping = time - hfd->zippingPhaseStartTime
-						- hfc->confirmationTime;
+						- hfc->zipConfirmationTime;
 		octaveComment("Confirmed zipping at %e", time);
 		octaveScalar("timeTillZipping", timeTillZipping);
 		octaveComment("Starting relaxation phase in zipped state "
@@ -444,12 +445,12 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 			break;
 		}
 		if (time - hfd->confirmationStartTime
-						< hfc->confirmationTime)
+						< hfc->unzipConfirmationTime)
 			break; /* need to wait for confirmation */
 
 		/* We have unzipping confirmation! */
 		double timeTillUnzipping = time - hfd->unzippingPhaseStartTime
-						- hfc->confirmationTime;
+						- hfc->unzipConfirmationTime;
 		octaveComment("Confirmed unzipping at %e", time);
 		octaveScalar("timeTillUnzipping", timeTillUnzipping);
 

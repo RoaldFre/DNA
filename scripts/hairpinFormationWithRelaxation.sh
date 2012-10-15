@@ -13,11 +13,11 @@ relaxTemp=$4
 zippingTemp=$5
 unzippingTemp=$6
 allowUnbounded=$7
-allowBounded=$8
-zippedRelaxation=$9
-time=${10} # this is a cut off: if there is no hairpin by now: give up! XXX SET LARGE ENOUGH!
-suffix=${11} # job label when running on cluster
+zippedRelaxation=$8
+time=$9 # this is a cut off: if there is no hairpin by now: give up! XXX SET LARGE ENOUGH!
+suffix=${10} # job label when running on cluster
 
+allowBounded=0
 
 main=hairpin # Should be in current working dir, or in $PATH
 timestep=15
@@ -34,7 +34,7 @@ requiredBound=`echo "$N - $allowUnbounded" | bc`
 
 outputBaseDir=`mktemp -d`
 outputFile="$outputBaseDir/outputFrom_${suffix}"
-destinationDir="$destinationDirRoot/$fullSequence/relaxT${relaxTemp}_zipT${zippingTemp}_unzipT${unzippingTemp}_allowUnb${allowUnbounded}_allowB${allowBounded}_zippedRel${zippedRelaxation}/dt${timestep}_time${time}/N${N}"
+destinationDir="$destinationDirRoot/$fullSequence/relaxT${relaxTemp}_zipT${zippingTemp}_unzipT${unzippingTemp}_allowUnb${allowUnbounded}_zippedRel${zippedRelaxation}/dt${timestep}_time${time}/N${N}"
 destinationFile="$destinationDir/formation_${suffix}"
 
 
