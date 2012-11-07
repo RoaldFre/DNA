@@ -10,7 +10,8 @@ dir="/home/other/roald/clusterdata/hairpinFormation/CACTCAGAGAGTGACTGACTCTCAGACT
 %NO EXCLUSION, 100C
 %dir="/home/other/roald/clusterdata/oldHairpinFormation/hairpinFormationNoExcl/formation_zipT20_unzipT100_allowUnb2_allowB2_zippedRel10/dt15_time100000/";
 %Ns = [5 10 15 20 30 40 50 60 80 100];
-Ns = [10 15 20 30 40 50 60 80];
+%Ns = [10 15 20 30 40 50 60 80 100];
+Ns = [15 20 30 40 50 60 80 100];
 fitstart = 1; %start at this index for fitting
 %Ns = [15 20 30 40 50 60 80];
 %Ns = [30 40 50 60 80];

@@ -1,7 +1,5 @@
 function plotBasePairing(filename, plotState, plotNumBasePairs, numBPsDecimateFactor)
 
-addpath("octave-forge");
-
 if nargin == 1
 	plotState = true;
 	plotNumBasePairs = false;
@@ -27,8 +25,8 @@ correctlyBound = data(:, nMonomers + 3);
 
 if plotNumBasePairs
 	q = numBPsDecimateFactor;
-	plot(decimate(time, q), decimate(allBound, q), 'k', ...
-	     decimate(time, q), decimate(correctlyBound,q), 'b');
+	plot(decimateWrapper(time, q), decimateWrapper(allBound, q), 'k', ...
+	     decimateWrapper(time, q), decimateWrapper(correctlyBound,q), 'b');
 end
 
 if plotState

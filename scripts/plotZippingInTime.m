@@ -1,6 +1,3 @@
-addpath('octave-forge');
-
-
 %stays one rather homogenous 'chunk'
 %file="/home/other/roald/clusterdata/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12355.itf11";
 
