@@ -262,8 +262,8 @@ char *getSequence(Strand *s)
 		case BASE_X: seq[i] = 'X'; break;
 		case BASE_Y: seq[i] = 'Y'; break;
 		default:
-		     assert(false);
-		     die("getSequence: got invalid strand!");
+			assert(false);
+			die("getSequence: got invalid strand!\n");
 		}
 	}
 
@@ -365,9 +365,10 @@ char *getWorldInfo(void)
 		/* This isn't very malloc friendly and quadratic in the 
 		 * string length, but meh. */
 		char *tmp = ret;
-		ret = asprintfOrDie("%s# Strand %d: %s\n", tmp,
-				i + 1, getSequence(&world.strands[i]));
+		char *seq = getSequence(&world.strands[i]);
+		ret = asprintfOrDie("%s# Strand %d: %s\n", tmp, i + 1, seq);
 		free(tmp);
+		free(seq);
 	}
 
 	return ret;
