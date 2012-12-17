@@ -170,29 +170,8 @@ static void initAngleBaseInfoLUT(void) {
 
 static AngleBaseInfo getAngleBaseInfo(ParticleType base)
 {
-	AngleBaseInfo info;
-	switch (base) {
-	case BASE_A:
-		info.P5SB = ANGLE_P_5S_A;
-		info.P3SB = ANGLE_P_3S_A;
-		break;
-	case BASE_T:
-		info.P5SB = ANGLE_P_5S_T;
-		info.P3SB = ANGLE_P_3S_T;
-		break;
-	case BASE_C:
-		info.P5SB = ANGLE_P_5S_C;
-		info.P3SB = ANGLE_P_3S_C;
-		break;
-	case BASE_G:
-		info.P5SB = ANGLE_P_5S_G;
-		info.P3SB = ANGLE_P_3S_G;
-		break;
-	default:
-		fprintf(stderr, "Unknown base type in getAngleBaseInfo!\n");
-		assert(false);
-	}
-	return info;
+	assert(isBase(base));
+	return angleBaseInfoLUT[base];
 }
 
 static double Vangle(Particle *p1, Particle *p2, Particle *p3, double theta0)
