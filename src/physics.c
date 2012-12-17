@@ -745,7 +745,7 @@ static bool feelExclusion(Particle *p1, Particle *p2)
 	if (indexDiff > 1)
 		return true;
 
-	return areConnected[indexDiff][p1->type][p2->type];
+	return !areConnected[indexDiff][p1->type][p2->type];
 }
 
 /* Return (the exclusion cut off distance)^2. This is the distance where 
