@@ -88,6 +88,14 @@ bool allocStrand(Strand *s, int numMonomers) {
  *  ''' 
  * 
  */
+
+/* ********************
+ * BIG GIANT MAJOR TODO:
+ * ********************
+ * COMPLEMENTARY STRAND DOES NOT LIKE THE WAY WE NUMBER MONOMERS, OR 
+ * SOMETHING LIKE THAT. THIS IS APPARANT IN, FOR INSTANCE THE EXCLUSION 
+ * INTERACTION, WHERE PHOSPHATES AND MONOMERS OF THE COMPLEMENTARY STRAND 
+ * REPULSE EACH OTHER! */
 static void fillStrandHelper(Strand *s, const char *baseSequence,
 		bool complementarySequence, bool complementaryHelix)
 {
