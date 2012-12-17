@@ -2,8 +2,6 @@
 % function [time, dists, N, sequence] = parseEndToEndDists(filesglob, decimateFactor)
 function [time, dists, N, sequence] = parseEndToEndDists(filesglob, decimateFactor)
 
-addpath('octave-forge');
-
 if (nargin < 1)
 	error "Not enough required arguments given!"
 elseif (nargin < 2)
@@ -19,7 +17,7 @@ end
 nRuns = numel(files);
 
 fullTime = load(files{1})(:,1);
-time = decimate(fullTime, decimateFactor);
+time = decimateWrapper(fullTime, decimateFactor);
 [_, sequence] = system(['sed -n "s/# Strand 1: \(\w\)/\1/p" ',files{1}]);
 N = numel(sequence);
 dists = zeros(numel(time), nRuns);
@@ -31,6 +29,6 @@ for run = 1:nRuns
 	if (!isequal(thistime, fullTime) || thisSequence != sequence)
 		error "Trying to load incompatible datasets with different times or sequence!"
 	end
-	dists(:, run) = decimate(data(:,2), decimateFactor);
+	dists(:, run) = decimateWrapper(data(:,2), decimateFactor);
 end
 
