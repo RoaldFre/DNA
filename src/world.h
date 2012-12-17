@@ -48,7 +48,7 @@ typedef struct particle
 	struct box *myBox; /* The space patition box that I am in */
 } Particle;
 
-typedef struct strand
+typedef struct strand 
 {
 	int numMonomers;
 	Particle *Ps; /* Phosphates */

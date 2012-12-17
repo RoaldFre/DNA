@@ -86,15 +86,17 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
 	p1->F = add(p1->F, F);
 	p2->F = sub(p2->F, F);
 }
+static double sugarBaseBondDistanceLookupTable[NUM_BASE_TYPES];
+static void initSugarBaseBondDistance(void) {
+	sugarBaseBondDistanceLookupTable[BASE_A] = BOND_S_A;
+	sugarBaseBondDistanceLookupTable[BASE_T] = BOND_S_T;
+	sugarBaseBondDistanceLookupTable[BASE_C] = BOND_S_C;
+	sugarBaseBondDistanceLookupTable[BASE_G] = BOND_S_G;
+}
 static double getSugarBaseBondDistance(ParticleType base)
 {
-	switch (base) {
-		case BASE_A: return BOND_S_A;
-		case BASE_T: return BOND_S_T;
-		case BASE_C: return BOND_S_C;
-		case BASE_G: return BOND_S_G;
-		default: assert(false); return 0;
-	}
+	assert(isBase(base));
+	return sugarBaseBondDistanceLookupTable[base];
 }
 /* Bond between a sugar and a base */
 static double VbondSB(Particle *sugar, Particle *base)
@@ -1126,6 +1128,7 @@ void initPhysics(void)
 {
 	initDihedralCache();
 	initAreConnected();
+	initSugarBaseBondDistance();
 }
 
 Vec3 getCOM(Particle *ps, int num)
