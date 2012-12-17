@@ -103,6 +103,12 @@ static void initSugarBaseBondDistanceLUT(void) {
 		case BASE_G:
 			sugarBaseBondDistanceLUT[b] = BOND_S_G;
 			break;
+		case BASE_X:
+			sugarBaseBondDistanceLUT[b] = BOND_S_X;
+			break;
+		case BASE_Y:
+			sugarBaseBondDistanceLUT[b] = BOND_S_Y;
+			break;
 		default:
 			assert(false);
 			die("Unknown base type %d in "
@@ -161,13 +167,20 @@ static void initAngleBaseInfoLUT(void) {
 			angleBaseInfoLUT[b].P5SB = ANGLE_P_5S_G;
 			angleBaseInfoLUT[b].P3SB = ANGLE_P_3S_G;
 			break;
+		case BASE_X:
+			angleBaseInfoLUT[b].P5SB = ANGLE_P_5S_X;
+			angleBaseInfoLUT[b].P3SB = ANGLE_P_3S_X;
+			break;
+		case BASE_Y:
+			angleBaseInfoLUT[b].P5SB = ANGLE_P_5S_Y;
+			angleBaseInfoLUT[b].P3SB = ANGLE_P_3S_Y;
+			break;
 		default:
 			assert(false);
 			die("Unknown base type %d in initAngleBaseInfoLUT!\n", b);
 		}
 	}
 }
-
 static AngleBaseInfo getAngleBaseInfo(ParticleType base)
 {
 	assert(isBase(base));
@@ -301,6 +314,14 @@ static void initDihedralLUT(void)
 		case BASE_G:
 			dihedralsBasesLUT[b].BS3P5S = makeDihedralCache(DIHEDRAL_G_S3_P_5S);
 			dihedralsBasesLUT[b].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_G);
+			break;
+		case BASE_X:
+			dihedralsBasesLUT[b].BS3P5S = makeDihedralCache(DIHEDRAL_X_S3_P_5S);
+			dihedralsBasesLUT[b].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_X);
+			break;
+		case BASE_Y:
+			dihedralsBasesLUT[b].BS3P5S = makeDihedralCache(DIHEDRAL_Y_S3_P_5S);
+			dihedralsBasesLUT[b].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_Y);
 			break;
 		default:
 			assert(false);
@@ -525,7 +546,9 @@ static HelixInfo getHelixInfo(ParticleType t)
 	case BASE_T:	info.r = T_R;  info.phi = T_PHI;  info.z = T_Z;  break;
 	case BASE_C:	info.r = C_R;  info.phi = C_PHI;  info.z = C_Z;  break;
 	case BASE_G:	info.r = G_R;  info.phi = G_PHI;  info.z = G_Z;  break;
-	default: 	assert(false);
+	case BASE_X:	info.r = X_R;  info.phi = X_PHI;  info.z = X_Z;  break;
+	case BASE_Y:	info.r = Y_R;  info.phi = Y_PHI;  info.z = Y_Z;  break;
+	default: 	assert(false); die("Error in getHelixInfo()!");
 	}
 	return info;
 }

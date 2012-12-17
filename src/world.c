@@ -170,6 +170,20 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 			b_z = complementarySequence ? C_Z : G_Z;
 			b_phi = complementarySequence ? C_PHI : G_PHI;
 			break;
+		case 'X':
+			b_t = complementarySequence ? BASE_C : BASE_X;
+			b_m = complementarySequence ? C_M : X_M;
+			b_r = complementarySequence ? C_R : X_R;
+			b_z = complementarySequence ? C_Z : X_Z;
+			b_phi = complementarySequence ? C_PHI : X_PHI;
+			break;
+		case 'Y':
+			b_t = complementarySequence ? BASE_C : BASE_Y;
+			b_m = complementarySequence ? C_M : Y_M;
+			b_r = complementarySequence ? C_R : Y_R;
+			b_z = complementarySequence ? C_Z : Y_Z;
+			b_phi = complementarySequence ? C_PHI : Y_PHI;
+			break;
 		default:
 			fprintf(stderr, "Unknown base type '%c' at "
 					"position %d in base sequence '%s'! "
@@ -245,6 +259,8 @@ char *getSequence(Strand *s)
 		case BASE_T: seq[i] = 'T'; break;
 		case BASE_C: seq[i] = 'C'; break;
 		case BASE_G: seq[i] = 'G'; break;
+		case BASE_X: seq[i] = 'X'; break;
+		case BASE_Y: seq[i] = 'Y'; break;
 		default:
 		     assert(false);
 		     die("getSequence: got invalid strand!");

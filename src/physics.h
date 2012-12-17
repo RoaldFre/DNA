@@ -38,6 +38,8 @@
 #define T_PHI (86.119 * DEGREE)
 #define C_PHI (85.027 * DEGREE)
 #define G_PHI (40.691 * DEGREE)
+#define X_PHI A_PHI
+#define Y_PHI T_PHI
 /* Radial distance */
 #define P_R (8.916 * ANGSTROM)
 #define S_R (6.981 * ANGSTROM)
@@ -45,6 +47,8 @@
 #define T_R (2.349 * ANGSTROM)
 #define C_R (2.296 * ANGSTROM)
 #define G_R (0.828 * ANGSTROM)
+#define X_R A_R
+#define Y_R T_R
 /* Heights */
 #define P_Z (2.186 * ANGSTROM)
 #define S_Z (1.280 * ANGSTROM)
@@ -52,6 +56,8 @@
 #define T_Z (0.191 * ANGSTROM)
 #define C_Z (0.187 * ANGSTROM)
 #define G_Z (0.053 * ANGSTROM)
+#define X_Z A_Z
+#define Y_Z T_Z
 /* Masses (in kg) */
 #define P_M (94.97 * AU)
 #define S_M (83.11 * AU)
@@ -59,6 +65,8 @@
 #define T_M (125.1 * AU)
 #define C_M (110.1 * AU)
 #define G_M (150.1 * AU)
+#define X_M A_M
+#define Y_M T_M
 
 /* BOND INTERACTION */
 #define BOND_K1   (  1e20 * EPSILON) /* in J/ANGSTROM^2 */
@@ -69,6 +77,8 @@
 #define BOND_S_T  (4.880*ANGSTROM)
 #define BOND_S_C  (4.921*ANGSTROM)
 #define BOND_S_G  (6.392*ANGSTROM)
+#define BOND_S_X BOND_S_A
+#define BOND_S_Y BOND_S_T
 
 /* ANGLE INTERACTION */
 #define ANGLE_COUPLING	(400 * EPSILON) /* per radian^2 */
@@ -82,6 +92,10 @@
 #define ANGLE_P_3S_C	(112.39 * DEGREE)
 #define ANGLE_P_5S_G	(113.52 * DEGREE)
 #define ANGLE_P_3S_G	(108.12 * DEGREE)
+#define ANGLE_P_5S_X ANGLE_P_5S_A
+#define ANGLE_P_3S_X ANGLE_P_3S_A
+#define ANGLE_P_5S_Y ANGLE_P_5S_T
+#define ANGLE_P_3S_Y ANGLE_P_3S_T
 
 /* DIHEDRAL INTERACTION */
 #define DIHEDRAL_COUPLING	(4 * EPSILON)
@@ -95,14 +109,20 @@
 #define DIHEDRAL_S3_P_5S_C	(  54.50 * DEGREE)
 #define DIHEDRAL_G_S3_P_5S	( -22.30 * DEGREE)
 #define DIHEDRAL_S3_P_5S_G	(  50.66 * DEGREE)
+#define DIHEDRAL_X_S3_P_5S DIHEDRAL_A_S3_P_5S
+#define DIHEDRAL_S3_P_5S_X DIHEDRAL_S3_P_5S_A
+#define DIHEDRAL_Y_S3_P_5S DIHEDRAL_T_S3_P_5S
+#define DIHEDRAL_S3_P_5S_Y DIHEDRAL_S3_P_5S_T
 
 /* BASE PAIR INTERACTION */
 #define BASE_PAIR_COUPLING_A_T (2.77 * KCAL_PER_MOL) /* Knotts */
 #define BASE_PAIR_COUPLING_G_C (4.16 * KCAL_PER_MOL) /* Knotts */
+#define BASE_PAIR_COUPLING_X_Y (10 * BASE_PAIR_COUPLING_A_T)
 //#define BASE_PAIR_COUPLING_A_T (3.90 * KCAL_PER_MOL) /* Florescu & Joyeux */
 //#define BASE_PAIR_COUPLING_G_C (4.37 * KCAL_PER_MOL) /* Florescu & Joyeux */
 #define BASE_PAIR_DISTANCE_A_T (2.9002*ANGSTROM)
 #define BASE_PAIR_DISTANCE_G_C (2.8694*ANGSTROM)
+#define BASE_PAIR_DISTANCE_X_Y BASE_PAIR_DISTANCE_A_T
 
 /* STACKING INTERACTION */
 #define STACK_COUPLING	EPSILON

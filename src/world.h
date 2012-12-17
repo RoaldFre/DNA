@@ -9,6 +9,8 @@ typedef enum particleType
 	BASE_T,
 	BASE_C,
 	BASE_G,
+	BASE_X,
+	BASE_Y,
 	PHOSPHATE,
 	SUGAR,
 
@@ -26,8 +28,8 @@ typedef enum particleType
 	 * that involves particle types... */
 } ParticleType;
 
-#define NUM_BASE_TYPES 4 /* Number of base types in the enum above. */
-#define NUM_PARTICLE_TYPES 6 /* Number of particle types in the enum above. */
+#define NUM_BASE_TYPES 6 /* Number of base types in the enum above. */
+#define NUM_PARTICLE_TYPES 8 /* Number of particle types in the enum above. */
 
 static __inline__ bool isBase(ParticleType t)
 {
