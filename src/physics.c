@@ -690,44 +690,60 @@ static void FbasePair(Particle *p1, Particle *p2)
 
 /* EXCLUSION */
 /* Two particles feel exclusion forces if they are not connected by a 
- * direct bond. */
+ * direct bond.
+ * Lookup table: areConnected[indexDiff][type1][type2],
+ * where * type1 and type2 are the types of particles on the same strand, 
+ *         separated at most 1 monomer from each other,
+ *       * indexDiff is the difference in monomer-index of those particles 
+ *         in the strand (can only be 0 or 1: particles should be ordered so 
+ *         that type1 has a lower index than type2) */
+static bool areConnected[2][NUM_PARTICLE_TYPES][NUM_PARTICLE_TYPES];
+
+static void initAreConnected(void) {
+	/* Initialize everything to false */
+	for (int i = 0; i < NUM_PARTICLE_TYPES; i++) {
+		for (int j = 0; j < NUM_PARTICLE_TYPES; j++) {
+			areConnected[0][i][j] = false;
+			areConnected[1][i][j] = false;
+		}
+	}
+
+	/* Everything connected that doesn't involve bases */
+	areConnected[0][SUGAR][PHOSPHATE] = true;
+	areConnected[0][PHOSPHATE][SUGAR] = true;
+	areConnected[1][PHOSPHATE][SUGAR] = true;
+
+	/* Everything involving bases */
+	for (int b = 0; b < NUM_PARTICLE_TYPES; b++) {
+		if (!isBase(b))
+			continue;
+
+		/* Base is only connected to sugar on same monomer */
+		areConnected[0][b][SUGAR] = true;
+		areConnected[0][SUGAR][b] = true;
+	}
+}
+
 static bool feelExclusion(Particle *p1, Particle *p2)
 {
+	/* If different strands: certainly exclusion */
 	if (p1->strand != p2->strand)
 		return true;
 
-	if (ABS(p1->strandIndex - p2->strandIndex) > 1)
+	/* Order so that p1->strandIndex <= p2->strandIndex */
+	if (p1->strandIndex > p2->strandIndex) {
+		Particle *tmp = p1;
+		p1 = p2;
+		p2 = tmp;
+	}
+
+	int indexDiff = p2->strandIndex - p1->strandIndex;
+
+	/* If separated by more than 1 monomer: certainly exclusion */
+	if (indexDiff > 1)
 		return true;
 
-	ParticleType t1 = p1->type;
-	ParticleType t2 = p2->type;
-	int i1 = p1->strandIndex;
-	int i2 = p2->strandIndex;
-
-	/* Use the ordering of the type enum:
-	 * PHOSPHATE, SUGAR, BASE_X */
-	if (t1 > t2) {
-		ParticleType tempType = t1;
-		t1 = t2;
-		t2 = tempType;
-
-		int tempIndex = i1;
-		i1 = i2;
-		i2 = tempIndex;
-
-		/* p1 and p2 not used anymore, so no need to swap. */
-	}
-
-	switch (t1) {
-	case PHOSPHATE: /* t2 is PHOSPHATE, SUGAR or BASE */
-		return t2 == PHOSPHATE || t2 != SUGAR || (i1 == i2 + 1);
-	case SUGAR: /* t2 is a SUGAR or BASE */
-		return t2 == SUGAR || i1 != i2;
-	default: /* t1 and t2 are BASEs */
-		if (interactions.mutuallyExclusivePairForces)
-			assert(i1 != i2);
-		return i1 != i2;
-	}
+	return areConnected[indexDiff][p1->type][p2->type];
 }
 
 /* Return (the exclusion cut off distance)^2. This is the distance where 
@@ -1109,6 +1125,7 @@ void dumpStats()
 void initPhysics(void)
 {
 	initDihedralCache();
+	initAreConnected();
 }
 
 Vec3 getCOM(Particle *ps, int num)

@@ -312,9 +312,7 @@ Particle *getConnectedParticle(Particle *p)
 	case PHOSPHATE:
 		return &s->Ss[i];
 	case SUGAR:
-		if (i-1 < 0)
-			return NULL;
-		return &s->Ps[i-1];
+		return ((i-1 < 0) ? NULL : &s->Ps[i-1]);
 	default: /* Base */
 		return &s->Ss[i];
 	}

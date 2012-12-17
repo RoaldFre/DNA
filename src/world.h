@@ -5,12 +5,13 @@
 
 typedef enum particleType
 {
-	PHOSPHATE = -2,
-	SUGAR = -1,
 	BASE_A = 0,
-	BASE_T = 1,
-	BASE_C = 2,
-	BASE_G = 3,
+	BASE_T,
+	BASE_C,
+	BASE_G,
+	PHOSPHATE,
+	SUGAR,
+
 	/* WARNING:
 	 * If for some reason you want to change the ordering of 
 	 * this enum, watch out to avoid breaking getConnectedParticle(), 
@@ -26,10 +27,11 @@ typedef enum particleType
 } ParticleType;
 
 #define NUM_BASE_TYPES 4 /* Number of base types in the enum above. */
+#define NUM_PARTICLE_TYPES 6 /* Number of particle types in the enum above. */
 
 static __inline__ bool isBase(ParticleType t)
 {
-	return t > SUGAR;
+	return t < PHOSPHATE;
 }
 
 typedef struct particle
