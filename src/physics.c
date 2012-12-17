@@ -86,17 +86,34 @@ static void Fbond(Particle *p1, Particle *p2, double d0)
 	p1->F = add(p1->F, F);
 	p2->F = sub(p2->F, F);
 }
-static double sugarBaseBondDistanceLookupTable[NUM_BASE_TYPES];
-static void initSugarBaseBondDistance(void) {
-	sugarBaseBondDistanceLookupTable[BASE_A] = BOND_S_A;
-	sugarBaseBondDistanceLookupTable[BASE_T] = BOND_S_T;
-	sugarBaseBondDistanceLookupTable[BASE_C] = BOND_S_C;
-	sugarBaseBondDistanceLookupTable[BASE_G] = BOND_S_G;
+static double sugarBaseBondDistanceLUT[NUM_BASE_TYPES];
+static void initSugarBaseBondDistanceLUT(void) {
+	for (int b = 0; b < NUM_BASE_TYPES; b++) {
+		assert(isBase(b));
+		switch (b) {
+		case BASE_A:
+			sugarBaseBondDistanceLUT[b] = BOND_S_A;
+			break;
+		case BASE_T:
+			sugarBaseBondDistanceLUT[b] = BOND_S_T;
+			break;
+		case BASE_C:
+			sugarBaseBondDistanceLUT[b] = BOND_S_C;
+			break;
+		case BASE_G:
+			sugarBaseBondDistanceLUT[b] = BOND_S_G;
+			break;
+		default:
+			assert(false);
+			die("Unknown base type %d in "
+					"initSugarBaseBondDistanceLUT!\n", b);
+		}
+	}
 }
 static double getSugarBaseBondDistance(ParticleType base)
 {
 	assert(isBase(base));
-	return sugarBaseBondDistanceLookupTable[base];
+	return sugarBaseBondDistanceLUT[base];
 }
 /* Bond between a sugar and a base */
 static double VbondSB(Particle *sugar, Particle *base)
@@ -123,6 +140,34 @@ typedef struct {
 	double P5SB;
 	double P3SB;
 } AngleBaseInfo;
+static AngleBaseInfo angleBaseInfoLUT[NUM_BASE_TYPES];
+static void initAngleBaseInfoLUT(void) {
+	for (int b = 0; b < NUM_BASE_TYPES; b++) {
+		assert(isBase(b));
+		switch (b) {
+		case BASE_A:
+			angleBaseInfoLUT[b].P5SB = ANGLE_P_5S_A;
+			angleBaseInfoLUT[b].P3SB = ANGLE_P_3S_A;
+			break;
+		case BASE_T:
+			angleBaseInfoLUT[b].P5SB = ANGLE_P_5S_T;
+			angleBaseInfoLUT[b].P3SB = ANGLE_P_3S_T;
+			break;
+		case BASE_C:
+			angleBaseInfoLUT[b].P5SB = ANGLE_P_5S_C;
+			angleBaseInfoLUT[b].P3SB = ANGLE_P_3S_C;
+			break;
+		case BASE_G:
+			angleBaseInfoLUT[b].P5SB = ANGLE_P_5S_G;
+			angleBaseInfoLUT[b].P3SB = ANGLE_P_3S_G;
+			break;
+		default:
+			assert(false);
+			die("Unknown base type %d in initAngleBaseInfoLUT!\n", b);
+		}
+	}
+}
+
 static AngleBaseInfo getAngleBaseInfo(ParticleType base)
 {
 	AngleBaseInfo info;
@@ -246,7 +291,7 @@ typedef struct {
 	DihedralCache S3P5SB;
 } DihedralBaseInfo;
 
-static DihedralBaseInfo dihedralsBases[NUM_BASE_TYPES];
+static DihedralBaseInfo dihedralsBasesLUT[NUM_BASE_TYPES];
 static DihedralCache dihedralP5S3P5S;
 static DihedralCache dihedralS3P5S3P;
 
@@ -257,22 +302,33 @@ static DihedralCache makeDihedralCache(double dihedralAngle)
 	ret.cosDihedral = cos(dihedralAngle);
 	return ret;
 }
-static void initDihedralCache(void)
+static void initDihedralLUT(void)
 {
-	dihedralsBases[BASE_A].BS3P5S = makeDihedralCache(DIHEDRAL_A_S3_P_5S);
-	dihedralsBases[BASE_A].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_A);
-
-	dihedralsBases[BASE_T].BS3P5S = makeDihedralCache(DIHEDRAL_T_S3_P_5S);
-	dihedralsBases[BASE_T].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_T);
-
-	dihedralsBases[BASE_C].BS3P5S = makeDihedralCache(DIHEDRAL_C_S3_P_5S);
-	dihedralsBases[BASE_C].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_C);
-
-	dihedralsBases[BASE_G].BS3P5S = makeDihedralCache(DIHEDRAL_G_S3_P_5S);
-	dihedralsBases[BASE_G].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_G);
-
-	dihedralP5S3P5S = makeDihedralCache(DIHEDRAL_P_5S3_P_5S);
-	dihedralS3P5S3P = makeDihedralCache(DIHEDRAL_S3_P_5S3_P);
+	for (int b = 0; b < NUM_BASE_TYPES; b++) {
+		assert(isBase(b));
+		switch(b) {
+		case BASE_A:
+			dihedralsBasesLUT[b].BS3P5S = makeDihedralCache(DIHEDRAL_A_S3_P_5S);
+			dihedralsBasesLUT[b].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_A);
+			break;
+		case BASE_T:
+			dihedralsBasesLUT[b].BS3P5S = makeDihedralCache(DIHEDRAL_T_S3_P_5S);
+			dihedralsBasesLUT[b].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_T);
+			break;
+		case BASE_C:
+			dihedralsBasesLUT[b].BS3P5S = makeDihedralCache(DIHEDRAL_C_S3_P_5S);
+			dihedralsBasesLUT[b].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_C);
+			break;
+		case BASE_G:
+			dihedralsBasesLUT[b].BS3P5S = makeDihedralCache(DIHEDRAL_G_S3_P_5S);
+			dihedralsBasesLUT[b].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_G);
+			break;
+		default:
+			assert(false);
+			die("Unknown base type %d in "
+					"initDihedralLUT!\n", b);
+		}
+	}
 }
 
 /* V = k * (1 - cos(phi - phi0)) */
@@ -304,13 +360,13 @@ static double VdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
 {
 	assert(0 <= b->type && b->type < 4);
-	return Vdihedral(b, s1, p, s2, dihedralsBases[b->type].BS3P5S);
+	return Vdihedral(b, s1, p, s2, dihedralsBasesLUT[b->type].BS3P5S);
 }
 static double VdihedralS3P5SB(Particle *s1, Particle *p,
 				Particle *s2, Particle *b)
 {
 	assert(0 <= b->type && b->type < 4);
-	return Vdihedral(s1, p, s2, b, dihedralsBases[b->type].S3P5SB);
+	return Vdihedral(s1, p, s2, b, dihedralsBasesLUT[b->type].S3P5SB);
 }
 
 /*
@@ -467,12 +523,12 @@ static void Fdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 static void FdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
 {
-	Fdihedral(b, s1, p, s2, dihedralsBases[b->type].BS3P5S);
+	Fdihedral(b, s1, p, s2, dihedralsBasesLUT[b->type].BS3P5S);
 }
 static void FdihedralS3P5SB(Particle *s1, Particle *p,
 				Particle *s2, Particle *b)
 {
-	Fdihedral(s1, p, s2, b, dihedralsBases[b->type].S3P5SB);
+	Fdihedral(s1, p, s2, b, dihedralsBasesLUT[b->type].S3P5SB);
 }
 
 
@@ -693,36 +749,35 @@ static void FbasePair(Particle *p1, Particle *p2)
 /* EXCLUSION */
 /* Two particles feel exclusion forces if they are not connected by a 
  * direct bond.
- * Lookup table: areConnected[indexDiff][type1][type2],
+ * Lookup table: areConnectedLUT[indexDiff][type1][type2],
  * where * type1 and type2 are the types of particles on the same strand, 
  *         separated at most 1 monomer from each other,
  *       * indexDiff is the difference in monomer-index of those particles 
  *         in the strand (can only be 0 or 1: particles should be ordered so 
  *         that type1 has a lower index than type2) */
-static bool areConnected[2][NUM_PARTICLE_TYPES][NUM_PARTICLE_TYPES];
+static bool areConnectedLUT[2][NUM_PARTICLE_TYPES][NUM_PARTICLE_TYPES];
 
-static void initAreConnected(void) {
+static void initAreConnectedLUT(void) {
 	/* Initialize everything to false */
 	for (int i = 0; i < NUM_PARTICLE_TYPES; i++) {
 		for (int j = 0; j < NUM_PARTICLE_TYPES; j++) {
-			areConnected[0][i][j] = false;
-			areConnected[1][i][j] = false;
+			areConnectedLUT[0][i][j] = false;
+			areConnectedLUT[1][i][j] = false;
 		}
 	}
 
 	/* Everything connected that doesn't involve bases */
-	areConnected[0][SUGAR][PHOSPHATE] = true;
-	areConnected[0][PHOSPHATE][SUGAR] = true;
-	areConnected[1][PHOSPHATE][SUGAR] = true;
+	areConnectedLUT[0][SUGAR][PHOSPHATE] = true;
+	areConnectedLUT[0][PHOSPHATE][SUGAR] = true;
+	areConnectedLUT[1][PHOSPHATE][SUGAR] = true;
 
 	/* Everything involving bases */
-	for (int b = 0; b < NUM_PARTICLE_TYPES; b++) {
-		if (!isBase(b))
-			continue;
+	for (int b = 0; b < NUM_BASE_TYPES; b++) {
+		assert(isBase(b));
 
 		/* Base is only connected to sugar on same monomer */
-		areConnected[0][b][SUGAR] = true;
-		areConnected[0][SUGAR][b] = true;
+		areConnectedLUT[0][b][SUGAR] = true;
+		areConnectedLUT[0][SUGAR][b] = true;
 	}
 }
 
@@ -745,7 +800,7 @@ static bool feelExclusion(Particle *p1, Particle *p2)
 	if (indexDiff > 1)
 		return true;
 
-	return !areConnected[indexDiff][p1->type][p2->type];
+	return !areConnectedLUT[indexDiff][p1->type][p2->type];
 }
 
 /* Return (the exclusion cut off distance)^2. This is the distance where 
@@ -1126,9 +1181,10 @@ void dumpStats()
 
 void initPhysics(void)
 {
-	initDihedralCache();
-	initAreConnected();
-	initSugarBaseBondDistance();
+	initDihedralLUT();
+	initAreConnectedLUT();
+	initSugarBaseBondDistanceLUT();
+	initAngleBaseInfoLUT();
 }
 
 Vec3 getCOM(Particle *ps, int num)
