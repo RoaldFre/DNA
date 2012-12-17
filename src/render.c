@@ -61,6 +61,8 @@ const GLfloat A_col[] = {0.1, 0.1, 1.0, 0.0};
 const GLfloat T_col[] = {0.0, 0.7, 1.0, 0.0};
 const GLfloat C_col[] = {0.0, 0.8, 0.0, 0.0};
 const GLfloat G_col[] = {0.7, 1.0, 0.0, 0.0};
+const GLfloat X_col[] = {1.0, 0.0, 0.0, 0.0};
+const GLfloat Y_col[] = {1.0, 0.3, 0.5, 0.0};
 
 static int numVertices;
 static int numIndices;
@@ -151,6 +153,8 @@ static void renderBase(Particle *p, RenderConf *rc)
 		case BASE_T: col = T_col; break;
 		case BASE_C: col = C_col; break;
 		case BASE_G: col = G_col; break;
+		case BASE_X: col = X_col; break;
+		case BASE_Y: col = Y_col; break;
 		default: /* not a base */
 		     assert(false);
 		     col = gray;
