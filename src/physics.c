@@ -693,7 +693,7 @@ static BasePairInfo getBasePairInfo(Particle *p1, Particle *p2)
 	return basePairInfoLUT[t1][t2];
 }
 /* Returns true for pairs of particles that can form a base pair binding. */
-static bool isBondedBasePair(Particle *p1, Particle *p2)
+static bool canFormBasePair(Particle *p1, Particle *p2)
 {
 	BasePairInfo bpi = getBasePairInfo(p1, p2);
 	return bpi.coupling > 0;
@@ -992,7 +992,7 @@ static void mutuallyExclusivePairForces(Particle *p1, Particle *p2)
 {
 	/* Nonbonded pair interactions are mutually exclusive. See Knotts.
 	 * Note that this screws up energy conservation!! */
-	if (interactions.enableBond && isBondedBasePair(p1, p2))
+	if (interactions.enableBasePair && canFormBasePair(p1, p2))
 		FbasePair(p1, p2); /* TODO MUST BE MUTUALLY EXCLUSIVE WITH 
 				      STACKING, that is: two base pairs 
 				      cannot form a bp bond if they are 
