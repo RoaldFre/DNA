@@ -26,7 +26,7 @@ typedef struct Vec3
 
 static __inline__ void fprintVector(FILE *stream, Vec3 v)
 {
-	fprintf(stream, "%10f\t%10f\t%10f\t", v.x, v.y, v.z);
+	fprintf(stream, "%10lf\t%10lf\t%10lf", v.x, v.y, v.z);
 }
 
 static __inline__ void printVector(Vec3 v)
@@ -36,11 +36,22 @@ static __inline__ void printVector(Vec3 v)
 
 static __inline__ void fprintVectorExp(FILE *stream, Vec3 v)
 {
-	fprintf(stream, "%15e %15e %15e", v.x, v.y, v.z);
+	fprintf(stream, "%15le %15le %15le", v.x, v.y, v.z);
 }
 static __inline__ void printVectorExp(Vec3 v)
 {
 	fprintVectorExp(stdout, v);
+}
+
+static __inline__ bool fscanVector(FILE *stream, Vec3 *v)
+{
+	int n = fscanf(stream, "%lf %lf %lf", &v->x, &v->y, &v->z);
+	return (n == 3);
+}
+static __inline__ bool fscanVectorExp(FILE *stream, Vec3 *v)
+{
+	int n = fscanf(stream, "%le %le %le", &v->x, &v->y, &v->z);
+	return (n == 3);
 }
 
 /* Warning, you can't 'call' the macros below with functions that have side 

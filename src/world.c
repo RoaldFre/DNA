@@ -4,6 +4,7 @@
 #include "integrator.h"
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 
 World world;
@@ -343,6 +344,92 @@ Particle *getConnectedParticle(Particle *p)
 }
 
 
+
+/* ===== SERIALIZATION FUNCTIONS ===== */
+static void writeStrand(FILE *out, Strand *s)
+{
+	assert(out != NULL  &&  s != NULL);
+	fprintf(out, "%d\n", s->numMonomers);
+	char *seq = getSequence(s);
+	fprintf(out, "%s\n", seq);
+	free(seq);
+
+	for (int i = 0; i < 3*s->numMonomers; i++) {
+		fprintVectorExp(out, s->all[i].pos);
+		fprintf(out, "\t");
+		fprintVectorExp(out, s->all[i].prevPos);
+		fprintf(out, "\t");
+		fprintVectorExp(out, s->all[i].vel);
+		fprintf(out, "\n");
+	}
+}
+
+
+#define MAGIC "DNAv1"
+void writeWorld(const char *filename)
+{
+	assert(filename != NULL);
+	FILE *out = fopen(filename, "w");
+	if (out == NULL)
+		die("writeWorld: can't open file '%s'!\nfopen error: %s\n", 
+				filename, strerror(errno));
+
+	fprintf(out, MAGIC "\n");
+	fprintf(out, "%e\n%d\n", world.worldSize, world.numStrands);
+
+	for (int s = 0; s < world.numStrands; s++)
+		writeStrand(out, &world.strands[s]);
+
+	fclose(out);
+}
+
+static void readStrand(FILE *in, Strand *s) {
+	assert(in != NULL);
+
+	if (1 != fscanf(in, "%d\n", &s->numMonomers))
+		die("readStrand: can't read number of monomers!\n");
+	char *seq = calloc(s->numMonomers + 1, sizeof(*seq));
+	if (1 != fscanf(in, "%s\n", seq))
+		die("readStrand: can't read base sequence!\n");
+	//printf("readStrand: reading strand with sequence %s\n", seq);
+	fillStrand(s, seq);
+	free(seq);
+
+	bool OK = true;
+	for (int i = 0; i < 3*s->numMonomers; i++) {
+		OK = OK && fscanVectorExp(in, &s->all[i].pos);
+		OK = OK && 0 == fscanf(in, "\t");
+		OK = OK && fscanVectorExp(in, &s->all[i].prevPos);
+		OK = OK && 0 == fscanf(in, "\t");
+		OK = OK && fscanVectorExp(in, &s->all[i].vel);
+		OK = OK && 0 == fscanf(in, "\n");
+		if (!OK)
+			die("readStrand: couldn't read particle vectors!\n");
+	}
+}
+void readWorld(const char *filename)
+{
+	assert(world.strands == NULL); /* world not already allocated */
+
+	assert(filename != NULL);
+	FILE *in = fopen(filename, "r");
+	if (in == NULL)
+		die("writeWorld: can't open file '%s'!\n", filename);
+
+	if (fscanf(in, MAGIC "\n") != 0  ||  errno)
+		die("readWorld: couldn't find valid magic '%s'"
+				"in file '%s'!\n", MAGIC, filename);
+
+	if (fscanf(in, "%le\n%d\n", &world.worldSize, &world.numStrands) != 2)
+		die("readWorld: couldn't get worldSize or numStrands\n");
+
+	allocWorld(world.numStrands, world.worldSize);
+
+	for (int s = 0; s < world.numStrands; s++)
+		readStrand(in, &world.strands[s]);
+
+	fclose(in);
+}
 
 
 /* ===== MISC FUNCTIONS ===== */
