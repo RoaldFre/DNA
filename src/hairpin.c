@@ -606,8 +606,7 @@ int main(int argc, char **argv)
 	Task task = sequence(tasks, 7);
 
 	setHeatBathTemperature(temperature);
-	registerInteractionSettings(interactionSettings);
-	initPhysics();
+	initPhysics(interactionSettings);
 
 	bool everythingOK = run(&task);
 

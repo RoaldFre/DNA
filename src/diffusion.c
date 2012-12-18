@@ -443,8 +443,7 @@ int main(int argc, char **argv)
 	Task task = sequence(tasks, 6);
 
 	setHeatBathTemperature(temperature);
-	registerInteractionSettings(interactionSettings);
-	initPhysics();
+	initPhysics(interactionSettings);
 
 	bool everythingOK = run(&task);
 

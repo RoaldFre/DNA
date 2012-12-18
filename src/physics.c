@@ -11,13 +11,6 @@
 static InteractionSettings interactions;
 static double truncationLenSq; /* Cached: interactions.truncationLen^2 */
 
-void registerInteractionSettings(InteractionSettings interactionSettings)
-{
-	interactions = interactionSettings;
-	truncationLenSq = SQUARE(interactionSettings.truncationLen);
-}
-
-
 
 /* ===== FORCES AND POTENTIALS ===== */
 
@@ -634,50 +627,74 @@ typedef struct {
 } BasePairInfo;
 /* Returns the BasePairInfo for the given types. If the given types do not 
  * constitute a valid base pair, then coupling and distance are set to -1. */
+static BasePairInfo basePairInfoLUT[NUM_BASE_TYPES][NUM_BASE_TYPES];
+static void initBasePairInfoLUT(void) {
+	BasePairInfo bpiGC, bpiAT, bpiXY, bpiNULL;
+	bpiNULL.coupling = -1;
+	bpiNULL.distance2 = -1;
+
+	bpiGC.coupling = BASE_PAIR_COUPLING_G_C;
+	bpiGC.distance2 = SQUARE(BASE_PAIR_DISTANCE_G_C);
+
+	bpiAT.coupling = BASE_PAIR_COUPLING_A_T;
+	bpiAT.distance2 = SQUARE(BASE_PAIR_DISTANCE_A_T);
+
+	bpiXY.coupling = BASE_PAIR_COUPLING_X_Y;
+	bpiXY.distance2 = SQUARE(BASE_PAIR_DISTANCE_X_Y);
+
+	/* Initialize to null */
+	for (int b1 = 0; b1 < NUM_BASE_TYPES; b1++)
+		for (int b2 = 0; b2 < NUM_BASE_TYPES; b2++)
+			basePairInfoLUT[b1][b2] = bpiNULL;
+	
+	basePairInfoLUT[BASE_A][BASE_T] = bpiAT;
+	basePairInfoLUT[BASE_T][BASE_A] = bpiAT;
+
+	basePairInfoLUT[BASE_G][BASE_C] = bpiGC;
+	basePairInfoLUT[BASE_C][BASE_G] = bpiGC;
+
+	basePairInfoLUT[BASE_X][BASE_Y] = bpiXY;
+	basePairInfoLUT[BASE_Y][BASE_X] = bpiXY;
+}
 static BasePairInfo getBasePairInfo(Particle *p1, Particle *p2)
 {
 	ParticleType t1 = p1->type;
 	ParticleType t2 = p2->type;
 
-	BasePairInfo bpi;
-	bpi.coupling = -1;
-	bpi.distance2 = -1;
+	BasePairInfo bpiNULL;
+	bpiNULL.coupling = -1;
+	bpiNULL.distance2 = -1;
+
+	if (!isBase(t1) || !isBase(t2))
+		return bpiNULL;
 
 	switch (interactions.basePairInteraction) {
 	case BASE_PAIR_ALL:
 		break;
 	case BASE_PAIR_HAIRPIN:
 		if (p1->strand != p2->strand)
-			return bpi;
+			return bpiNULL;
 
 		int n  = p1->strand->numMonomers;
 		int i1 = p1->strandIndex;
 		int i2 = p2->strandIndex;
 
 		if (i1 != n - 1 - i2)
-			return bpi;
+			return bpiNULL;
 		break;
 	case BASE_PAIR_DOUBLE_STRAND:
 		if (p1->strand == p2->strand)
-			return bpi;
+			return bpiNULL;
 		if (p1->strandIndex != p2->strandIndex)
-			return bpi;
+			return bpiNULL;
 		break;
 	default:
 		assert(false);
-		return bpi;
+		die("getBasePairInfo: Unknown basePairInteraction!\n");
 	}
 
-	if ((t1 == BASE_A  &&  t2 == BASE_T) 
-			||  (t1 == BASE_T  &&  t2 == BASE_A)) {
-		bpi.coupling = BASE_PAIR_COUPLING_A_T;
-		bpi.distance2 = SQUARE(BASE_PAIR_DISTANCE_A_T);
-	} else if ((t1 == BASE_C  &&  t2 == BASE_G)
-			||  (t1 == BASE_G  &&  t2 == BASE_C)) {
-		bpi.coupling = BASE_PAIR_COUPLING_G_C;
-		bpi.distance2 = SQUARE(BASE_PAIR_DISTANCE_G_C);
-	}
-	return bpi;
+	assert(isBase(t1) && isBase(t2));
+	return basePairInfoLUT[t1][t2];
 }
 /* Returns true for pairs of particles that can form a base pair binding. */
 static bool isBondedBasePair(Particle *p1, Particle *p2)
@@ -1180,13 +1197,16 @@ void dumpStats()
 
 
 /* ===== MISC FUNCTIONS ===== */
-
-void initPhysics(void)
+void initPhysics(InteractionSettings interactionSettings)
 {
+	interactions = interactionSettings;
+	truncationLenSq = SQUARE(interactionSettings.truncationLen);
+
 	initDihedralLUT();
 	initAreConnectedLUT();
 	initSugarBaseBondDistanceLUT();
 	initAngleBaseInfoLUT();
+	initBasePairInfoLUT();
 }
 
 Vec3 getCOM(Particle *ps, int num)

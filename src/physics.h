@@ -142,9 +142,6 @@
 #define BOLTZMANN_CONSTANT	1.38065e-23
 #define AVOGADRO		6.023e23
 
-/* This needs to be called before doing any physics calculations! */
-void initPhysics(void);
-
 typedef struct {
 	bool enableBond;
 	bool enableAngle;
@@ -177,7 +174,8 @@ typedef struct {
 	double truncationLen; /* Length at which potentials are truncated */
 } InteractionSettings;
 
-void registerInteractionSettings(InteractionSettings interactionSettings);
+/* This needs to be called before doing any physics calculations! */
+void initPhysics(InteractionSettings interactionSettings);
 
 void calculateForces(void);
 
