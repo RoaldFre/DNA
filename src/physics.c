@@ -103,7 +103,6 @@ static void initSugarBaseBondDistanceLUT(void) {
 			sugarBaseBondDistanceLUT[b] = BOND_S_Y;
 			break;
 		default:
-			assert(false);
 			die("Unknown base type %d in "
 					"initSugarBaseBondDistanceLUT!\n", b);
 		}
@@ -169,7 +168,6 @@ static void initAngleBaseInfoLUT(void) {
 			angleBaseInfoLUT[b].P3SB = ANGLE_P_3S_Y;
 			break;
 		default:
-			assert(false);
 			die("Unknown base type %d in initAngleBaseInfoLUT!\n", b);
 		}
 	}
@@ -317,7 +315,6 @@ static void initDihedralLUT(void)
 			dihedralsBasesLUT[b].S3P5SB = makeDihedralCache(DIHEDRAL_S3_P_5S_Y);
 			break;
 		default:
-			assert(false);
 			die("Unknown base type %d in "
 					"initDihedralLUT!\n", b);
 		}
@@ -352,13 +349,13 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 static double VdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
 {
-	assert(0 <= b->type && b->type < 4);
+	assert(b->type < 4);
 	return Vdihedral(b, s1, p, s2, dihedralsBasesLUT[b->type].BS3P5S);
 }
 static double VdihedralS3P5SB(Particle *s1, Particle *p,
 				Particle *s2, Particle *b)
 {
-	assert(0 <= b->type && b->type < 4);
+	assert(b->type < 4);
 	return Vdihedral(s1, p, s2, b, dihedralsBasesLUT[b->type].S3P5SB);
 }
 
@@ -402,7 +399,7 @@ static __inline__ Mat3 crossProdTransposedJacobian(Vec3 r12, Vec3 r23, int i)
 	case 3:
 		return r12matrCrossProd;
 	default:
-		assert(false); die("Internal error!\n");
+		die("Internal error!\n");
 		return mat3(0,0,0,0,0,0,0,0,0); /* To make compiler happy. */
 	}
 }
@@ -541,7 +538,7 @@ static HelixInfo getHelixInfo(ParticleType t)
 	case BASE_G:	info.r = G_R;  info.phi = G_PHI;  info.z = G_Z;  break;
 	case BASE_X:	info.r = X_R;  info.phi = X_PHI;  info.z = X_Z;  break;
 	case BASE_Y:	info.r = Y_R;  info.phi = Y_PHI;  info.z = Y_Z;  break;
-	default: 	assert(false); die("Error in getHelixInfo()!");
+	default: die("Error in getHelixInfo()!\n");
 	}
 	return info;
 }
@@ -689,7 +686,6 @@ static BasePairInfo getBasePairInfo(Particle *p1, Particle *p2)
 			return bpiNULL;
 		break;
 	default:
-		assert(false);
 		die("getBasePairInfo: Unknown basePairInteraction!\n");
 	}
 

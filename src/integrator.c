@@ -318,7 +318,7 @@ char *integratorInfo(IntegratorConf *conf)
 				conf->integrator.settings.verlet.tau);
 		break;
 	default:
-		assert(false); die("Unknown integrator type!\n");
+		die("Unknown integrator type!\n");
 		return NULL; /* To avoid uninitialized usage warnings */
 	}
 

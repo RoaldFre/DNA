@@ -263,7 +263,6 @@ char *getSequence(Strand *s)
 		case BASE_X: seq[i] = 'X'; break;
 		case BASE_Y: seq[i] = 'Y'; break;
 		default:
-			assert(false);
 			die("getSequence: got invalid strand!\n");
 		}
 	}

@@ -379,7 +379,7 @@ int main(int argc, char **argv)
 		integrator.settings.langevin = langevinSettings;
 		break;
 	default:
-		assert(false); die("Unknown integrator type!\n");
+		die("Unknown integrator type!\n");
 	}
 	integratorConf.integrator = integrator;
 

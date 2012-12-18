@@ -510,7 +510,7 @@ int main(int argc, char **argv)
 		integrator.settings.langevin = langevinSettings;
 		break;
 	default:
-		assert(false); die("Unknown integrator type!\n");
+		die("Unknown integrator type!\n");
 	}
 	integratorConf.integrator = integrator;
 
@@ -586,7 +586,7 @@ int main(int argc, char **argv)
 		hairpin.sampler = trivialSampler();
 		break;
 	default:
-		assert(false); die("Unknown hairpin measurement type!\n");
+		die("Unknown hairpin measurement type!\n");
 	}
 	hairpin.measConf = measurementConf;
 	Task hairpinTask = measurementTask(&hairpin);

@@ -32,6 +32,7 @@ void die(const char *fmt, ...)
 	vfprintf(stderr, fmt, args);
 	va_end(args);
 
+	assert(false); /* Debugging breakpoint */
 	exit(1);
 }
 void dieMem()
