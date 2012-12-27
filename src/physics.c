@@ -551,33 +551,42 @@ static double helixDistance2(HelixInfo bot, HelixInfo top,
 	Vec3 high = (Vec3) {top.r * cos(dphi), top.r * sin(dphi), dz};
 	return distance2(low, high);
 }
+static double neighbourStackDistance2LUT[NUM_BASE_TYPES][NUM_BASE_TYPES][2];
+static void initNeighbourStackDistance2LUT(void)
+{
+	for (int b1 = 0; b1 < NUM_BASE_TYPES; b1++)
+	for (int b2 = 0; b2 < NUM_BASE_TYPES; b2++) {
+		HelixInfo hi1 = getHelixInfo(b1);
+		HelixInfo hi2 = getHelixInfo(b2);
+		neighbourStackDistance2LUT[b1][b2][0] =
+				helixDistance2(hi2, hi1,
+					HELIX_DELTA_Z, HELIX_DELTA_PHI);
+		neighbourStackDistance2LUT[b1][b2][1] =
+				helixDistance2(hi2, hi1,
+					2 * HELIX_DELTA_Z, 2 * HELIX_DELTA_PHI);
+	}
+}
 
-/* Distance between next neighbouring particles in the beta helix, ie 
- * particle i and i+2.
- * Particle 1 is the 'bottom' particle in the helix (lower index in the 
- * strand), particle 2 is the 'top' particle of the helix (higher index in 
- * the strand).
+/* Distance between (next) neighbouring bases in the beta helix, ie base i 
+ * and i+1 or i and i+2.
+ * Base 1 is the 'bottom' base in the helix (lower index in the strand), 
+ * base 2 is the 'top' base of the helix (higher index in the strand).
  *
  * TODO WARNING, complementary strand should be of the correct 3'-5' 
  * "direction" as the "normal" strand, or this breaks down.
  *
  * monomerDistance:
- *   1 for immediate neighbours i and i+1
- *   2 for   next    neighbours i and i+2
- *   n for           neighbours i and i+n */
-static double neighbourStackDistance2(ParticleType t1, ParticleType t2, int monomerDistance)
+ *   0 for immediate neighbours i and i+1
+ *   1 for   next    neighbours i and i+2 */
+static double neighbourStackDistance2(ParticleType b1, ParticleType b2, int monomerDistance)
 {
-	HelixInfo hi1 = getHelixInfo(t1);
-	HelixInfo hi2 = getHelixInfo(t2);
-	return helixDistance2(hi2, hi1, /* TODO order of hi1 and hi2 like 
-					   this should be wrong, but 
-					   works... */
-			monomerDistance * HELIX_DELTA_Z,
-			monomerDistance * HELIX_DELTA_PHI);
+	assert(isBase(b1) && isBase(b2));
+	assert(0 <= monomerDistance && monomerDistance <= 1);
+	return neighbourStackDistance2LUT[b1][b2][monomerDistance];
 }
 /* monomerDistance:
- *   1 for immediate neighbours (i and i+1)
- *   2 for   next    neighbours (i and i+2) */
+ *   0 for immediate neighbours (i and i+1)
+ *   1 for   next    neighbours (i and i+2) */
 static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 {
 	assert(isBase(p1->type) && isBase(p2->type));
@@ -969,7 +978,7 @@ static void strandForces(Strand *s) {
 		Fbond(&s->Ss[i], &s->Ps[i],   BOND_S5_P);
 		Fbond(&s->Ss[i], &s->Ps[i-1], BOND_S3_P);
 
-		Fstack(&s->Bs[i], &s->Bs[i-1], 1);
+		Fstack(&s->Bs[i], &s->Bs[i-1], 0);
 
 		FangleP5SB(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ]);
 		Fangle    (&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
@@ -984,7 +993,7 @@ static void strandForces(Strand *s) {
 		if (i < 2) continue;
 		Fdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
 							dihedralS3P5S3P);
-		Fstack(&s->Bs[i], &s->Bs[i-2], 2);
+		Fstack(&s->Bs[i], &s->Bs[i-2], 1);
 	}
 }
 
@@ -1083,7 +1092,7 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 		Vb += Vbond(&s->Ss[i], &s->Ps[i],   BOND_S5_P);
 		Vb += Vbond(&s->Ss[i], &s->Ps[i-1], BOND_S3_P);
 
-		Vs += Vstack(&s->Bs[i], &s->Bs[i-1], 1);
+		Vs += Vstack(&s->Bs[i], &s->Bs[i-1], 0);
 
 		Va += VangleP5SB(&s->Ps[ i ], &s->Ss[ i ], &s->Bs[ i ]);
 		Va += Vangle    (&s->Ps[ i ], &s->Ss[ i ], &s->Ps[i-1], ANGLE_P_5S3_P);
@@ -1098,7 +1107,7 @@ static void addPotentialEnergies(Strand *s, PotentialEnergies *pe)
 		if (i < 2) continue;
 		Vd += Vdihedral(&s->Ss[i], &s->Ps[i-1], &s->Ss[i-1], &s->Ps[i-2],
 							dihedralS3P5S3P);
-		Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 2);
+		Vs += Vstack(&s->Bs[i], &s->Bs[i-2], 1);
 	}
 
 	pe->bond     += Vb;
@@ -1203,6 +1212,7 @@ void initPhysics(InteractionSettings interactionSettings)
 	initSugarBaseBondDistanceLUT();
 	initAngleBaseInfoLUT();
 	initBasePairInfoLUT();
+	initNeighbourStackDistance2LUT();
 }
 
 Vec3 getCOM(Particle *ps, int num)
