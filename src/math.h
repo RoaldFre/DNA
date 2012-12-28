@@ -233,7 +233,7 @@ static __inline__ double dihedral(Vec3 v1, Vec3 v2, Vec3 v3)
 	Vec3 v2xv3 = cross(v2, v3);
 	return atan2(length(v2) * dot(v1, v2xv3), dot(v1xv2, v2xv3));
 }
-/* Returns fills the argument pointers with sin(phi) and cos(phi) where phi 
+/* Fills the argument pointers with sin(phi) and cos(phi) where phi 
  * is the dihedral angle. */
 static __inline__ void sinCosDihedral(Vec3 v1, Vec3 v2, Vec3 v3, 
 					double *sinPhi, double *cosPhi)
@@ -248,9 +248,9 @@ static __inline__ void sinCosDihedral(Vec3 v1, Vec3 v2, Vec3 v3,
 		theSin = 0;
 	} else {
 		if (dot(v1xv2, v3) > 0)
-			theSin = sqrt(1 - SQUARE(theCos));
-		else
 			theSin = -sqrt(1 - SQUARE(theCos));
+		else
+			theSin = sqrt(1 - SQUARE(theCos));
 	}
 	*sinPhi = theSin;
 	*cosPhi = theCos;

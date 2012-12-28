@@ -287,6 +287,11 @@ static DihedralCache makeDihedralCache(double dihedralAngle)
 }
 static void initDihedralLUT(void)
 {
+	/* Backbone */
+	dihedralP5S3P5S = makeDihedralCache(DIHEDRAL_P_5S3_P_5S);
+	dihedralS3P5S3P = makeDihedralCache(DIHEDRAL_S3_P_5S3_P);
+
+	/* Everything involving bases */
 	for (int b = 0; b < NUM_BASE_TYPES; b++) {
 		assert(isBase(b));
 		switch(b) {
