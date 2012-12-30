@@ -9,7 +9,7 @@ if (decimateFactor == 1)
 	return
 end
 
-dataSize = size(data)
+dataSize = size(data);
 if (dataSize(1) == 1 || dataSize(2) == 1)
 	% It's a 1D array
 	decimated = decimate(data, decimateFactor);
