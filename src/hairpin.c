@@ -37,6 +37,8 @@
 
 /* Static global configuration variables */
 
+static const char* initialStateFile = NULL; /* Read world state from here. */
+static const char* finalStateFile = NULL; /* Dump world state here at end. */
 static MeasurementConf verboseConf =
 {
 	.measureTime = -1, /* loop forever */
@@ -130,7 +132,6 @@ static InteractionSettings interactionSettings = {
 };
 
 static const char* baseSequence = DEF_BASE_SEQUENCE;
-static bool buildCompStrand = false;
 static double worldSize = -1; /* guard */
 
 
@@ -141,7 +142,6 @@ static void printUsage(void)
 	printf("Flags:\n");
 	printf(" -s <str>  base Sequence of the DNA strand to simulate\n");
 	printf("             default: %s\n", DEF_BASE_SEQUENCE);
-	printf(" -d        build a Double helix with complementary strand as well\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
 	printf("             default: %f\n", DEF_TIMESTEP);
 	printf(" -T <flt><C|K>  initial Temperature (example: 20C or 300K)\n");
@@ -187,6 +187,8 @@ static void printUsage(void)
 	printf("             default: sample indefinitely\n");
 	printf(" -D <path> Data file to Dump measurement output. The directory must exist.\n");
 	printf("             default: %s\n", DEF_DATA_PATH);
+	printf(" -w <path> data file to dump World state in at the end of the measurement. The directory must exist.\n");
+	printf(" -d <path> read initial world Data from file\n");
 	printf(" -X <m|f>  measurement to eXecute:\n");
 	printf("             m: hairpin Melting temperature\n");
 	printf("             f: hairpin Formation time\n");
@@ -234,15 +236,12 @@ static void parseArguments(int argc, char **argv)
 	/* defaults */
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
-	while ((c = getopt(argc, argv, ":s:dt:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:X:epkhA:B:C:G:L:VH:M:O:Q:U:")) != -1)
+	while ((c = getopt(argc, argv, ":s:t:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:")) != -1)
 	{
 		switch (c)
 		{
 		case 's':
 			baseSequence = optarg;
-			break;
-		case 'd':
-			buildCompStrand = true;
 			break;
 		case 't':
 			integratorConf.timeStep = atof(optarg) * FEMTOSECONDS;
@@ -339,6 +338,12 @@ static void parseArguments(int argc, char **argv)
 		case 'D':
 			measurementConf.measureFile = optarg;
 			break;
+		case 'w':
+			finalStateFile = optarg;
+			break;
+		case 'd':
+			initialStateFile = optarg;
+			break;
 		case 'h':
 			printUsage();
 			exit(0);
@@ -427,13 +432,16 @@ static void parseArguments(int argc, char **argv)
 		die("\nFound unrecognised option(s) at the command line!\n");
 	}
 
-	if (worldSize < 0)
-		worldSize = ((strlen(baseSequence) + 2)
-					* DEF_MONOMER_WORLDSIZE_FACTOR) * ANGSTROM;
-
 	if (verletSettings.tau < 0)
 		verletSettings.tau = DEF_COUPLING_TIMESTEP_FACTOR
 						* integratorConf.timeStep;
+}
+
+static void determineIdealNumberOfBoxes(void)
+{
+	if (worldSize < 0)
+		worldSize = ((strlen(baseSequence) + 2)
+					* DEF_MONOMER_WORLDSIZE_FACTOR) * ANGSTROM;
 
 	if (interactionSettings.truncationLen < 0) {
 		/* Disable truncation -> no space partitioning */
@@ -486,16 +494,20 @@ int main(int argc, char **argv)
 	parseArguments(argc, argv);
 	const char *filenameBase = measurementConf.measureFile;
 
-	if (buildCompStrand)
-		allocWorld(2, worldSize);
-	else
+	if (initialStateFile != NULL) {
+		readWorld(initialStateFile);
+		/* The read-in file must have a worldsize that is valid, 
+		 * i.e. won't get altered by determineIdealNumberOfBoxes(), 
+		 * or else things might go out-of-band. TODO do this more 
+		 * elegantly. */
+		worldSize = world.worldSize;
+		determineIdealNumberOfBoxes();
+	} else {
+		determineIdealNumberOfBoxes();
 		allocWorld(1, worldSize);
-
-	fillStrand(&world.strands[0], baseSequence);
-	if (buildCompStrand)
-		fillComplementaryStrand(&world.strands[1], baseSequence);
-
-	killMomentum();
+		fillStrand(&world.strands[0], baseSequence);
+		killMomentum();
+	}
 
 	assert(worldSanityCheck());
 
@@ -609,6 +621,9 @@ int main(int argc, char **argv)
 	initPhysics(interactionSettings);
 
 	bool everythingOK = run(&task);
+
+	if (finalStateFile != NULL)
+		writeWorld(finalStateFile);
 
 	freeWorld();
 	free(basePairFile);
