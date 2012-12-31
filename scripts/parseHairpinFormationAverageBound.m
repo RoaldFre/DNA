@@ -57,7 +57,7 @@ for run = 1:nRuns
 	end
 
 	figure(unzippingPlot);
-	loglog(N -  unzippingBound, 'r')
+	loglog(N - unzippingBound, 'r')
 	figure(zippingPlot);
 	%loglog([zippingBound; relaxBound(1:plotRelaxSamples)], 'r')
 	plot(zippingBoundFromNucl, 'r')

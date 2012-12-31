@@ -1,17 +1,17 @@
 %filename  = 'hairpinLoopScaling_combined' %destination file
 filename  = 'hairpinLoopScaling' %destination file
 
-dir="/home/other/roald/clusterdata/loopFormation/formation_S=CG_L=A_zipT20_unzipT180_allowUnb0_allowB0_zippedRel10/dt15_time100000/";
+dir="/home/other/roald/clusterdata/loopFormation/relaxT90C_zipT10C_unzipT90C_zippedRel100/dt15/S4/"
 
-#Ls = [2 4 6 8 10 14 18 22 26 30 40 50 60 70 80 90 100];
-Ls = [2 4 6 8 10 14    22       34 38 40      60];
-fitstart = 1; %start at this index for fitting
+%Ls = [2 4 6 8 10 14 18 22 26 30 40 50 60 70 80 90 100];
+Ls = [2 4 6 8 10 14 18 22 26 30 40 50 60 70 80 90 100];
+fitstart = 6; %start at this index for fitting
 zippingTimes = zeros(size(Ls));
 zippingTimeErrs = zeros(size(Ls));
 unzippingTimes = zeros(size(Ls));
 unzippingTimeErrs = zeros(size(Ls));
 for i = 1 : numel(Ls)
-	[zipTime, zipErr, unzipTime, unzipErr] = averageZippingTime([dir, "L", num2str(Ls(i)), "*/formation*"]);
+	[zipTime, zipErr, unzipTime, unzipErr] = averageZippingTime([dir, "L", num2str(Ls(i)), "*/formation*itf11"], -1);
 	zippingTimes(i) = zipTime;
 	zippingTimeErrs(i) = zipErr;
 	unzippingTimes(i) = unzipTime;

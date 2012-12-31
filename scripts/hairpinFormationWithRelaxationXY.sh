@@ -27,7 +27,7 @@ NtotStem=`python -c "print($N + $NXY)"` # use this for relaxation time etc
 echo "Computing required bounded base pairs, N=$N, NXY=$NXY, NtotStem=$NtotStem"
 # Yes, ugly.
 requiredBounded=`python -c "print(int(round(($NtotStem) * (1 - $allowedUnboundedFraction))))"`
-allowedBounded=0
+allowedBounded=$NXY
 echo "requiredBounded: $requiredBounded"
 
 

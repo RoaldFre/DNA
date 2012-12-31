@@ -12,6 +12,7 @@ amplFracErrs = [];
 dir="~/clusterdata/endToEnd/CACTCAGAGAGTGACTGACTCTCAGACTCACACAGAGAGTCACTGTCTGACTCTCTCTGAGACACTGAGAGTGAGAGTGACTCTGAGTGAGTCACAGTGA/T90C"
 
 Ss = 30:10:50; % Stem lengths (ignore S=20)
+Ss = []
 decimateFactor = 11;
 
 for i = 1 : numel(Ss)
@@ -30,7 +31,6 @@ end
 % Quick addition: from N=60 onwards, we have simulated a longer period, so 
 % append these results separately here.
 extraSs = 60:10:100;
-%extraSs = [];
 for i = 1 : numel(extraSs)
 	extraSs(i)
 	[tau1, tau1Stddev, tau2, tau2Stddev, offset, offsetStddev, amplFrac, amplFracStddev] = averageEndToEndDist2times([dir, "/dt15_time2000/N", num2str(extraSs(i)), "/endToEnd*itf11"], decimateFactor);
