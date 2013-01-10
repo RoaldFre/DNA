@@ -406,7 +406,13 @@ static void visitNeighboursOf(Box *box,
 void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data)
 {
 	if (nb < 3) {
-		/* Brute force. Reason: see comment below */
+		/* Brute force. We can't do anything better anyway with 2 
+		 * boxes or less per dimension, as all particles will have 
+		 * to be checked against each other.
+		 * If we use the method below (with visitNeighbours()), we 
+		 * get into trouble when nb==2. In that case, the 'prev' 
+		 * and the 'next' per dimension will map to the same box, 
+		 * which would lead to double visits per pair! */
 		forEveryPairBruteForce(f, data);
 		return;
 	}
