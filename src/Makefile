@@ -22,7 +22,7 @@ DEBUG = -DNDEBUG
 GCC_OPTIM = -O4 -flto -fwhole-program -mmmx -msse -msse2 -msse3 -fexcess-precision=fast -ffast-math -finline-limit=2000 -fmerge-all-constants -fmodulo-sched -fmodulo-sched-allow-regmoves -fgcse-sm -fgcse-las -fgcse-after-reload -funsafe-loop-optimizations
 GCC_CFLAGS = $(WARNINGS) -std=gnu99 -pipe -march=native -ggdb $(GCC_OPTIM) $(DEBUG) $(DEFINES) -I/usr/include/freetype2
 
-CLANG_OPTIM = -O4 -march=core2
+CLANG_OPTIM = -O4 -march=native
 CLANG_CFLAGS = $(CLANG_OPTIM) $(DEBUG) $(DEFINES) -ggdb -I/usr/include/freetype2 
 
 
@@ -84,5 +84,5 @@ difffastdebug:
 	@$(CC) -o $@ $(CFLAGS) -c $<
 
 clean:
-	rm -f *.o mathlib/*.o tinymt/*.o
+	rm -f $(OBJECTS) $(EXTRA_RENDER_OBJECTS)
 
