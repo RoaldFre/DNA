@@ -30,6 +30,8 @@ static void removeFromBox(Particle *p, Box *b);
 static Box *boxFromIndex(int ix, int iy, int iz);
 static Box *boxFromParticle(const Particle *p);
 static Box *boxFromNonPeriodicIndex(int ix, int iy, int iz);
+static void forEveryPairBruteForce(void (*f)(Particle *p1, Particle *p2, void *data), 
+			 void *data);
 
 
 /* Globals */
@@ -403,6 +405,12 @@ static void visitNeighboursOf(Box *box,
 /* ITERATION OVER PAIRS */
 void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data)
 {
+	if (nb < 3) {
+		/* Brute force. Reason: see comment below */
+		forEveryPairBruteForce(f, data);
+		return;
+	}
+
 	/* Loop over all occupied boxes */
 	if (occupiedBoxes == NULL)
 		return;
@@ -410,7 +418,7 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 	Box *box = occupiedBoxes;
 	do {
 		/* Loop over all i'th particles 'p' from the box 'box' and 
-		 * match them with the j'th particle in the same box */
+		 * match them with the j'th praticle in the same box */
 		Particle *p = box->p;
 		int n = box->n;
 		for (int i = 0; i < n; i++) {
@@ -441,6 +449,40 @@ void forEveryPair(void (*f)(Particle *p1, Particle *p2))
 	/* I *hope* the compiler can optimize this deep chain of (function) 
 	 * pointer magic. TODO: Check this! */
 	forEveryPairD(&pairWrapper, (void*) &f);
+}
+
+/* Brute force over *every single* pair, including those that are more than 
+ * a boxlength apart. */
+static void forEveryPairBruteForce(void (*f)(Particle*, Particle*, void*), 
+			 void *data)
+{
+	/* Pairs within the same box */
+	for (int b = 0; b < nb*nb*nb; b++) {
+		Particle *p1 = grid[b].p;
+		for (int i = 0; i < grid[b].n; i++) { /* i'th particle in box */
+			Particle *p2 = p1->next;
+			for (int j = i + 1; j < grid[b].n; j++) {
+				f(p1, p2, data);
+				p2 = p2->next;
+			}
+			p1 = p1->next;
+		}
+	}
+
+	/* Pairs in different boxes */
+	for (int b1 = 0; b1 < nb*nb*nb; b1++) {
+		Particle *p1 = grid[b1].p;
+		for (int i1 = 0; i1 < grid[b1].n; i1++) {
+			for (int b2 = b1 + 1; b2 < nb*nb*nb; b2++) {
+				Particle *p2 = grid[b2].p;
+				for (int i2 = 0; i2 < grid[b2].n; i2++) {
+					f(p1, p2, data);
+					p2 = p2->next;
+				}
+			}
+			p1 = p1->next;
+		}
+	}
 }
 
 
