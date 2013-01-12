@@ -458,7 +458,10 @@ void forEveryPair(void (*f)(Particle *p1, Particle *p2))
 }
 
 /* Brute force over *every single* pair, including those that are more than 
- * a boxlength apart. */
+ * a boxlength apart.
+ * TODO: Possible improvement: Only loop over occupiedBoxes. But we really 
+ * only call this in case of 1 or 2 boxes per dimension atm, so it's not 
+ * really much of a speed-up then. */
 static void forEveryPairBruteForce(void (*f)(Particle*, Particle*, void*), 
 			 void *data)
 {
