@@ -27,7 +27,18 @@ void addToGrid(Particle *p);
 
 /* Put particles back in their correct boxes in case they escaped. This 
  * also forces periodic boundary conditions on the particle positions in 
- * case the particles escaped from the grid. */
+ * case the particles escaped from the grid.
+ * NOTE: This uses the 'forEveryParticle()' function of world.c. Hence, 
+ * this only is useful if ALL particles of the world are already added to 
+ * the grid!
+ *
+ * TODO: Possible safe alternative: Only loop over occupied boxes (i.e. 
+ * only particles that are truly added to the grid) -- but that's probably 
+ * a tad slower. (There is no problem with 'occupiedboxes' getting 
+ * reshuffled while we are reboxing, because particles can only *leave* 
+ * boxes that we haven't checked yet, and new boxes are pushed in front of 
+ * the linked list, so we won't visit them again when walking the 
+ * occupiedboxes list.)*/
 void reboxParticles(void);
 
 /* Execute a given function for every discinct pair of particles that are 
