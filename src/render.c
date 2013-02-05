@@ -1,5 +1,4 @@
 #include "render.h"
-#include "integrator.h"
 
 #ifdef NO_RENDER
 /* =========== BUILD WITHOUT RENDERING =========== */
@@ -29,6 +28,7 @@ void registerString(RenderStringConfig *rsc)
 #include <GL/gl.h>
 #include <math.h>
 #include "system.h"
+#include "integrator.h"
 #include "physics.h"
 #include "task.h"
 #include "font.h"
