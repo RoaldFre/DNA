@@ -12,6 +12,8 @@
  * args: sequence: a list to task pointers. Null pointerns will be ignored. */
 Task sequence(Task **tasks, int num);
 
+/* Task that will stop the run after the given time. */
+Task timerTask(double time);
 
 /* Some helper/wrapper functions */
 

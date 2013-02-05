@@ -1,5 +1,6 @@
 #include "system.h"
 #include "task.h"
+#include "integrator.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -137,3 +138,22 @@ Task sequence(Task **tasks, int num)
 	return seq;
 }
 
+static TaskSignal timerTick(void *state)
+{
+	double timeLimit = *((double*) state);
+	if (getTime() < timeLimit)
+		return TASK_OK;
+	else
+		return TASK_STOP;
+}
+Task timerTask(double time)
+{
+	double *timeCpy = malloc(sizeof(*timeCpy));
+	*timeCpy = time;
+	Task timer;
+	timer.initialData = timeCpy;
+	timer.start = &passPointer;
+	timer.tick  = &timerTick;
+	timer.stop  = &freePointer;
+	return timer;	
+}
