@@ -557,18 +557,25 @@ static double helixDistance2(HelixInfo bot, HelixInfo top,
 	return distance2(low, high);
 }
 static double neighbourStackDistance2LUT[NUM_BASE_TYPES][NUM_BASE_TYPES][2];
-static void initNeighbourStackDistance2LUT(void)
+static double neighbourStackCorrectionLUT[NUM_BASE_TYPES][NUM_BASE_TYPES][2];
+static void initNeighbourStackLUTs(void)
 {
+	assert(truncationLenSq != 0); // This must be set before initializing
+
 	for (int b1 = 0; b1 < NUM_BASE_TYPES; b1++)
 	for (int b2 = 0; b2 < NUM_BASE_TYPES; b2++) {
 		HelixInfo hi1 = getHelixInfo(b1);
 		HelixInfo hi2 = getHelixInfo(b2);
-		neighbourStackDistance2LUT[b1][b2][0] =
-				helixDistance2(hi2, hi1,
+		double rEqSq1 = helixDistance2(hi2, hi1,
 					HELIX_DELTA_Z, HELIX_DELTA_PHI);
-		neighbourStackDistance2LUT[b1][b2][1] =
-				helixDistance2(hi2, hi1,
+		double rEqSq2 = helixDistance2(hi2, hi1,
 					2 * HELIX_DELTA_Z, 2 * HELIX_DELTA_PHI);
+		double Vcorr1 = calcVLJ(STACK_COUPLING, rEqSq1, truncationLenSq);
+		double Vcorr2 = calcVLJ(STACK_COUPLING, rEqSq2, truncationLenSq);
+		neighbourStackDistance2LUT[b1][b2][0] = rEqSq1;
+		neighbourStackDistance2LUT[b1][b2][1] = rEqSq2;
+		neighbourStackCorrectionLUT[b1][b2][0] = Vcorr1;
+		neighbourStackCorrectionLUT[b1][b2][1] = Vcorr2;
 	}
 }
 
@@ -583,11 +590,19 @@ static void initNeighbourStackDistance2LUT(void)
  * monomerDistance:
  *   0 for immediate neighbours i and i+1
  *   1 for   next    neighbours i and i+2 */
-static double neighbourStackDistance2(ParticleType b1, ParticleType b2, int monomerDistance)
+static double neighbourStackDistance2(ParticleType b1, ParticleType b2,
+							int monomerDistance)
 {
 	assert(isBase(b1) && isBase(b2));
 	assert(0 <= monomerDistance && monomerDistance <= 1);
 	return neighbourStackDistance2LUT[b1][b2][monomerDistance];
+}
+static double neighbourStackCorrection(ParticleType b1, ParticleType b2,
+							int monomerDistance)
+{
+	assert(isBase(b1) && isBase(b2));
+	assert(0 <= monomerDistance && monomerDistance <= 1);
+	return neighbourStackCorrectionLUT[b1][b2][monomerDistance];
 }
 /* monomerDistance:
  *   0 for immediate neighbours (i and i+1)
@@ -605,8 +620,9 @@ static double Vstack(Particle *p1, Particle *p2, int monomerDistance)
 
 	double rEqSq = neighbourStackDistance2(p1->type, p2->type,
 						monomerDistance);
-	double V = calcVLJ(STACK_COUPLING, rEqSq, rSq)
-			- calcVLJ(STACK_COUPLING, rEqSq, truncationLenSq); //TODO cache correction!
+	double Vcorr = neighbourStackCorrection(p1->type, p2->type,
+						monomerDistance);
+	double V = calcVLJ(STACK_COUPLING, rEqSq, rSq) - Vcorr;
 	return V;
 }
 static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
@@ -1217,7 +1233,7 @@ void initPhysics(InteractionSettings interactionSettings)
 	initSugarBaseBondDistanceLUT();
 	initAngleBaseInfoLUT();
 	initBasePairInfoLUT();
-	initNeighbourStackDistance2LUT();
+	initNeighbourStackLUTs();
 }
 
 Vec3 getCOM(Particle *ps, int num)
