@@ -11,6 +11,15 @@
 static InteractionSettings interactions;
 static double truncationLenSq; /* Cached: interactions.truncationLen^2 */
 
+/* ===== CACHED STUFF FOR PERFORMANCE ===== */
+static double invDebLength; /* Inverse Debye length for Coulomb screening */
+static double calcInvDebyeLength(void);
+void syncPhysics(void)
+{
+	invDebLength = calcInvDebyeLength();
+}
+
+
 
 /* ===== FORCES AND POTENTIALS ===== */
 
@@ -908,14 +917,13 @@ static double calcInvDebyeLength(void)
 	lambdaBDenom = 4 * M_PI * H2O_PERMETTIVITY
 			* BOLTZMANN_CONSTANT * T;
 	lambdaB = SQUARE(ELECTRON_CHARGE) / lambdaBDenom;
-	double invDebLength = sqrt(8 * M_PI * lambdaB * AVOGADRO * saltCon);
-	return invDebLength;
+	return sqrt(8 * M_PI * lambdaB * AVOGADRO * saltCon);
 }
 static double calcVCoulomb(double r)
 {
 	double couplingConstant = SQUARE(ELECTRON_CHARGE)
 				/ (4 * M_PI * H2O_PERMETTIVITY);
-	double exponentialPart = exp(-r * calcInvDebyeLength());
+	double exponentialPart = exp(-r * invDebLength);
 	
 	return couplingConstant * exponentialPart / r;
 }
@@ -944,10 +952,9 @@ static double calcFCoulomb(double r)
 {
 	double couplingConstant = SQUARE(ELECTRON_CHARGE)
 				/ (4 * M_PI * H2O_PERMETTIVITY);
-	double k0 = calcInvDebyeLength(); //TODO cache per iteration (or whenever T changes)
-	double exponentialPart = exp(-r * k0);
+	double exponentialPart = exp(-r * invDebLength);
 	
-	return couplingConstant * exponentialPart * (k0 + 1/r) / r;
+	return couplingConstant * exponentialPart * (invDebLength + 1/r) / r;
 }
 static void FCoulomb(Particle *p1, Particle *p2)
 {	
@@ -1234,6 +1241,8 @@ void initPhysics(InteractionSettings interactionSettings)
 	initAngleBaseInfoLUT();
 	initBasePairInfoLUT();
 	initNeighbourStackLUTs();
+
+	syncPhysics();
 }
 
 Vec3 getCOM(Particle *ps, int num)

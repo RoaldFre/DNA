@@ -177,6 +177,10 @@ typedef struct {
 /* This needs to be called before doing any physics calculations! */
 void initPhysics(InteractionSettings interactionSettings);
 
+/* This needs to be called whenever some relevant external setting (like 
+ * the heat bath temperature) is changed. */
+void syncPhysics(void);
+
 void calculateForces(void);
 
 double getKineticTemperature(void);

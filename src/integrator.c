@@ -223,6 +223,8 @@ static void stepPhysics(Integrator integrator)
 {
 	assert(worldSanityCheck());
 
+	syncPhysics();
+
 	switch(integrator.type) {
 	case VERLET:
 		verlet();
