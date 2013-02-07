@@ -195,8 +195,10 @@ static void periodicPosition(Particle *p)
 	p->prevPos = add(p->pos, diffPos);
 }
 
-static void reboxParticle(Particle *p)
+void reboxParticle(Particle *p)
 {
+	assert(p->myBox != NULL);
+
 	periodicPosition(p);
 
 	Box *correctBox = boxFromParticle(p);

@@ -43,6 +43,9 @@ void addToGrid(Particle *p);
  * the linked list, so we won't visit them again when walking the 
  * occupiedboxes list.)*/
 void reboxParticles(void);
+/* Same as above but for a single particle. This particle must already have 
+ * been added to the grid! */
+void reboxParticle(Particle *p);
 
 /* Execute a given function for every discinct pair of particles that are 
  * within the same box, or in adjacent boxes (taking into account periodic 
