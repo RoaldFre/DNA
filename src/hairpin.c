@@ -10,6 +10,7 @@
 #include "world.h"
 #include "spgrid.h"
 #include "integrator.h"
+#include "monteCarlo.h"
 #include "render.h"
 #include "samplers.h"
 #include "math.h"
@@ -131,6 +132,7 @@ static InteractionSettings interactionSettings = {
 static const char* baseSequence = DEF_BASE_SEQUENCE;
 static double worldSize = -1; /* guard */
 static int numBoxes = -1; /* guard */
+static bool useMonteCarlo = false;
 
 
 static void printUsage(void)
@@ -166,6 +168,7 @@ static void printUsage(void)
 	printf(" -i <type> Integrator to use. Values for <type>:\n");
 	printf("             l: Langevin (velocity BBK) [default]\n");
 	printf("             v: velocity Verlet with Berendsen thermostat\n");
+	printf("             m: use Monte Carlo sampling\n");
 	printf("\n");
 	printf("Parameters for Langevin integrator:\n");
 	printf(" -g <flt>  Gamma: friction coefficient for Langevin dynamics\n");
@@ -314,6 +317,7 @@ static void parseArguments(int argc, char **argv)
 			switch(optarg[0]) {
 			case 'l': integratorType = LANGEVIN; break;
 			case 'v': integratorType = VERLET; break;
+			case 'm': useMonteCarlo = true; break;
 			default: die("Unknown integrator type '%s'\n", optarg);
 				 break;
 			}
@@ -603,6 +607,10 @@ int main(int argc, char **argv)
 
 	/* Render task */
 	Task renderTask = makeRenderTask(&renderConf);
+
+	//TODO
+	if (useMonteCarlo)
+		integratorTask = makeMonteCarloTask();
 
 	/* Combined task */
 	Task *tasks[7];

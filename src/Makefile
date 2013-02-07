@@ -3,7 +3,7 @@ RENDER = yes
 
 DEFINES=-D_GNU_SOURCE
 
-OBJECTS = system.o math.o task.o measure.o samplers.o physics.o integrator.o world.o spgrid.o tinymt/tinymt64.o render.o octave.o
+OBJECTS = system.o math.o task.o measure.o samplers.o physics.o integrator.o monteCarlo.o world.o spgrid.o tinymt/tinymt64.o render.o octave.o
 EXTRA_RENDER_OBJECTS = font.o mathlib/vector.o mathlib/quaternion.o mathlib/matrix.o
 
 LIBS = -lm
@@ -50,13 +50,12 @@ debug:
 fastdebug:
 	make -B DEBUG="-DDEBUG"
 
-main: $(OBJECTS) main.o
-	@echo "LD	main"
-	@$(CC) -o main $(CFLAGS) $(OBJECTS) main.o $(LIBS) -ggdb $(PROFILE)
+
 
 doubleStrand: $(OBJECTS) doubleStrand.o
 	@echo "LD	doubleStrand"
 	@$(CC) -o doubleStrand $(CFLAGS) $(OBJECTS) doubleStrand.o $(LIBS) -ggdb $(PROFILE)
+
 
 hairpin: $(OBJECTS) hairpin.o
 	@echo "LD	hairpin"
@@ -69,20 +68,27 @@ hairpinCombined: hairpinCombined.o
 hairpinCombinedProfile:
 	make -B PROFILE="-pg" hairpinCombined
 
+
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"
 	@$(CC) -o diffusion $(CFLAGS) $(OBJECTS) diffusion.o $(LIBS) -ggdb $(PROFILE)
-
 diffdebug:
 	make -B GCC_OPTIM="-O0" CLANG_OPTIM="-O0" DEBUG="-DDEBUG" diff
-
 difffastdebug:
 	make -B DEBUG="-DDEBUG" diff
+
+
+tests: $(OBJECTS) tests.o
+	@echo "LD	hairpin"
+	@$(CC) -o tests $(CFLAGS) $(OBJECTS) tests.o $(LIBS) -ggdb $(PROFILE)
+testsdebug:
+	make -B GCC_OPTIM="-O0" CLANG_OPTIM="-O0" DEBUG="-DDEBUG" tests
+
 
 .c.o:
 	@echo "CC	$@"
 	@$(CC) -o $@ $(CFLAGS) -c $<
 
 clean:
-	rm -f $(OBJECTS) $(EXTRA_RENDER_OBJECTS)
+	rm -f $(OBJECTS) $(EXTRA_RENDER_OBJECTS) doubleStrand.o hairpin.o diffusion.o tests.o
 
