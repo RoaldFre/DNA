@@ -1152,20 +1152,15 @@ static PotentialEnergies calcPotentialEnergies(void) {
 		addPotentialEnergies(&world.strands[s], &pe);
 	
 	forEveryPairD(&pairPotentials, &pe);
-
-	
-	/* Convert to eV */
-	pe.bond      *= ENERGY_FACTOR;
-	pe.angle     *= ENERGY_FACTOR;
-	pe.dihedral  *= ENERGY_FACTOR;
-	pe.stack     *= ENERGY_FACTOR;
-	pe.basePair  *= ENERGY_FACTOR;
-	pe.Coulomb   *= ENERGY_FACTOR;
-	pe.exclusion *= ENERGY_FACTOR;
 	
 	return pe;
 }
 
+double getPotentialEnergy(void) {
+	PotentialEnergies pe = calcPotentialEnergies();
+	return pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + 
+			pe.Coulomb + pe.exclusion;
+}
 
 
 
@@ -1219,7 +1214,15 @@ bool physicsCheck(void)
 void dumpStats()
 {
 	PotentialEnergies pe = calcPotentialEnergies();
-	double K = kineticEnergy() * ENERGY_FACTOR;
+	/* Output in electron volt */
+	pe.bond      /= ELECTRON_VOLT;
+	pe.angle     /= ELECTRON_VOLT;
+	pe.dihedral  /= ELECTRON_VOLT;
+	pe.stack     /= ELECTRON_VOLT;
+	pe.basePair  /= ELECTRON_VOLT;
+	pe.Coulomb   /= ELECTRON_VOLT;
+	pe.exclusion /= ELECTRON_VOLT;
+	double K = kineticEnergy() / ELECTRON_VOLT;
 	double T = getKineticTemperature();
 	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.exclusion;
 

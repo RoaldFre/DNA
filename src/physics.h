@@ -20,7 +20,7 @@
 #define KCAL_PER_MOL	6.947695e-21	/* kcal/mol in Joule(/particle) */
 #define EPSILON		(0.26 * KCAL_PER_MOL)
 #define ELECTRON_CHARGE	1.602177e-19
-#define ENERGY_FACTOR	(1/ELECTRON_CHARGE) /* Energies in electron volt */
+#define ELECTRON_VOLT	(ELECTRON_CHARGE)
 #define CELSIUS_TO_KELVIN 273.15
 #define CELSIUS(T)	(T + CELSIUS_TO_KELVIN)
 #define TO_CELSIUS(T)	(T - CELSIUS_TO_KELVIN)
@@ -184,6 +184,7 @@ void syncPhysics(void);
 void calculateForces(void);
 
 double getKineticTemperature(void);
+double getPotentialEnergy(void);
 
 /* Parse a string of the form "<number><C|K>" and return the corresponding 
  * temperature (in Kelvin). Returns -1 in case of error. */
