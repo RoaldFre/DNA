@@ -261,10 +261,6 @@ static void *integratorTaskStart(void *initialData)
 {
 	IntegratorConf *ic = (IntegratorConf*) initialData;
 
-	if(!allocGrid(ic->numBoxes, world.worldSize))
-		return NULL;
-
-	forEveryParticle(&addToGrid);
 	forEveryParticle(&initializePreviousPosition);
 
 	IntegratorState *state = malloc(sizeof(*state));
@@ -331,10 +327,9 @@ char *integratorInfo(IntegratorConf *conf)
 		return NULL; /* To avoid uninitialized usage warnings */
 	}
 
-	char *ret = asprintfOrDie("%s# Time step: %e\n# Number of boxes: %d\n"
-			"# Rebox interval: %e\n",
+	char *ret = asprintfOrDie("%s# Time step: %e\n # Rebox interval: %e\n",
 			integratorTypeAndSettings,
-			conf->timeStep, conf->numBoxes, conf->reboxInterval);
+			conf->timeStep, conf->reboxInterval);
 	free(integratorTypeAndSettings);
 	return ret;
 }

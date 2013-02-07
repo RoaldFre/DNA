@@ -29,7 +29,6 @@ typedef struct {
 typedef struct {
 	Integrator integrator;
 	double timeStep;      /* The timestep (dt) in the simulation */
-	int numBoxes;         /* For space partition grid */
 	double reboxInterval; /* Time interval for reboxing particles */
 } IntegratorConf;
 

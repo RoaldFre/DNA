@@ -8,6 +8,7 @@
 #include <string.h>
 #include "system.h"
 #include "world.h"
+#include "spgrid.h"
 #include "integrator.h"
 #include "render.h"
 #include "samplers.h"
@@ -76,7 +77,6 @@ static LangevinSettings langevinSettings = {
 };
 static IntegratorConf integratorConf = {
 	.timeStep      = DEF_TIMESTEP * FEMTOSECONDS,
-	.numBoxes      = -1, /* guard */
 	.reboxInterval = DEF_REBOX_INTERVAL * FEMTOSECONDS,
 };
 
@@ -99,6 +99,7 @@ static InteractionSettings interactionSettings = {
 static const char* baseSequence = DEF_BASE_SEQUENCE;
 static bool buildCompStrand = true;
 static double worldSize = -1; /* guard */
+static int numBoxes = -1; /* guard */
 
 
 static void printUsage(void)
@@ -228,8 +229,8 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid world size %s\n", optarg);
 			break;
 		case 'b':
-			integratorConf.numBoxes = atoi(optarg);
-			if (integratorConf.numBoxes <= 0)
+			numBoxes = atoi(optarg);
+			if (numBoxes <= 0)
 				die("Invalid number of boxes %s\n",
 						optarg);
 			break;
@@ -313,7 +314,7 @@ static void parseArguments(int argc, char **argv)
 		/* Disable truncation -> no space partitioning */
 		printf("Disabling space partitioning, "
 				"maximizing truncation length.\n");
-		integratorConf.numBoxes = 1;
+		numBoxes = 1;
 		interactionSettings.truncationLen = worldSize / 2.0;
 		/* Due to (cubic) periodicity, we still need to truncate at 
 		 * worldsize/2 to have correct energy conservation and to 
@@ -329,28 +330,26 @@ static void parseArguments(int argc, char **argv)
 				interactionSettings.truncationLen, worldSize/2.0,
 				2.0 * interactionSettings.truncationLen);
 		worldSize = 2.0 * interactionSettings.truncationLen;
-		integratorConf.numBoxes = 1; /* No space partitioning */
-	} else if (integratorConf.numBoxes == -1) {
+		numBoxes = 1; /* No space partitioning */
+	} else if (numBoxes == -1) {
 		/* Automatically determine ideal number of boxes.
 		 * Formula is fitted for N between 100 and 1000 on a Core2 
 		 * Duo E8500.
 		 * (+ 0.5 for correct rounding to int) */
 		int ideal = 0.5 + 2.73 * pow(strlen(baseSequence), 0.446);
-		integratorConf.numBoxes = MIN(ideal,
-					worldSize / interactionSettings.truncationLen);
-		if (integratorConf.numBoxes < 1)
-			integratorConf.numBoxes = 1;
-		printf("Number of boxes per dimension: %d\n",
-				integratorConf.numBoxes);
+		numBoxes = MIN(ideal, worldSize / interactionSettings.truncationLen);
+		if (numBoxes < 1)
+			numBoxes = 1;
+		printf("Number of boxes per dimension: %d\n", numBoxes);
 	}
 
-	if (worldSize / integratorConf.numBoxes < interactionSettings.truncationLen)
+	if (worldSize / numBoxes < interactionSettings.truncationLen)
 		die("The boxsize (%e) is smaller than the potential "
 			"truncation radius (%e)!\n",
-			worldSize / integratorConf.numBoxes / ANGSTROM,
+			worldSize / numBoxes / ANGSTROM,
 			interactionSettings.truncationLen / ANGSTROM);
 
-	renderConf.numBoxes = integratorConf.numBoxes;
+	renderConf.numBoxes = numBoxes;
 }
 
 int main(int argc, char **argv)
@@ -370,6 +369,7 @@ int main(int argc, char **argv)
 		fillComplementaryStrand(&world.strands[1], baseSequence);
 
 	killMomentum();
+	initGrid(numBoxes, worldSize);
 
 	assert(worldSanityCheck());
 

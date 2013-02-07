@@ -14,6 +14,9 @@
  * Returns true on succes, false on failure. */
 bool allocGrid(int numBoxes, double size);
 
+/* Allocates a grid (cfr allocGrid()) and adds every particle of the world. */
+bool initGrid(int numBoxes, double size);
+
 /* All particles are removed from the grid and the memory gets freed. */
 void freeGrid(void);
 

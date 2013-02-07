@@ -129,6 +129,14 @@ bool allocGrid(int numBoxes, double size)
 	return true;
 }
 
+bool initGrid(int numBoxes, double size)
+{
+	if (!allocGrid(numBoxes, size))
+		return false;
+	forEveryParticle(&addToGrid);
+	return true;
+}
+
 void freeGrid()
 {
 	if (grid == NULL) {
