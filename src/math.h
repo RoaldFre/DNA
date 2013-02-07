@@ -23,6 +23,10 @@ typedef struct Vec3
 {
 	double x, y, z;
 } Vec3;
+static __inline__ Vec3 vec3(double x, double y, double z)
+{
+	return (Vec3) {x, y, z};
+}
 
 static __inline__ void fprintVector(FILE *stream, Vec3 v)
 {
@@ -377,6 +381,38 @@ static __inline__ Vec3 fromCilindrical(double r, double phi, double height)
 	return res;
 }
 
+/* Returns a uniform random number x, where 0 <= x < 1. */
+static __inline__ double rand01(void)
+{
+	return tinymt64_generate_double01(&tinymt);
+}
+
+/* Returns a uniform random index x, where 0 <= x < numElements. */
+static __inline__ int randIndex(int numElements)
+{
+	return (int) (numElements * rand01());
+}
+
+static __inline__ Vec3 randUniformVec(double low, double high)
+{
+	Vec3 res;
+	res.x = low + (high - low) * rand01();
+	res.y = low + (high - low) * rand01();
+	res.z = low + (high - low) * rand01();
+	return res;
+}
+
+/* Return a unit vector uniformly sampled over the surface of a sphere */
+static __inline__ Vec3 randomDirection(void)
+{
+	double theta = 2*M_PI * rand01();
+	double s,c;
+	sincos(theta, &s, &c);
+	double z = 2*rand01() - 1;
+	double r = sqrt(1 - SQUARE(z));
+	return vec3(r*c, r*s, z);
+}
+
 /* These are static *globals* so that inlining randNorm multiple times in a 
  * single function can optimize out the caching of the results! 
  * TODO: verify this */
@@ -440,6 +476,10 @@ static __inline__ Vec3 rotate(Vec3 v, Vec3 axis, double theta)
 	      + (c   +    uz*uz*(1 - c)) * v.z;
 
 	return res;
+}
+static __inline__ Vec3 rotateAround(Vec3 v, Vec3 origin, Vec3 axis, double theta)
+{
+	return add(origin, rotate(sub(v, origin), axis, theta));
 }
 
 
