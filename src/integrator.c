@@ -25,7 +25,7 @@ __inline__ void setTimeStep(double dt)
 	timeStep = dt;
 }
 
-static double simulationTime = 0;
+static double simulationTime;
 
 double getTime(void)
 {
@@ -267,6 +267,7 @@ static void *integratorTaskStart(void *initialData)
 	state->lastReboxTime = 0;
 
 	setTimeStep(ic->timeStep);
+	simulationTime = 0;
 
 	free(initialData);
 	return state;
