@@ -428,8 +428,8 @@ static __inline__ Vec3 rotate(Vec3 v, Vec3 axis, double theta)
 
 	/* Rotation matrix fully written out */
 	res.x = (c   +    ux*ux*(1 - c)) * v.x
-	      + (ux*uy*(1 - c)  -  uz*c) * v.y
-	      + (ux*uz*(1 - c)  +  uy*c) * v.z;
+	      + (ux*uy*(1 - c)  -  uz*s) * v.y
+	      + (ux*uz*(1 - c)  +  uy*s) * v.z;
 
 	res.y = (ux*uy*(1 - c)  +  uz*s) * v.x
 	      + (c   +    uy*uy*(1 - c)) * v.y
