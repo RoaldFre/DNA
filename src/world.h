@@ -40,7 +40,8 @@ typedef struct particle
 {
 	double m; /* Mass */
 	Vec3 pos; /* Position */
-	Vec3 prevPos; /* Position at previous time step */
+	Vec3 prevPos; /* Position at previous time step. This gets managed 
+			 by the integrator task. */
 	Vec3 vel; /* Velocity */
 	Vec3 F;   /* Force */
 	ParticleType type;

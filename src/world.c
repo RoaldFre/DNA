@@ -120,7 +120,6 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 	 * -> per dimension: gaussian with variance T k_B / m */
 	double T = getHeatBathTemperature();
 	double velVarPerInvMass = T * BOLTZMANN_CONSTANT;
-	double dt = getTimeStep();
 
 	double phi = 0;
 	double z = 0;
@@ -223,11 +222,6 @@ static void fillStrandHelper(Strand *s, const char *baseSequence,
 		s->Bs[i].vel = randNormVec(sqrt(velVarPerInvMass / s->Bs[i].m));
 		s->Ss[i].vel = randNormVec(sqrt(velVarPerInvMass / s->Ss[i].m));
 		s->Ps[i].vel = randNormVec(sqrt(velVarPerInvMass / s->Ps[i].m));
-
-		/* Previous position */
-		s->Bs[i].prevPos = sub(s->Bs[i].pos, scale(s->Bs[i].vel, dt));
-		s->Ss[i].prevPos = sub(s->Ss[i].pos, scale(s->Ss[i].vel, dt));
-		s->Ps[i].prevPos = sub(s->Ps[i].pos, scale(s->Ps[i].vel, dt));
 
 		/* Particle's strand */
 		s->Bs[i].strand = s; s->Bs[i].strandIndex = j;

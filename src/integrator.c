@@ -244,6 +244,11 @@ static void stepPhysics(Integrator integrator)
 	simulationTime += timeStep;
 }
 
+static void initializePreviousPosition(Particle *p)
+{
+	p->prevPos = sub(p->pos, scale(p->vel, timeStep));
+}
+
 typedef struct
 {
 	Integrator integrator;
@@ -260,6 +265,7 @@ static void *integratorTaskStart(void *initialData)
 		return NULL;
 
 	forEveryParticle(&addToGrid);
+	forEveryParticle(&initializePreviousPosition);
 
 	IntegratorState *state = malloc(sizeof(*state));
 	state->integrator = ic->integrator;
