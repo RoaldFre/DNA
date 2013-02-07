@@ -93,6 +93,10 @@ typedef struct world
 	Strand *strands;
 } World;
 
+
+void setHeatBathTemperature(double temperature);
+double getHeatBathTemperature(void);
+
 extern World world;
 
 bool allocWorld(int numStrands, double worldSize);

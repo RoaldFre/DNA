@@ -7,7 +7,21 @@
 #include <errno.h>
 
 
+
 World world;
+
+static double heatBathTemperature;
+
+void setHeatBathTemperature(double temperature)
+{
+	heatBathTemperature = temperature;
+}
+double getHeatBathTemperature(void)
+{
+	return heatBathTemperature;
+}
+
+
 
 /* Allocates the world to hold the given number of strands, and sets this 
  * value in world.

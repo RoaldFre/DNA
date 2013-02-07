@@ -3,17 +3,6 @@
 #include "integrator.h"
 #include "spgrid.h"
 
-static double heatBathTemperature;
-
-__inline__ void setHeatBathTemperature(double temperature)
-{
-	heatBathTemperature = temperature;
-}
-__inline__ double getHeatBathTemperature(void)
-{
-	return heatBathTemperature;
-}
-
 static double timeStep;
 
 __inline__ double getTimeStep(void)
