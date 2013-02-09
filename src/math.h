@@ -452,35 +452,6 @@ static __inline__ Vec3 randNormVec(double stdDev)
 	return res;
 }
 
-static __inline__ Vec3 rotate(Vec3 v, Vec3 axis, double theta)
-{
-	Vec3 u = normalize(axis);
-	double ux = u.x;
-	double uy = u.y;
-	double uz = u.z;
-	double c = cos(theta);
-	double s = sin(theta);
-	Vec3 res;
-
-	/* Rotation matrix fully written out */
-	res.x = (c   +    ux*ux*(1 - c)) * v.x
-	      + (ux*uy*(1 - c)  -  uz*s) * v.y
-	      + (ux*uz*(1 - c)  +  uy*s) * v.z;
-
-	res.y = (ux*uy*(1 - c)  +  uz*s) * v.x
-	      + (c   +    uy*uy*(1 - c)) * v.y
-	      + (uy*uz*(1 - c)  -  ux*s) * v.z;
-
-	res.z = (ux*uz*(1 - c)  -  uy*s) * v.x
-	      + (uy*uz*(1 - c)  +  ux*s) * v.y
-	      + (c   +    uz*uz*(1 - c)) * v.z;
-
-	return res;
-}
-static __inline__ Vec3 rotateAround(Vec3 v, Vec3 origin, Vec3 axis, double theta)
-{
-	return add(origin, rotate(sub(v, origin), axis, theta));
-}
 
 
 typedef struct Mat3
@@ -535,4 +506,141 @@ static __inline__ Vec3 matApply(Mat3 m, Vec3 v)
 	w.z = dot(m.r3, v);
 	return w;
 }
+
+
+static __inline__ Mat3 mat3rotation(Vec3 axis, double theta)
+{
+	Vec3 u = normalize(axis);
+	double ux = u.x; double uy = u.y; double uz = u.z;
+	double c = cos(theta);
+	double s = sin(theta);
+	return mat3( c + ux*ux*(1-c),   ux*uy*(1-c) - uz*s, ux*uz*(1-c) + uy*s,
+	            uy*ux*(1-c) + uz*s,  c + uy*uy*(1-c),   uy*uz*(1-c) - ux*s,
+		    uz*ux*(1-c) - uy*s, uz*uy*(1-c) + ux*s,  c + uz*uz*(1-c));
+}
+static __inline__ Vec3 rotate(Vec3 v, Vec3 axis, double theta)
+{
+	return matApply(mat3rotation(axis, theta), v);
+}
+static __inline__ Vec3 rotateAround(Vec3 v, Vec3 origin, Vec3 axis, double theta)
+{
+	return add(origin, rotate(sub(v, origin), axis, theta));
+}
+
+
+
+
+
+
+/* 4D functions for homogeneous coordinates */
+
+typedef struct
+{
+	double m[4][4];
+} Mat4;
+typedef struct
+{
+	double v[4];
+} Vec4;
+
+static __inline__ Mat4 mat4(double m11, double m12, double m13, double m14,
+                            double m21, double m22, double m23, double m24,
+                            double m31, double m32, double m33, double m34,
+                            double m41, double m42, double m43, double m44)
+{
+	Mat4 m;
+	m.m[0][0] = m11; m.m[0][1] = m12; m.m[0][2] = m13; m.m[0][3] = m14;
+	m.m[1][0] = m21; m.m[1][1] = m22; m.m[1][2] = m23; m.m[1][3] = m24;
+	m.m[2][0] = m31; m.m[2][1] = m32; m.m[2][2] = m33; m.m[2][3] = m34;
+	m.m[3][0] = m41; m.m[3][1] = m42; m.m[3][2] = m43; m.m[3][3] = m44;
+	return m;
+}
+static __inline__ Mat4 mat4from3(Mat3 m3)
+{
+	return mat4(m3.r1.x, m3.r1.y, m3.r1.z, 0,
+	            m3.r2.x, m3.r2.y, m3.r2.z, 0,
+	            m3.r3.x, m3.r3.y, m3.r3.z, 0,
+	            0,       0,       0,       1);
+}
+static __inline__ Mat4 mat4identity(void)
+{
+	return mat4(1, 0, 0, 0,
+	            0, 1, 0, 0,
+	            0, 0, 1, 0,
+	            0, 0, 0, 1);
+}
+static __inline__ Vec4 vec4(double x, double y, double z, double w)
+{
+	Vec4 res;
+	res.v[0] = x; res.v[1] = y; res.v[2] = z; res.v[3] = w;
+	return res;
+}
+static __inline__ Vec4 vec4from3(Vec3 xyz, double w)
+{
+	return vec4(xyz.x, xyz.y, xyz.z, w);
+}
+
+static __inline__ Mat4 mat4multiply(Mat4 a, Mat4 b)
+{
+	Mat4 c = mat4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+			;
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			for (int k = 0; k < 4; k++)
+				c.m[i][j] += a.m[i][k] * b.m[k][j];
+	return c;
+}
+static __inline__ Vec4 mat4apply(Mat4 m, Vec4 v)
+{
+	Vec4 res = vec4(0, 0, 0, 0);
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			res.v[i] += m.m[i][j] * v.v[j];
+	return res;
+}
+
+static __inline__ Vec3 mat4vector(Mat4 m, Vec3 v)
+{
+	Vec4 v4 = vec4from3(v, 0);
+	Vec4 res4 = mat4apply(m, v4);
+	Vec3 res3 = vec3(res4.v[0], res4.v[1], res4.v[2]);
+	return res3;
+}
+static __inline__ Vec3 mat4point(Mat4 m, Vec3 p)
+{
+	Vec4 p4 = vec4from3(p, 1);
+	Vec4 res4 = mat4apply(m, p4);
+	Vec3 res3 = vec3(res4.v[0], res4.v[1], res4.v[2]);
+	return scale(res3, 1.0/res4.v[3]);
+}
+
+static __inline__ Mat4 mat4transpose(Mat4 m)
+{
+	Mat4 t;
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			t.m[i][j] = m.m[j][i];
+	return t;
+}
+
+static __inline__ Mat4 mat4rotation(Vec3 axis, double theta)
+{
+	return mat4from3(mat3rotation(axis, theta));
+}
+static __inline__ Mat4 mat4translation(Vec3 offset)
+{
+	return mat4(1, 0, 0, offset.x,
+	            0, 1, 0, offset.y,
+	            0, 0, 1, offset.z,
+	            0, 0, 0,    1     );
+}
+static __inline__ Mat4 mat4rotationAround(Vec3 origin, Vec3 axis, double theta)
+{
+	Mat4 transl = mat4translation(origin);
+	Mat4 invTransl = mat4translation(scale(origin, -1));
+	Mat4 rot = mat4rotation(axis, theta);
+	return mat4multiply(transl, mat4multiply(rot, invTransl));
+}
+
+
 #endif
