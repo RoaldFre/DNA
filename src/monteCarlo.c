@@ -15,6 +15,9 @@ static void pivotStrandNextMonomers(Strand *s, int pivotMonomer,
 		s->Ps[i].pos = rotateAround(s->Ps[i].pos, origin, axis, theta);
 		s->Ss[i].pos = rotateAround(s->Ss[i].pos, origin, axis, theta);
 		s->Bs[i].pos = rotateAround(s->Bs[i].pos, origin, axis, theta);
+		reboxParticle(&s->Ps[i]);
+		reboxParticle(&s->Ss[i]);
+		reboxParticle(&s->Bs[i]);
 	}
 }
 /* The pivot origin is the phosphate of the 'pivotMonomer' monomer of the 
@@ -23,6 +26,7 @@ static void pivotStrandPhosphate(Strand *s, int pivotMonomer,
 						Vec3 axis, double theta)
 {
 	Vec3 origin = s->Ps[pivotMonomer].pos;
+	reboxParticle(&s->Ps[pivotMonomer]);
 	pivotStrandNextMonomers(s, pivotMonomer, origin, axis, theta);
 }
 /* The pivot origin is the sugar of the 'pivotMonomer' monomer of the 
@@ -54,20 +58,6 @@ static void pivotStrand(Strand *s, int pivotMonomer, PivotType type,
 		break;
 	}
 }
-/* Also reboxes the pivot Monomer itself, so this can be used for pivots 
- * around phosphates and sugars. */
-static void reboxAfterPivot(Strand *s, int pivotMonomer)
-{
-	assert(s != NULL);
-	assert(0 <= pivotMonomer && pivotMonomer < s->numMonomers);
-
-	int n = s->numMonomers;
-	for (int i = pivotMonomer; i < n; i++) {
-		reboxParticle(&s->Ps[i]);
-		reboxParticle(&s->Ss[i]);
-		reboxParticle(&s->Bs[i]);
-	}
-}
 
 static void pivotMove(void)
 {
@@ -84,10 +74,7 @@ static void pivotMove(void)
 
 	double dE = V2 - V1;
 	double beta = 1.0/(BOLTZMANN_CONSTANT * getHeatBathTemperature());
-	if (dE < 0 || rand01() < exp(-dE * beta)) {
-		/* Move is accepted -> update boxes of moved particles! */
-		reboxAfterPivot(s, pivot);
-	} else {
+	if (dE > 0 && rand01() > exp(-dE * beta)) {
 		/* Move is rejected -> reset back to original configuration! */
 		pivotStrand(s, pivot, type, axis, -theta);
 	}
