@@ -316,7 +316,7 @@ char *integratorInfo(IntegratorConf *conf)
 		return NULL; /* To avoid uninitialized usage warnings */
 	}
 
-	char *ret = asprintfOrDie("%s# Time step: %e\n # Rebox interval: %e\n",
+	char *ret = asprintfOrDie("%s# Time step: %e\n# Rebox interval: %e\n",
 			integratorTypeAndSettings,
 			conf->timeStep, conf->reboxInterval);
 	free(integratorTypeAndSettings);
