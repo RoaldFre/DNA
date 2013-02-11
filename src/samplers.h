@@ -110,6 +110,21 @@ typedef struct {
 
 Sampler hairpinMeltingTempSampler(HairpinMeltingTempSamplerConfig *hsc);
 
+
+typedef struct {
+	/* A pair is 'bound' if its base pair potential is lower than the 
+	 * given threshold. */
+	double energyThreshold;
+
+	/* Set the temperature to this value at the start of sampling. Use 
+	 * a negative value here if you don't want to change the 
+	 * temperature. */
+	double temperature;
+} HairpinStateSamplerConfig;
+
+Sampler hairpinStateSampler(HairpinStateSamplerConfig *hssc);
+
+
 /* A trivial sampler that does nothing. Useful for debugging purposes. */
 Sampler trivialSampler(void);
 

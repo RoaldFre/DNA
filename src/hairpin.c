@@ -84,9 +84,15 @@ static HairpinMeltingTempSamplerConfig hmtc =
 	.measureTime = 100 * NANOSECONDS,
 	.verbose = false,
 };
+static HairpinStateSamplerConfig hsc =
+{
+	.energyThreshold = -0.1 * EPSILON,
+	.temperature = -1.0,
+};
 static enum {
 	HAIRPIN_MELTING_TEMPERATURE,
 	HAIRPIN_FORMATION_TIME,
+	HAIRPIN_STATE,
 	HAIRPIN_NO_MEASUREMENT,
 } hairpinMeasurementType = HAIRPIN_NO_MEASUREMENT;
 
@@ -190,9 +196,10 @@ static void printUsage(void)
 	printf("             default: %s\n", DEF_DATA_PATH);
 	printf(" -w <path> data file to dump World state in at the end of the measurement. The directory must exist.\n");
 	printf(" -d <path> read initial world Data from file\n");
-	printf(" -X <m|f>  measurement to eXecute:\n");
+	printf(" -X <type>  measurement to eXecute. Values for <type>:\n");
 	printf("             m: hairpin Melting temperature\n");
 	printf("             f: hairpin Formation time\n");
+	printf("             s: hairpin State\n");
 	printf(" -e        also measure End-to-end distance of the strand\n");
 	printf("             output: the data filename (see -D) with suffix: '%s'\n",
 							END_TO_END_DIST_FILE_SUFFIX);
@@ -227,6 +234,9 @@ static void printUsage(void)
 	printf("             default: %fC\n", TO_CELSIUS(hfc.unzippingTemperature));
 	printf(" -U <flt>  zipped relaxation phase duration (nanoseconds)\n");
 	printf("             default: %f\n", hfc.zippedRelaxationTime / NANOSECONDS);
+	printf("Parameters for hairpin state measurement:\n");
+	printf(" -a <flt><C|K> startTemp\n");
+	printf("             default: same as initial temperature\n");
 	printf("\n");
 }
 
@@ -237,7 +247,7 @@ static void parseArguments(int argc, char **argv)
 	/* defaults */
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
-	while ((c = getopt(argc, argv, ":s:t:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:")) != -1)
+	while ((c = getopt(argc, argv, ":s:t:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -390,6 +400,11 @@ static void parseArguments(int argc, char **argv)
 		case 'U':
 			hfc.zippedRelaxationTime = atof(optarg) * NANOSECONDS;
 			break;
+		case 'a':
+			hsc.temperature = parseTemperature(optarg);
+			if (hsc.temperature < 0)
+				die("Invalid starting temperature '%s'\n", optarg);
+			break;
 		case 'X':
 			switch(optarg[0]) {
 			case 'f': 
@@ -397,6 +412,9 @@ static void parseArguments(int argc, char **argv)
 				break;
 			case 'm':
 				hairpinMeasurementType = HAIRPIN_MELTING_TEMPERATURE;
+				break;
+			case 's':
+				hairpinMeasurementType = HAIRPIN_STATE;
 				break;
 			default:
 				die("Unknown hairpin measurement type '%s'\n", optarg);
@@ -595,6 +613,9 @@ int main(int argc, char **argv)
 					"of bound base pairs to measure "
 					"hairpin formation time!\n");
 		hairpin.sampler = hairpinFormationSampler(&hfc);
+		break;
+	case HAIRPIN_STATE:
+		hairpin.sampler = hairpinStateSampler(&hsc);
 		break;
 	case HAIRPIN_NO_MEASUREMENT:
 		hairpin.sampler = trivialSampler();

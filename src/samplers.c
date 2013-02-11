@@ -308,6 +308,10 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 	HairpinFormationSamplerData *hfd = malloc(sizeof(*hfd));
 	memset(hfd, 0, sizeof(*hfd));
 
+	int n = world.strands[0].numMonomers;
+	if (n < 1)
+		die("hairpinFormationSampler: no DNA strands in world!\n");
+
 	hfd->conf = *hfc; /* struct copy */
 	hfd->status = WAITING_TO_ZIP;
 	hfd->zippingPhaseStartTime = getTime();
@@ -316,7 +320,6 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 	setHeatBathTemperature(hfc->zippingTemperature);
 
 	/* Dump info */
-	int n = world.strands[0].numMonomers;
 	octaveScalar("sampleStartTime",       getTime());
 	octaveScalar("zippingPhaseStartTime", getTime());
 	octaveScalar("zippingTemperature",    hfc->zippingTemperature);
@@ -479,6 +482,64 @@ Sampler hairpinFormationSampler(HairpinFormationSamplerConfig *hfc)
 
 
 
+
+/* HAIR PIN STATE */
+static void* hairpinStateStart(SamplerData *sd, void *conf)
+{
+	UNUSED(sd);
+	HairpinStateSamplerConfig *hsc = (HairpinStateSamplerConfig*) conf;
+
+	int n = world.strands[0].numMonomers;
+	if (n < 1)
+		die("hairpinStateSampler: no DNA strands in world!\n");
+
+	/* Dump info */
+	octaveComment("temperatureBeforeStart  %e", getHeatBathTemperature());
+	octaveComment("energyThreshold %e",         hsc->energyThreshold);
+	octaveComment("numMonomers %d",             n);
+	octaveComment("timestep %e",                getTimeStep());
+	octaveComment("sampleInterval %e",          sd->sampleInterval);
+
+	/* Set temperature if necessary */
+	if (hsc->temperature >= 0)
+		setHeatBathTemperature(hsc->temperature);
+
+	octaveComment("temperatureAfterStart  %e",  hsc->temperature);
+
+	return hsc;
+}
+static SamplerSignal hairpinStateSample(SamplerData *sd, void *state)
+{
+	UNUSED(sd);
+	HairpinStateSamplerConfig *hsc = (HairpinStateSamplerConfig*) state;
+	int correctlyBound = getCorrectlyBoundHairpinBasePairs(
+				&world.strands[0], hsc->energyThreshold);
+
+	printf("%e %d ", getTime(), correctlyBound);
+	dumpHairpinState(&world.strands[0], hsc->energyThreshold);
+	printf("\n");
+
+	return SAMPLER_OK;
+}
+Sampler hairpinStateSampler(HairpinStateSamplerConfig *hsc)
+{
+	Sampler sampler;
+	HairpinStateSamplerConfig *hscCopy = malloc(sizeof(*hscCopy));
+	memcpy(hscCopy, hsc, sizeof(*hscCopy));
+
+	sampler.samplerConf = hscCopy;
+	sampler.start  = &hairpinStateStart;
+	sampler.sample = &hairpinStateSample;
+	sampler.stop   = &freeState;
+	sampler.header = "# Hairpin state measurement. This file is "
+			"readable by Octave.\n";
+
+	return sampler;
+}
+
+
+
+
 /* HAIR PIN MELTING TEMPERATURE */
 typedef struct {
 	enum {
@@ -498,13 +559,18 @@ typedef struct {
 
 static void* hairpinMeltingTempStart(SamplerData *sd, void *conf)
 {
-	HairpinMeltingTempSamplerConfig *hmtc = (HairpinMeltingTempSamplerConfig*) conf;
+	HairpinMeltingTempSamplerConfig *hmtc =
+				(HairpinMeltingTempSamplerConfig*) conf;
 	HairpinMeltingTempSamplerData *hmtd = malloc(sizeof(*hmtd));
 	memset(hmtd, 0, sizeof(*hmtd));
 
 	hmtd->conf = *hmtc; /* struct copy */
 	hmtd->status = START_RELAXATION;
 	hmtd->currentStep = 0;
+
+	int n = world.strands[0].numMonomers;
+	if (n < 1)
+		die("hairpinMeltingTempSampler: no DNA strands in world!\n");
 
 	/* Set this once here, so all steps have the exact same number of 
 	 * iterations. It's a PITA to do data processing otherwise. */
@@ -515,7 +581,6 @@ static void* hairpinMeltingTempStart(SamplerData *sd, void *conf)
 	 * when 'hmtc->verbose' is true. */
 	hmtd->averageBPsPerStep = calloc(sizeof(*hmtd->averageBPsPerStep), 
 					hmtc->numSteps);
-	int n = world.strands[0].numMonomers;
 	octaveScalar("sampleStartTime",   getTime());
 	octaveScalar("temperature",       getHeatBathTemperature());
 	octaveScalar("relaxationTime",    hmtc->relaxationTime);
