@@ -14,6 +14,9 @@ static double heatBathTemperature;
 
 void setHeatBathTemperature(double temperature)
 {
+	if (temperature < 0)
+		die("Trying to set a negative temperature!\n");
+
 	heatBathTemperature = temperature;
 }
 double getHeatBathTemperature(void)
