@@ -4,7 +4,7 @@ echo "Starting hairpinStateWithRelaxationXY.sh wrapper"
 
 set -e
 
-scriptsdir="$HOME/source/DNA/scripts"
+scriptsdir="$HOME/DNA/scripts"
 
 destinationDirRoot=$1
 fullSequence=$2
