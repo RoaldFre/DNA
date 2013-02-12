@@ -28,9 +28,13 @@ void die(const char *fmt, ...)
 {
 	va_list args;
 
+	fflush(stdout);
+
 	va_start(args, fmt);
 	vfprintf(stderr, fmt, args);
 	va_end(args);
+
+	fflush(stderr);
 
 	assert(false); /* Debugging breakpoint */
 	exit(1);
