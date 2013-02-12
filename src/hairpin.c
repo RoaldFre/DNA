@@ -243,6 +243,7 @@ static void printUsage(void)
 static void parseArguments(int argc, char **argv)
 {
 	int c;
+	const char *measDescr;
 
 	/* defaults */
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
@@ -253,108 +254,156 @@ static void parseArguments(int argc, char **argv)
 		{
 		case 's':
 			baseSequence = optarg;
+			printf("s: Setting sequence to %s\n", baseSequence);
 			break;
 		case 't':
 			integratorConf.timeStep = atof(optarg) * FEMTOSECONDS;
 			if (integratorConf.timeStep <= 0)
 				die("Invalid timestep %s\n", optarg);
+			printf("t: Setting time step %e\n", integratorConf.timeStep);
 			break;
 		case 'T':
 			temperature = parseTemperature(optarg);
 			if (temperature < 0)
 				die("Invalid temperature!\n");
+			printf("T: Setting temperature to %f\n", temperature);
 			break;
 		case 'N':
 			interactionSettings.saltConcentration = atof(optarg);
 			if (interactionSettings.saltConcentration < 0)
 				die("Invalid salt concentration %s\n", optarg);
+			printf("N: Setting salt concentration to %f\n", 
+					interactionSettings.saltConcentration);
 			break;
 		case 'g':
 			langevinSettings.gamma = atof(optarg);
 			if (langevinSettings.gamma < 0)
 				die("Invalid friction coefficient %s\n", optarg);
+			printf("g: Setting gamma to %e\n", 
+						langevinSettings.gamma);
 			break;
 		case 'c':
 			verletSettings.tau = atof(optarg) * FEMTOSECONDS;
 			if (verletSettings.tau < 0)
 				die("Invalid thermostat relaxation time %s\n",
 						optarg);
+			printf("c: Setting verlet coupling to %e\n", 
+						verletSettings.tau);
 			break;
 		case 'f':
 			renderConf.framerate = atof(optarg);
 			if (renderConf.framerate < 0)
 				die("Invalid framerate %s\n", optarg);
+			printf("f: Setting frame rate to %d\n", 
+						renderConf.framerate);
 			break;
 		case 'r':
 			render = true;
+			printf("r: Enabling rendering\n");
 			break;
 		case 'R':
 			renderConf.radius = atof(optarg) * ANGSTROM;
 			if (renderConf.radius <= 0)
 				die("Invalid radius %s\n", optarg);
+			printf("R: Setting render radius to %e\n", 
+						renderConf.radius);
 			break;
 		case 'F':
 			renderConf.drawForces = true;
+			printf("F: Enabling rendering of forces\n");
 			break;
 		case 'l':
 			interactionSettings.truncationLen = atof(optarg) * ANGSTROM;
+			printf("l: Setting truncationLength to %e\n", 
+					interactionSettings.truncationLen);
 			break;
 		case 'S':
 			worldSize = atof(optarg) * ANGSTROM;
 			if (worldSize <= 0)
 				die("Invalid world size %s\n", optarg);
+			printf("S: Setting world size to %e\n", worldSize);
 			break;
 		case 'b':
 			numBoxes = atoi(optarg);
 			if (numBoxes <= 0)
 				die("Invalid number of boxes %s\n",
 						optarg);
+			printf("b: Setting number of boxes to %d\n", numBoxes);
 			break;
 		case 'x':
 			integratorConf.reboxInterval = atof(optarg) * FEMTOSECONDS;
 			if (integratorConf.reboxInterval <= 0)
 				die("Invalid rebox interval %s\n", optarg);
+			printf("x: Setting rebox interval to %e\n", 
+						integratorConf.reboxInterval);
 			break;
 		case 'v':
 			verboseConf.measureInterval = atof(optarg) * PICOSECONDS;
 			if (verboseConf.measureInterval <= 0)
 				die("Verbose: invalid verbose interval %s\n",
 						optarg);
+			printf("v: Setting verbose interval to %e\n", 
+						verboseConf.measureInterval);
 			break;
 		case 'i':
 			if (optarg[0] == '\0' || optarg[1] != '\0')
 				die("Integrator: badly formatted integrator type\n");
+			const char *integratorDescr;
 			switch(optarg[0]) {
-			case 'l': integratorType = LANGEVIN; break;
-			case 'v': integratorType = VERLET; break;
-			case 'm': useMonteCarlo = true; break;
+			case 'l': 
+				integratorType = LANGEVIN;
+				integratorDescr = "Langevin";
+				break;
+			case 'v':
+				integratorType = VERLET;
+				integratorDescr = "Verlet";
+				break;
+			case 'm':
+				useMonteCarlo = true;
+				integratorDescr = "Monte Carlo";
+				break;
 			default: die("Unknown integrator type '%s'\n", optarg);
-				 break;
+				integratorDescr = "ERROR";
+				break;
 			}
+			printf("i: Integrating with %s integrator\n", 
+						integratorDescr);
 			break;
 		case 'W':
 			measurementConf.measureWait = atof(optarg) * NANOSECONDS;
 			if (measurementConf.measureWait < 0)
 				die("Invalid relaxation time %s\n", optarg);
+			printf("W: Setting measurement wait to %e\n", 
+						measurementConf.measureWait);
 			break;
 		case 'I':
 			measurementConf.measureInterval = atof(optarg) * PICOSECONDS;
 			if (measurementConf.measureInterval<= 0)
 				die("Invalid measurement interval %s\n", optarg);
+			printf("I: Setting measurement interval to %e\n", 
+						measurementConf.measureInterval);
 			break;
 		case 'P':
 			measurementConf.measureTime = atof(optarg) * NANOSECONDS;
 			if (measurementConf.measureTime <= 0)
 				die("Invalid measurement time %s\n", optarg);
+			printf("P: Setting measurement time to %e\n", 
+						measurementConf.measureTime);
 			break;
 		case 'D':
 			measurementConf.measureFile = optarg;
+			printf("D: Setting measurement file to %s\n", 
+						measurementConf.measureFile);
 			break;
 		case 'w':
 			finalStateFile = optarg;
+			printf("w: Setting final state file to %s\n", 
+						finalStateFile);
 			break;
 		case 'd':
 			initialStateFile = optarg;
+			printf("d: Setting initial state file to %s\n", 
+						initialStateFile);
 			break;
 		case 'h':
 			printUsage();
@@ -365,70 +414,101 @@ static void parseArguments(int argc, char **argv)
 			hmtc.Tstart = parseTemperature(optarg);
 			if (hmtc.Tstart < 0)
 				die("Invalid starting temperature '%s'\n", optarg);
+			printf("A: Setting melting starting temperature to %f\n", 
+						hmtc.Tstart);
 			break;
 		case 'B':
 			hmtc.Tstep = atof(optarg);
+			printf("B: Setting melting temperature step to %f\n", 
+						hmtc.Tstep);
 			break;
 		case 'C':
 			hmtc.numSteps = atoi(optarg);
+			printf("C: Setting melting temperature number of steps to %d\n", 
+						hmtc.numSteps);
 			break;
 		case 'G':
 			hmtc.measureTime = atof(optarg) * NANOSECONDS;
+			printf("G: Setting melting measure time to %e\n", 
+						hmtc.measureTime);
 			break;
 		case 'L':
 			hmtc.relaxationTime = atof(optarg) * NANOSECONDS;
+			printf("L: Setting melting relaxation time to %e\n", 
+						hmtc.relaxationTime);
 			break;
 		case 'V':
 			hmtc.verbose = true;
+			printf("v: Being verbose for melting\n");
 			break;
 		case 'H':
 			hfc.requiredBoundBPs = atoi(optarg);
+			printf("H: Setting formation required bound to %d\n", 
+						hfc.requiredBoundBPs);
 			break;
 		case 'M':
 			hfc.allowedBoundBPs = atoi(optarg);
+			printf("M: Setting formation allowed bound to %d\n", 
+						hfc.allowedBoundBPs);
 			break;
 		case 'O':
 			hfc.zippingTemperature = parseTemperature(optarg);
 			if (hfc.zippingTemperature < 0)
 				die("Invalid zipping temperature '%s'\n", optarg);
+			printf("O: Setting formation zipping temperature to %f\n", 
+						hfc.zippingTemperature);
 			break;
 		case 'Q':
 			hfc.unzippingTemperature = parseTemperature(optarg);
 			if (hfc.unzippingTemperature < 0)
 				die("Invalid unzipping temperature '%s'\n", optarg);
+			printf("Q: Setting formation unzipping temperature to %f\n", 
+						hfc.unzippingTemperature);
 			break;
 		case 'U':
 			hfc.zippedRelaxationTime = atof(optarg) * NANOSECONDS;
+			printf("U: Setting formation zipped relaxation time to %e\n", 
+						hfc.zippedRelaxationTime);
 			break;
 		case 'a':
 			hsc.temperature = parseTemperature(optarg);
 			if (hsc.temperature < 0)
 				die("Invalid starting temperature '%s'\n", optarg);
+			printf("a: Setting state measurement starting temprature to %e\n", 
+						hsc.temperature);
 			break;
 		case 'X':
 			switch(optarg[0]) {
 			case 'f': 
 				hairpinMeasurementType = HAIRPIN_FORMATION_TIME;
+				measDescr = "hairpin formation time";
 				break;
 			case 'm':
 				hairpinMeasurementType = HAIRPIN_MELTING_TEMPERATURE;
+				measDescr = "hairpin melting temperature";
 				break;
 			case 's':
 				hairpinMeasurementType = HAIRPIN_STATE;
+				measDescr = "hairpin state";
 				break;
 			default:
 				die("Unknown hairpin measurement type '%s'\n", optarg);
+				measDescr = "ERROR";
 				break;
 			}
+			printf("X: hairpin measurement: %s\n", measDescr);
 			break;
 		case 'e':
 			measureEndToEndDistance = true;
+			printf("e: measuring end to end ditance\n");
 			break;
 		case 'p':
 			measureBasePairing = true;
+			printf("e: measuring base pairing\n");
 			break;
 		case 'k':
 			measureTemperature = true;
+			printf("e: measuring Temperature\n");
 			break;
 		case ':':
 			printUsage();
