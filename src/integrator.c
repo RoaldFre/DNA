@@ -14,7 +14,7 @@ __inline__ void setTimeStep(double dt)
 	timeStep = dt;
 }
 
-static double simulationTime;
+static double simulationTime = 0;
 
 double getTime(void)
 {
@@ -244,8 +244,6 @@ typedef struct
 	double reboxInterval;
 	double lastReboxTime;
 } IntegratorState;
-/* The integrator task is responsible for handeling the space partition 
- * grid */
 static void *integratorTaskStart(void *initialData)
 {
 	IntegratorConf *ic = (IntegratorConf*) initialData;
@@ -255,10 +253,9 @@ static void *integratorTaskStart(void *initialData)
 	IntegratorState *state = malloc(sizeof(*state));
 	state->integrator = ic->integrator;
 	state->reboxInterval = ic->reboxInterval;
-	state->lastReboxTime = 0;
+	state->lastReboxTime = getTime();
 
 	setTimeStep(ic->timeStep);
-	simulationTime = 0;
 
 	free(initialData);
 	return state;
