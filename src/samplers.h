@@ -128,5 +128,9 @@ Sampler hairpinStateSampler(HairpinStateSamplerConfig *hssc);
 /* A trivial sampler that does nothing. Useful for debugging purposes. */
 Sampler trivialSampler(void);
 
+/* A trivial sampler that does nothing, except for requesting a quit after 
+ * the given time. Useful for debugging purposes. */
+Sampler trivialStoppingSampler(double stopTime);
+
 #endif
 

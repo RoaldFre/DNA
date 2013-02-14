@@ -803,3 +803,25 @@ Sampler trivialSampler(void) {
 	return sampler;
 }
 
+/* TRIVIAL STOPPING SAMPLER */
+
+static SamplerSignal trivialStoppingSample(SamplerData *sd, void *state)
+{
+	UNUSED(sd);
+	double *stopTime = (double*) state;
+	return (getTime() > *stopTime ? SAMPLER_STOP : SAMPLER_OK);
+}
+Sampler trivialStoppingSampler(double stopTime)
+{
+	double *conf = malloc(sizeof(*conf));
+	*conf = stopTime;
+	Sampler sampler = {
+			.samplerConf = conf,
+			.start = &passConf,
+			.sample = &trivialStoppingSample,
+			.stop = &freeState,
+			.header = NULL,
+	};
+	return sampler;
+}
+
