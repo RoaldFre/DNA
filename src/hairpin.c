@@ -41,7 +41,8 @@ static const char* initialStateFile = NULL; /* Read world state from here. */
 static const char* finalStateFile = NULL; /* Dump world state here at end. */
 static MeasurementConf verboseConf =
 {
-	.measureTime = -1, /* loop forever */
+	.maxMeasureTime = -1, /* loop forever */
+	.minMeasureTime = 0,
 	.measureInterval = -1, /* default: disable */
 	.measureWait = 0,
 	.measureFile = NULL,
@@ -50,7 +51,8 @@ static MeasurementConf verboseConf =
 /* generic measurement config for whatever measurement we will do */
 static MeasurementConf measurementConf =
 {
-	.measureTime = -1,
+	.maxMeasureTime = -1,
+	.minMeasureTime = 0,
 	.measureInterval = -1,
 	.measureWait = 0,
 	.measureFile = DEF_DATA_PATH,
@@ -190,8 +192,10 @@ static void printUsage(void)
 	printf("             default: 0 (ie, no relaxation phase)\n");
 	printf(" -I <flt>  sample Interval (in picosectonds)\n");
 	printf("             default: don't measure\n");
-	printf(" -P <flt>  measurement Period: total time to sample the system (in nanoseconds)\n");
+	printf(" -P <flt>  measurement Period: maximum time to sample the system (in nanoseconds)\n");
 	printf("             default: sample indefinitely\n");
+	printf(" -K <flt>  Keep sampling for the given minimum time (in nanoseconds).");
+	printf("             default: 0\n");
 	printf(" -D <path> Data file to Dump measurement output. The directory must exist.\n");
 	printf("             default: %s\n", DEF_DATA_PATH);
 	printf(" -w <path> data file to dump World state in at the end of the measurement. The directory must exist.\n");
@@ -248,7 +252,7 @@ static void parseArguments(int argc, char **argv)
 	/* defaults */
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
-	while ((c = getopt(argc, argv, ":s:t:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:a:")) != -1)
+	while ((c = getopt(argc, argv, ":s:t:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -384,11 +388,18 @@ static void parseArguments(int argc, char **argv)
 						measurementConf.measureInterval);
 			break;
 		case 'P':
-			measurementConf.measureTime = atof(optarg) * NANOSECONDS;
-			if (measurementConf.measureTime <= 0)
+			measurementConf.maxMeasureTime = atof(optarg) * NANOSECONDS;
+			if (measurementConf.maxMeasureTime <= 0)
 				die("Invalid measurement time %s\n", optarg);
-			printf("P: Setting measurement time to %e\n", 
-						measurementConf.measureTime);
+			printf("P: Setting maximum measurement time to %e\n", 
+						measurementConf.maxMeasureTime);
+			break;
+		case 'K':
+			measurementConf.minMeasureTime = atof(optarg) * NANOSECONDS;
+			if (measurementConf.minMeasureTime <= 0)
+				die("Invalid measurement time %s\n", optarg);
+			printf("P: Setting minimum measurement time to %e\n", 
+						measurementConf.minMeasureTime);
 			break;
 		case 'D':
 			measurementConf.measureFile = optarg;

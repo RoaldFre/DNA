@@ -6,8 +6,13 @@
 
 /* Configuration of a generic measurement */
 typedef struct {
-	/* Total time to sample the system. Negative to go on indefinitely. */
-	double measureTime;
+	/* Maximum time to sample the system. Negative to go on 
+	 * indefinitely, or until the sampler requests a quit. */
+	double maxMeasureTime;
+	/* Minimum time to sample the system. Requests of the sampler to 
+	 * quit will be ignored before this time is over (unless the 
+	 * sampler returns an error). */ 
+	double minMeasureTime;
 
 	/* Time between samples. Negative to disable measurement. */
 	double measureInterval; 

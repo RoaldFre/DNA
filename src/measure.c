@@ -186,12 +186,15 @@ static TaskSignal measTick(void *state)
 	if (state == NULL)
 		return TASK_OK;
 
+	// TODO: work relative to starting time of measurement!
 	MeasTaskState *measState = (MeasTaskState*) state;
 	MeasurementConf *measConf = &measState->measConf;
 	double measWait     = measConf->measureWait;
 	double measInterval = measConf->measureInterval;
-	double measTime     = measConf->measureTime;
-	double endTime      = measTime + measWait;
+	double minMeasTime  = measConf->minMeasureTime;
+	double maxMeasTime  = measConf->maxMeasureTime;
+	double minEndTime   = minMeasTime + measWait;
+	double maxEndTime   = maxMeasTime + measWait;
 	bool verbose        = measConf->verbose;
 	double time         = getTime();
 
@@ -229,10 +232,10 @@ static TaskSignal measTick(void *state)
 			break;
 
 		if (verbose) {
-			if (measTime > 0)
+			if (maxMeasTime > 0)
 				printf("\rSampling at %.3f of %.3f nanoseconds",
 						time / NANOSECONDS,
-						endTime / NANOSECONDS);
+						maxEndTime / NANOSECONDS);
 			else
 				printf("\rSampling at %.3f nanoseconds",
 						time / NANOSECONDS);
@@ -243,11 +246,11 @@ static TaskSignal measTick(void *state)
 		samplerSignal = samplerSample(measState);
 		measState->samplerData.sample++;
 		
-		if (measTime < 0)
-			break; /* Go on indefinitely, don't print anything */
+		if (maxMeasTime < 0)
+			break; /* Go on indefinitely */
 
 		fflush(stdout);
-		if (time >= endTime) {
+		if (time >= maxEndTime) {
 			if (verbose)
 				printf("\nFinished sampling period!\n");
 			return TASK_STOP;
@@ -262,6 +265,8 @@ static TaskSignal measTick(void *state)
 		case SAMPLER_OK:
 			return TASK_OK;
 		case SAMPLER_STOP:
+			if (time < minEndTime)
+				return TASK_OK; /* stopping request denied */
 			if (verbose)
 				printf("\nSampler requested polite quit.\n");
 			return TASK_STOP;
