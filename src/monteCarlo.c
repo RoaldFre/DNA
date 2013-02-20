@@ -54,30 +54,33 @@ static void applyPivotChain(Strand *s, PivotChain chain)
 			s->Ss[i].pos = mat4point(transfo, s->Ss[i].pos);
 			s->Bs[i].pos = mat4point(transfo, s->Bs[i].pos);
 			s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
-			continue; /* Decreases indentation below */
+		} else {
+			/* Current monomer *is* a pivot monomer */
+			switch (pts[pivPt].type) {
+			case PIVOT_PHOSPHATE:
+				/* Pivot entire monomer with old transfo */
+				s->Ss[i].pos = mat4point(transfo, s->Ss[i].pos);
+				s->Bs[i].pos = mat4point(transfo, s->Bs[i].pos);
+				s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
+				transfo = mat4multiply(pts[pivPt].transfo, transfo);
+				break;
+			case PIVOT_SUGAR:
+				/* TODO 'half pivot' the base? (rotate 
+				 * 'half' with old transfo and 'half' with 
+				 * new transfo?) */
+				s->Ss[i].pos = mat4point(transfo, s->Ss[i].pos);
+				s->Bs[i].pos = mat4point(transfo, s->Bs[i].pos);
+				transfo = mat4multiply(pts[pivPt].transfo, transfo);
+				s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
+				break;
+			default:
+				die("Internal error: unknown pivot type\n");
+			}
+			pivPt++;
 		}
-		/* Current monomer *is* a pivot monomer */
-		switch (pts[pivPt].type) {
-		case PIVOT_PHOSPHATE:
-			/* Pivot entire monomer with old transfo */
-			s->Ss[i].pos = mat4point(transfo, s->Ss[i].pos);
-			s->Bs[i].pos = mat4point(transfo, s->Bs[i].pos);
-			s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
-			transfo = mat4multiply(pts[pivPt].transfo, transfo);
-			break;
-		case PIVOT_SUGAR:
-			/* TODO 'half pivot' the base? (rotate 
-			 * 'half' with old transfo and 'half' with 
-			 * new transfo?) */
-			s->Ss[i].pos = mat4point(transfo, s->Ss[i].pos);
-			s->Bs[i].pos = mat4point(transfo, s->Bs[i].pos);
-			transfo = mat4multiply(pts[pivPt].transfo, transfo);
-			s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
-			break;
-		default:
-			die("Internal error: unknown pivot type\n");
-		}
-		pivPt++;
+		reboxParticle(&s->Ss[i]);
+		reboxParticle(&s->Bs[i]);
+		reboxParticle(&s->Ps[i]);
 	}
 }
 
@@ -187,8 +190,10 @@ static bool acceptMove(void)
 
 static void undoPivotMove(Strand *s)
 {
-	for (int i = 0; i < 3*s->numMonomers; i++)
+	for (int i = 0; i < 3*s->numMonomers; i++) {
 		s->all[i].pos = s->all[i].prevPos;
+		reboxParticle(&s->all[i]);
+	}
 }
 
 static void monteCarloMove(void)
