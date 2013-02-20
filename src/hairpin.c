@@ -132,6 +132,7 @@ static InteractionSettings interactionSettings = {
 	.enableBasePair	= true,
 	.enableCoulomb	= true,
 	.mutuallyExclusivePairForces = true,
+	.onlyXYbasePairing = false,
 	.basePairInteraction = BASE_PAIR_HAIRPIN,
 	.saltConcentration   = DEF_SALT_CONCENTRATION,
 	.truncationLen       = DEF_TRUNCATION_LENGTH * ANGSTROM,
@@ -736,7 +737,7 @@ int main(int argc, char **argv)
 	Task task = sequence(tasks, 7);
 
 	setHeatBathTemperature(temperature);
-	initPhysics(interactionSettings);
+	registerInteractions(interactionSettings);
 
 	bool everythingOK = run(&task);
 

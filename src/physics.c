@@ -683,11 +683,13 @@ static void initBasePairInfoLUT(void) {
 		for (int b2 = 0; b2 < NUM_BASE_TYPES; b2++)
 			basePairInfoLUT[b1][b2] = bpiNULL;
 	
-	basePairInfoLUT[BASE_A][BASE_T] = bpiAT;
-	basePairInfoLUT[BASE_T][BASE_A] = bpiAT;
+	if (interactions.onlyXYbasePairing == false) {
+		basePairInfoLUT[BASE_A][BASE_T] = bpiAT;
+		basePairInfoLUT[BASE_T][BASE_A] = bpiAT;
 
-	basePairInfoLUT[BASE_G][BASE_C] = bpiGC;
-	basePairInfoLUT[BASE_C][BASE_G] = bpiGC;
+		basePairInfoLUT[BASE_G][BASE_C] = bpiGC;
+		basePairInfoLUT[BASE_C][BASE_G] = bpiGC;
+	}
 
 	basePairInfoLUT[BASE_X][BASE_Y] = bpiXY;
 	basePairInfoLUT[BASE_Y][BASE_X] = bpiXY;
@@ -1233,7 +1235,7 @@ void dumpStats()
 
 
 /* ===== MISC FUNCTIONS ===== */
-void initPhysics(InteractionSettings interactionSettings)
+void registerInteractions(InteractionSettings interactionSettings)
 {
 	interactions = interactionSettings;
 	truncationLenSq = SQUARE(interactionSettings.truncationLen);

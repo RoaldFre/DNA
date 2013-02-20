@@ -169,13 +169,14 @@ typedef struct {
 		 * pairing. */
 		BASE_PAIR_DOUBLE_STRAND,
 	} basePairInteraction;
+	bool onlyXYbasePairing; /* Only enable base pairing for XY pairs */
 
 	double saltConcentration; /* Na+ concentration, in mol/m^3 */
 	double truncationLen; /* Length at which potentials are truncated */
 } InteractionSettings;
 
 /* This needs to be called before doing any physics calculations! */
-void initPhysics(InteractionSettings interactionSettings);
+void registerInteractions(InteractionSettings interactionSettings);
 
 /* This needs to be called whenever some relevant external setting (like 
  * the heat bath temperature) is changed. */
