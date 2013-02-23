@@ -486,7 +486,7 @@ static void parseArguments(int argc, char **argv)
 			hsc.temperature = parseTemperature(optarg);
 			if (hsc.temperature < 0)
 				die("Invalid starting temperature '%s'\n", optarg);
-			printf("a: Setting state measurement starting temprature to %e\n", 
+			printf("a: Setting state measurement starting temperature to %e\n", 
 						hsc.temperature);
 			break;
 		case 'X':
