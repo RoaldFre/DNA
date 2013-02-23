@@ -8,8 +8,10 @@
 static char renderString[RENDER_STRING_CHARS];
 static double previousPotentialEnergy;
 
-static long totalAttemptedMoves = 0;
-static long totalAcceptedMoves = 0;
+#define ACCEPTANCE_BUNCH 10000 /* update acceptance after this many moves */
+static int totalAttemptedMoves = 0;
+static int totalAcceptedMoves = 0;
+static float acceptance = 0;
 
 typedef enum {
 	PIVOT_PHOSPHATE = 0, /* pivot around the phosphate */
@@ -214,6 +216,12 @@ static void undoPivotMove(Strand *s)
 static void monteCarloMove(void)
 {
 	totalAttemptedMoves++;
+	if (totalAttemptedMoves > ACCEPTANCE_BUNCH) {
+		acceptance = ((float) totalAcceptedMoves)
+				/ (totalAttemptedMoves - 1);
+		totalAttemptedMoves = 1;
+		totalAcceptedMoves = 0;
+	}
 
 	Strand *s = &world.strands[0];
 	pivotMove(s);
@@ -224,7 +232,7 @@ static void monteCarloMove(void)
 	}
 
 	snprintf(renderString, RENDER_STRING_CHARS, "acceptance: %f",
-			((float) totalAcceptedMoves) / totalAttemptedMoves);
+								acceptance);
 }
 
 static void *monteCarloTaskStart(void *initialData)
