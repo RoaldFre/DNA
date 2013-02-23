@@ -111,13 +111,16 @@ static PivotPoint generatePivotPoint(Strand *s, int pivotIndex)
 
 	switch (type) {
 	case PIVOT_PHOSPHATE:
+		/* Pivot around the phosphate */
 		origin = s->Ps[pivotIndex].pos;
 		break;
 	case PIVOT_SUGAR:
+		/* Pivot around the sugar */
 		origin = s->Ss[pivotIndex].pos;
 		break;
 	case PIVOT_BASE:
-		origin = s->Bs[pivotIndex].pos;
+		/* Pivot the base *around* the sugar! */
+		origin = s->Ss[pivotIndex].pos;
 		break;
 	default:
 		die("Internal error: unknown pivot type\n");
