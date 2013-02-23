@@ -14,8 +14,9 @@ static long totalAcceptedMoves = 0;
 typedef enum {
 	PIVOT_PHOSPHATE = 0, /* pivot around the phosphate */
 	PIVOT_SUGAR,         /* pivot around the sugar */
+	PIVOT_BASE,          /* pivot only the base */
 } PivotType;
-#define NUM_PIVOT_TYPES 2
+#define NUM_PIVOT_TYPES 3
 
 typedef struct {
 	PivotType type;
@@ -24,7 +25,10 @@ typedef struct {
 } PivotPoint;
 
 /* Multiple pivot points for a single strand. Pivot points need to be 
- * sorted with ascending pivotIndex. */
+ * sorted with ascending pivotIndex.
+ *
+ * There can only be at most one pivotPoint for a specific index!
+ * TODO generalize */
 typedef struct {
 	int numPivotPoints;
 	PivotPoint* pivotPoints;
@@ -73,6 +77,12 @@ static void applyPivotChain(Strand *s, PivotChain chain)
 				transfo = mat4multiply(pts[pivPt].transfo, transfo);
 				s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
 				break;
+			case PIVOT_BASE:
+				s->Ss[i].pos = mat4point(transfo, s->Ss[i].pos);
+				Mat4 baseTransfo = mat4multiply(pts[pivPt].transfo, transfo);
+				s->Bs[i].pos = mat4point(baseTransfo, s->Bs[i].pos);
+				s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
+				break;
 			default:
 				die("Internal error: unknown pivot type\n");
 			}
@@ -100,9 +110,12 @@ static PivotPoint generatePivotPoint(Strand *s, int pivotIndex)
 	case PIVOT_SUGAR:
 		origin = s->Ss[pivotIndex].pos;
 		break;
+	case PIVOT_BASE:
+		origin = s->Bs[pivotIndex].pos;
+		break;
 	default:
 		die("Internal error: unknown pivot type\n");
-		origin = vec3(0,0,0); /* avoid compiler warning */
+		origin = vec3(0, 0, 0); /* avoid compiler warning */
 	}
 
 	PivotPoint res;
