@@ -64,6 +64,7 @@ typedef struct measTaskState
 	enum {RELAXING, SAMPLING} measStatus;
 	MeasurementConf measConf;
 	double intervalTime; /* Time since last sample (or start). */
+	double startingTime; /* Time at which measurement task was started */
 	StreamState streamState; /* For stdout redirection */
 } MeasTaskState;
 
@@ -161,6 +162,7 @@ static void *measStart(void *initialData)
 		state->streamState.newfd = -1;
 	}
 
+	state->startingTime = getTime();
 	state->intervalTime = (meas->measConf.measureWait > 0 ?
 			0 : meas->measConf.measureInterval);
 			/* TODO (So we start sampling immediately) */
@@ -186,17 +188,18 @@ static TaskSignal measTick(void *state)
 	if (state == NULL)
 		return TASK_OK;
 
-	// TODO: work relative to starting time of measurement!
 	MeasTaskState *measState = (MeasTaskState*) state;
 	MeasurementConf *measConf = &measState->measConf;
+	double startTime    = measState->startingTime;
 	double measWait     = measConf->measureWait;
 	double measInterval = measConf->measureInterval;
 	double minMeasTime  = measConf->minMeasureTime;
 	double maxMeasTime  = measConf->maxMeasureTime;
-	double minEndTime   = minMeasTime + measWait;
-	double maxEndTime   = maxMeasTime + measWait;
+	double minEndTime   = startTime + minMeasTime + measWait;
+	double maxEndTime   = startTime + maxMeasTime + measWait;
 	bool verbose        = measConf->verbose;
 	double time         = getTime();
+	double relTime      = time - startTime; /* relative time */
 
 	SamplerSignal samplerSignal = SAMPLER_OK;
 
@@ -206,14 +209,14 @@ static TaskSignal measTick(void *state)
 
 	switch (measState->measStatus) {
 	case RELAXING:
-		if (verbose && fmod(time, measWait / 100) < getTimeStep()) {
+		if (verbose && fmod(relTime, measWait / 100) < getTimeStep()) {
 			printf("\rRelax time %.3f of %.3f nanoseconds",
-					(time + measWait/100) / NANOSECONDS, 
+					(relTime + measWait/100) / NANOSECONDS, 
 					measWait / NANOSECONDS);
 			fflush(stdout);
 		}
-		if (time >= measWait) {
-			measState->intervalTime = time - measWait;
+		if (relTime >= measWait) {
+			measState->intervalTime = relTime - measWait;
 			if (verbose)
 				printf("\nStarting measurement.\n");
 
@@ -233,7 +236,7 @@ static TaskSignal measTick(void *state)
 
 		if (verbose) {
 			if (maxMeasTime > 0)
-				printf("\rSampling at %.3f of %.3f nanoseconds",
+				printf("\rSampling at %.3f till %.3f nanoseconds",
 						time / NANOSECONDS,
 						maxEndTime / NANOSECONDS);
 			else
