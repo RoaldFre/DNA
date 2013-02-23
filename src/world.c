@@ -471,8 +471,26 @@ char *getWorldInfo(void)
 	return ret;
 }
 
+void undoPeriodicBoundaryConditions(Strand *s)
+{
+	assert(s != NULL);
 
+	int n = s->numMonomers;
 
+	if (n == 0)
+		return;
+
+	Vec3 anchor = s->Ss[0].pos;
+
+	for (int i = 0; i < n; i++) {
+		s->Ss[i].pos = anchor;
+		s->Bs[i].pos = add(anchor, nearestImageVector(anchor, s->Bs[i].pos));
+		s->Ps[i].pos = add(anchor, nearestImageVector(anchor, s->Ps[i].pos));
+		if (i < n - 1)
+			anchor = add(s->Ps[i].pos, nearestImageVector(s->Ps[i].pos,
+			                                              s->Ss[i+1].pos));
+	}
+}
 
 
 /* ===== CHECK FUNCTIONS ===== */

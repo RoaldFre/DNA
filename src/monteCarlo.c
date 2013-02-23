@@ -45,6 +45,10 @@ static void applyPivotChain(Strand *s, PivotChain chain)
 	if (npts == 0)
 		return;
 
+	/* We can't deal with periodic boundary conditions in our 
+	 * transformations! */
+	undoPeriodicBoundaryConditions(s);
+
 	Mat4 transfo = mat4identity();
 	int pivPt = 0;
 

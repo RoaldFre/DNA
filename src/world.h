@@ -146,6 +146,11 @@ Particle *getConnectedParticle(Particle *p);
 
 void translateStrand(Strand *s, Vec3 delta);
 
+/* Undoes periodic boundary conditions. The sugar of the first monomer of 
+ * the strand is used as an anchor.
+ * TODO WARNING: prevPos gets corrupted! */
+void undoPeriodicBoundaryConditions(Strand *s);
+
 /* Checks whether particles of strands are properly associated with their 
  * type, monomer and strand. */
 bool strandSanityCheck(Strand *s);
