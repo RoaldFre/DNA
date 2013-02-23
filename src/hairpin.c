@@ -196,7 +196,7 @@ static void printUsage(void)
 	printf("             default: don't measure\n");
 	printf(" -P <flt>  measurement Period: maximum time to sample the system (in nanoseconds)\n");
 	printf("             default: sample indefinitely\n");
-	printf(" -K <flt>  Keep sampling for the given minimum time (in nanoseconds).");
+	printf(" -K <flt>  Keep sampling for the given minimum time (in nanoseconds).\n");
 	printf("             default: 0\n");
 	printf(" -D <path> Data file to Dump measurement output. The directory must exist.\n");
 	printf("             default: %s\n", DEF_DATA_PATH);
