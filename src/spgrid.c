@@ -183,7 +183,7 @@ void addToGrid(Particle *p) {
 static void periodicPosition(Particle *p)
 {
 	/* We need to watch out and update the previous position as well! */
-	Vec3 diffPos = sub(p->prevPos, p->pos);
+	Vec3 diffPos = nearestImageVector(p->pos, p->prevPos);
 
 	/* closePeriodic should suffice. When debugging, it can be useful 
 	 * to use periodic instead if we hang on closePeriodic [but that's 
