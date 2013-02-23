@@ -158,6 +158,7 @@ static void printUsage(void)
 	printf("             default: %s\n", DEF_INITIAL_TEMPERATURE);
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
 	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
+	printf(" -Y        only enable base pairing between XY base pairs\n");
 	printf(" -r        Render\n");
 	printf(" -f <flt>  desired Framerate when rendering.\n");
 	printf("             default: %f)\n", DEF_RENDER_FRAMERATE);
@@ -253,7 +254,9 @@ static void parseArguments(int argc, char **argv)
 	/* defaults */
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
-	while ((c = getopt(argc, argv, ":s:t:T:N:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:a:")) != -1)
+	/* Unused options:
+	 * E jJ m n o q u y zZ */
+	while ((c = getopt(argc, argv, ":s:t:T:N:Yg:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -279,6 +282,9 @@ static void parseArguments(int argc, char **argv)
 				die("Invalid salt concentration %s\n", optarg);
 			printf("N: Setting salt concentration to %f\n", 
 					interactionSettings.saltConcentration);
+			break;
+		case 'Y':
+			interactionSettings.onlyXYbasePairing = true;
 			break;
 		case 'g':
 			langevinSettings.gamma = atof(optarg);
