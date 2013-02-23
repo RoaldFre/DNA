@@ -36,6 +36,11 @@ typedef struct {
 	PivotPoint* pivotPoints;
 } PivotChain;
 
+/* XXX WARNING: due to numerical errors, the bond spacing at the end of 
+ * long chains will start to vary significantly. This will get corrected by 
+ * the acceptance probability when bond interactions are still enabled. It 
+ * could give a slightly biassed sampling, though.
+ * TODO this only is the case for long pivot chains? */
 static void applyPivotChain(Strand *s, PivotChain chain)
 {
 	int n = s->numMonomers;
@@ -242,9 +247,15 @@ static void monteCarloMove(void)
 								acceptance);
 }
 
+typedef struct {
+	long numMoves;
+	long maxMoves;
+} MonteCarloState;
 static void *monteCarloTaskStart(void *initialData)
 {
-	UNUSED(initialData);
+	if (world.numStrands != 1)
+		die("Expected a single strand in the world!\n");
+
 	previousPotentialEnergy = getPotentialEnergy();
 
 	renderString[0] = '\0';
@@ -254,22 +265,37 @@ static void *monteCarloTaskStart(void *initialData)
 	rsc.y = 60;
 	registerString(&rsc);
 
-	return NULL;
+	MonteCarloState *state = malloc(sizeof(*state));
+	int sweeps = *(int*) initialData;
+	free(initialData);
+
+	state->numMoves = 0;
+	state->maxMoves = sweeps * world.strands[0].numMonomers;
+
+	return state;
 }
 static TaskSignal monteCarloTaskTick(void *state)
 {
-	UNUSED(state);
+	MonteCarloState *mcs = (MonteCarloState*) state;
+	mcs->numMoves++;
+	if (mcs->maxMoves >= 0  &&  mcs->numMoves > mcs->maxMoves)
+		return TASK_STOP;
+
 	monteCarloMove();
 	return TASK_OK;
 }
 
-Task makeMonteCarloTask(void)
+Task makeMonteCarloTask(int monteCarloSweeps)
 {
 	Task task;
 
+	int *sweeps = malloc(sizeof(*sweeps));
+	*sweeps = monteCarloSweeps;
+
+	task.initialData = sweeps;
 	task.start = &monteCarloTaskStart;
 	task.tick  = &monteCarloTaskTick;
-	task.stop  = NULL;
+	task.stop  = &freePointer;
 	return task;
 }
 

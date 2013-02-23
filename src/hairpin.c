@@ -142,6 +142,7 @@ static const char* baseSequence = DEF_BASE_SEQUENCE;
 static double worldSize = -1; /* guard */
 static int numBoxes = -1; /* guard */
 static bool useMonteCarlo = false;
+static int monteCarloSweeps = -1;
 
 
 static void printUsage(void)
@@ -158,6 +159,7 @@ static void printUsage(void)
 	printf("             default: %s\n", DEF_INITIAL_TEMPERATURE);
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
 	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
+	printf(" -m <num>  perform the given number of Monte carlo sweeps before anything else\n");
 	printf(" -Y        only enable base pairing between XY base pairs\n");
 	printf(" -r        Render\n");
 	printf(" -f <flt>  desired Framerate when rendering.\n");
@@ -255,8 +257,8 @@ static void parseArguments(int argc, char **argv)
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
 	/* Unused options:
-	 * E jJ m n o q u y zZ */
-	while ((c = getopt(argc, argv, ":s:t:T:N:Yg:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:a:")) != -1)
+	 * E jJ n o q u y zZ */
+	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yg:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -283,8 +285,16 @@ static void parseArguments(int argc, char **argv)
 			printf("N: Setting salt concentration to %f\n", 
 					interactionSettings.saltConcentration);
 			break;
+		case 'm':
+			monteCarloSweeps = atoi(optarg);
+			if (monteCarloSweeps < 0)
+				die("Invalid number of monte carlo sweeps %s\n", optarg);
+			printf("m: Starting with %d monte carlo sweeps\n", 
+					monteCarloSweeps);
+			break;
 		case 'Y':
 			interactionSettings.onlyXYbasePairing = true;
+			printf("Y: Only enabling base pairing between XY pairs\n");
 			break;
 		case 'g':
 			langevinSettings.gamma = atof(optarg);
@@ -729,7 +739,7 @@ int main(int argc, char **argv)
 
 	//TODO
 	if (useMonteCarlo)
-		integratorTask = makeMonteCarloTask();
+		integratorTask = makeMonteCarloTask(monteCarloSweeps);
 
 	/* Combined task */
 	Task *tasks[7];

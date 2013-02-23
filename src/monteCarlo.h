@@ -3,6 +3,8 @@
 
 #include "physics.h"
 
-Task makeMonteCarloTask(void);
+/* Request a negative number of monteCarloSweeps to keep on going 
+ * indefinitely. */
+Task makeMonteCarloTask(int monteCarloSweeps);
 
 #endif
