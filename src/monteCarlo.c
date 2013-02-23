@@ -144,6 +144,8 @@ static void pivotMove(Strand *s)
 
 	generatePivotChain(&chain, s, PIVOT_SELECTION_PROBABILITY);
 	applyPivotChain(s, chain);
+
+	free(chain.pivotPoints);
 }
 
 #if 0
