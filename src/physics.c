@@ -363,13 +363,13 @@ static double Vdihedral(Particle *p1, Particle *p2, Particle *p3, Particle *p4,
 static double VdihedralBS3P5S(Particle *b, Particle *s1,
 				Particle *p, Particle *s2)
 {
-	assert(b->type < 4);
+	assert(b->type < NUM_BASE_TYPES);
 	return Vdihedral(b, s1, p, s2, dihedralsBasesLUT[b->type].BS3P5S);
 }
 static double VdihedralS3P5SB(Particle *s1, Particle *p,
 				Particle *s2, Particle *b)
 {
-	assert(b->type < 4);
+	assert(b->type < NUM_BASE_TYPES);
 	return Vdihedral(s1, p, s2, b, dihedralsBasesLUT[b->type].S3P5SB);
 }
 
