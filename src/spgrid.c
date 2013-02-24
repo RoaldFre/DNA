@@ -29,6 +29,7 @@ static void addToBox(Particle *p, Box *b);
 static void removeFromBox(Particle *p, Box *b);
 static Box *boxFromIndex(int ix, int iy, int iz);
 static Box *boxFromParticle(const Particle *p);
+static Box *boxFromNonPeriodicParticle(const Particle *p);
 static Box *boxFromNonPeriodicIndex(int ix, int iy, int iz);
 static void forEveryPairBruteForce(void (*f)(Particle *p1, Particle *p2, void *data), 
 			 void *data);
@@ -201,7 +202,8 @@ void reboxParticle(Particle *p)
 
 	periodicPosition(p);
 
-	Box *correctBox = boxFromParticle(p);
+	//Box *correctBox = boxFromParticle(p);
+	Box *correctBox = boxFromNonPeriodicParticle(p); // be safe
 	if (correctBox == p->myBox)
 		return;
 
