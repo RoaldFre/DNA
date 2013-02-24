@@ -260,37 +260,15 @@ static __inline__ void sinCosDihedral(Vec3 v1, Vec3 v2, Vec3 v3,
 	*cosPhi = theCos;
 }
 
-/* Returns the vector clamped to periodic boundary conditions.
- * This is slower, but works every time. Use the faster functions below for 
- * specific cases.
- * PostConditions:
- *     -period/2.0 <= res.x   &&   res.x < period/2.0
- *     -period/2.0 <= res.y   &&   res.y < period/2.0
- *     -period/2.0 <= res.z   &&   res.z < period/2.0
- */
-static __inline__ Vec3 periodic(double period, Vec3 v)
-{
-	if (LIKELY(length2(v) < SQUARE(period)/4.0))
-		return v;
-
-	Vec3 res;
-	double hp = period / 2.0; /* Half Period */
-	res.x = hp + floor((v.x - hp) / period) * period;
-	res.y = hp + floor((v.y - hp) / period) * period;
-	res.z = hp + floor((v.z - hp) / period) * period;
-
-	return res;
-}
-
 /* Helper for function below */
 static __inline__ double _closePeriodic(double period, double val)
 {
-	if (UNLIKELY(2*val < -period)) {
-		do val += period; while (UNLIKELY(2*val < -period));
+	if (UNLIKELY(val < -period/2.0)) {
+		do val += period; while (UNLIKELY(val < -period/2.0));
 		return val;
 	}
-	if (UNLIKELY(2*val >= period)) {
-		do val -= period; while (UNLIKELY(2*val >= period));
+	if (UNLIKELY(val >= period/2.0)) {
+		do val -= period; while (UNLIKELY(val >= period/2.0));
 		return val;
 	}
 	return val;
@@ -370,6 +348,38 @@ static __inline__ Vec3 fastPeriodic(double period, Vec3 v)
 
 	return res;
 }
+
+/* Returns the vector clamped to periodic boundary conditions.
+ * This is slower, but works every time. Use the faster functions below for 
+ * specific cases.
+ * PostConditions:
+ *     -period/2.0 <= res.x   &&   res.x < period/2.0
+ *     -period/2.0 <= res.y   &&   res.y < period/2.0
+ *     -period/2.0 <= res.z   &&   res.z < period/2.0
+ */
+static __inline__ Vec3 periodic(double period, Vec3 v)
+{
+	if (LIKELY(length2(v) < SQUARE(period)/4.0))
+		return v;
+
+	Vec3 res;
+	double hp = period / 2.0; /* Half Period */
+	res.x = hp + floor((v.x - hp) / period) * period;
+	res.y = hp + floor((v.y - hp) / period) * period;
+	res.z = hp + floor((v.z - hp) / period) * period;
+
+	/* Numerical maths is *hard*. I have had cases where the assertion 
+	 * res < period/2.0 failed. So we do one more explicit check for 
+	 * those things here with a fastPeriodic(). Blergh. */
+	res = fastPeriodic(period, res);
+
+	assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
+	assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
+	assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
+
+	return res;
+}
+
 
 /* y axis is the vertical axis */
 static __inline__ Vec3 fromCilindrical(double r, double phi, double height)

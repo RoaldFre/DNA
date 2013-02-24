@@ -188,8 +188,8 @@ static void periodicPosition(Particle *p)
 	/* closePeriodic should suffice. When debugging, it can be useful 
 	 * to use periodic instead if we hang on closePeriodic [but that's 
 	 * a bad sign anyway!]. */
-	p->pos = closePeriodic(gridSize, p->pos);
-	//p->pos = periodic(gridSize, p->pos);
+	//p->pos = closePeriodic(gridSize, p->pos);
+	p->pos = periodic(gridSize, p->pos);
 
 	/* Fix the previous position */
 	p->prevPos = add(p->pos, diffPos);
