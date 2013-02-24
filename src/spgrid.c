@@ -3,6 +3,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* !! NOTE !!
+ * Currently, particles can have a position at (or beyond!) the 'last' box, 
+ * yet be assigned to the 'first' box in a dimension. This is to assure 
+ * that we don't access the wrong memory, in case of numerical rounding 
+ * problems!
+ * The result: we can't count on the box indices to know where a particle 
+ * is. Hence, always use nearestImageVector() and friends.
+ * Also, all asserts regarding numerical accuracy have been commented.
+ * TODO: if particles are guaranteed to be within the boxes (with all the 
+ * numerical problems that this brings in), then we can quickly do a 
+ * nearestImageVector() based on the box indices! Maybe that's faster than 
+ * the current way. (we can pass the difference vector to functions in a 
+ * forEveryPair() loop...) */
+
 struct box
 {
 	Particle *p;	/* (Linked list of) particles in this box */
@@ -189,8 +203,8 @@ static void periodicPosition(Particle *p)
 	/* closePeriodic should suffice. When debugging, it can be useful 
 	 * to use periodic instead if we hang on closePeriodic [but that's 
 	 * a bad sign anyway!]. */
-	//p->pos = closePeriodic(gridSize, p->pos);
-	p->pos = periodic(gridSize, p->pos);
+	p->pos = closePeriodic(gridSize, p->pos);
+	//p->pos = periodic(gridSize, p->pos);
 
 	/* Fix the previous position */
 	p->prevPos = add(p->pos, diffPos);
@@ -202,8 +216,9 @@ void reboxParticle(Particle *p)
 
 	periodicPosition(p);
 
+	/* THE LINE BELOW IS NOT SAFE, see comment at the top of this file */
 	//Box *correctBox = boxFromParticle(p);
-	Box *correctBox = boxFromNonPeriodicParticle(p); // be safe
+	Box *correctBox = boxFromNonPeriodicParticle(p);
 	if (correctBox == p->myBox)
 		return;
 
@@ -233,9 +248,9 @@ static Box *boxFromParticle(const Particle *p)
 
 	assert(p != NULL);
 	assert(!isnan(p->pos.x) && !isnan(p->pos.y) && !isnan(p->pos.z));
-	assert(0 <= shifted.x  &&  shifted.x < gs);
-	assert(0 <= shifted.y  &&  shifted.y < gs);
-	assert(0 <= shifted.z  &&  shifted.z < gs);
+	//assert(0 <= shifted.x  &&  shifted.x < gs);
+	//assert(0 <= shifted.y  &&  shifted.y < gs);
+	//assert(0 <= shifted.z  &&  shifted.z < gs);
 
 	int ix = shifted.x / boxSize;
 	int iy = shifted.y / boxSize;

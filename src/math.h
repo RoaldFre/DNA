@@ -281,6 +281,8 @@ static __inline__ double _closePeriodic(double period, double val)
  *     -period/2.0 <= res.x   &&   res.x < period/2.0
  *     -period/2.0 <= res.y   &&   res.y < period/2.0
  *     -period/2.0 <= res.z   &&   res.z < period/2.0
+ * WARNING: PostConditions are 'modulo' numerical errors! NOT strictly 
+ * guaranteed!
  */
 static __inline__ Vec3 closePeriodic(double period, Vec3 v)
 {
@@ -293,9 +295,9 @@ static __inline__ Vec3 closePeriodic(double period, Vec3 v)
 	res.y = _closePeriodic(period, v.y);
 	res.z = _closePeriodic(period, v.z);
 	
-	assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
-	assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
-	assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
+	//assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
+	//assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
+	//assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
 
 	return res;
 }
@@ -326,6 +328,8 @@ static __inline__ double _fastPeriodic(double period, double val)
  *     -period/2.0 <= res.x   &&   res.x < period/2.0
  *     -period/2.0 <= res.y   &&   res.y < period/2.0
  *     -period/2.0 <= res.z   &&   res.z < period/2.0
+ * WARNING: PostConditions are 'modulo' numerical errors! NOT strictly 
+ * guaranteed!
  */
 static __inline__ Vec3 fastPeriodic(double period, Vec3 v)
 {
@@ -342,9 +346,9 @@ static __inline__ Vec3 fastPeriodic(double period, Vec3 v)
 	res.y = _fastPeriodic(period, v.y);
 	res.z = _fastPeriodic(period, v.z);
 
-	assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
-	assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
-	assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
+	//assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
+	//assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
+	//assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
 
 	return res;
 }
@@ -356,6 +360,8 @@ static __inline__ Vec3 fastPeriodic(double period, Vec3 v)
  *     -period/2.0 <= res.x   &&   res.x < period/2.0
  *     -period/2.0 <= res.y   &&   res.y < period/2.0
  *     -period/2.0 <= res.z   &&   res.z < period/2.0
+ * WARNING: PostConditions are 'modulo' numerical errors! NOT strictly 
+ * guaranteed!
  */
 static __inline__ Vec3 periodic(double period, Vec3 v)
 {
@@ -371,11 +377,11 @@ static __inline__ Vec3 periodic(double period, Vec3 v)
 	/* Numerical maths is *hard*. I have had cases where the assertion 
 	 * res < period/2.0 failed. So we do one more explicit check for 
 	 * those things here with a fastPeriodic(). Blergh. */
-	res = fastPeriodic(period, res);
+	//res = fastPeriodic(period, res);
 
-	assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
-	assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
-	assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
+	//assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
+	//assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
+	//assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
 
 	return res;
 }
