@@ -188,7 +188,7 @@ void freeGrid()
 
 void addToGrid(Particle *p) {
 	p->pos = periodic(gridSize, p->pos);
-	Box *box = boxFromParticle(p);
+	Box *box = boxFromNonPeriodicParticle(p);
 	addToBox(p, box);
 	gridNumParticles++;
 
@@ -239,9 +239,11 @@ void reboxParticles(void)
 	assert(spgridSanityCheck(true, true));
 }
 
+#if 0
 /* Precondition: particle must be within the grid. */
 static Box *boxFromParticle(const Particle *p)
 {
+	die("Using boxFromParticle() is probably not safe!\n");
 	double gs = gridSize;
 	/* shift coordinates from [-gs/2 to gs/2] to [0 to gs] */
 	Vec3 shifted = add(p->pos, (Vec3) {gs/2.0, gs/2.0, gs/2.0});
@@ -258,6 +260,7 @@ static Box *boxFromParticle(const Particle *p)
 
 	return boxFromIndex(ix, iy, iz);
 }
+#endif
 /* Particle may be outside the grid */
 static Box *boxFromNonPeriodicParticle(const Particle *p)
 {
