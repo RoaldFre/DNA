@@ -143,6 +143,7 @@ static double worldSize = -1; /* guard */
 static int numBoxes = -1; /* guard */
 static bool useMonteCarlo = false;
 static int monteCarloSweeps = -1;
+static bool noDynamics = false;
 
 
 static void printUsage(void)
@@ -181,6 +182,7 @@ static void printUsage(void)
 	printf("             l: Langevin (velocity BBK) [default]\n");
 	printf("             v: velocity Verlet with Berendsen thermostat\n");
 	printf("             m: use Monte Carlo sampling\n");
+	printf("             n: No dynamics (useful for just viewing the world when rendering)\n");
 	printf("\n");
 	printf("Parameters for Langevin integrator:\n");
 	printf(" -g <flt>  Gamma: friction coefficient for Langevin dynamics\n");
@@ -382,6 +384,10 @@ static void parseArguments(int argc, char **argv)
 			case 'm':
 				useMonteCarlo = true;
 				integratorDescr = "Monte Carlo";
+				break;
+			case 'n':
+				noDynamics = true;
+				integratorDescr = "No Dynamics";
 				break;
 			default: die("Unknown integrator type '%s'\n", optarg);
 				integratorDescr = "ERROR";
@@ -744,7 +750,7 @@ int main(int argc, char **argv)
 	/* Combined task */
 	Task *tasks[7];
 	tasks[0] = (render ? &renderTask : NULL);
-	tasks[1] = &integratorTask;
+	tasks[1] = (noDynamics ? NULL : &integratorTask);
 	tasks[2] = &verboseTask;
 	tasks[3] = &hairpinTask;;
 	tasks[4] = (measureEndToEndDistance ? &endToEndTask : NULL);
