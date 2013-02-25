@@ -95,7 +95,7 @@ static __inline__ bool isSaneVector(Vec3 v)
  * This is useful for rare bugs because it only checks for vector sanity, 
  * whereas compiling with assertions checks all assertions and is therefore 
  * slower. */
-#define DEBUG_VECTOR_SANITY false
+#define DEBUG_VECTOR_SANITY true
 
 static __inline__ void debugVectorSanity(Vec3 v, const char *location)
 {
@@ -261,6 +261,37 @@ static __inline__ void sinCosDihedral(Vec3 v1, Vec3 v2, Vec3 v3,
 }
 
 /* Helper for function below */
+static __inline__ double _periodic(double period, double val)
+{
+	double hp = period / 2.0; /* Half Period */
+	double shiftedAndScaled = (val + hp) / period;
+	double ret = (shiftedAndScaled - floor(shiftedAndScaled)) * period - hp;
+
+	assert(-period/2.0 <= ret  &&  ret < period/2.0);
+
+	return ret;
+}
+/* Returns the vector clamped to periodic boundary conditions.
+ * This is slower, but works every time. Use the faster functions below for 
+ * specific cases.
+ * PostConditions:
+ *     -period/2.0 <= res.x   &&   res.x < period/2.0
+ *     -period/2.0 <= res.y   &&   res.y < period/2.0
+ *     -period/2.0 <= res.z   &&   res.z < period/2.0
+ */
+static __inline__ Vec3 periodic(double period, Vec3 v)
+{
+	if (LIKELY(length2(v) < SQUARE(period)/4.0))
+		return v;
+
+	Vec3 res;
+	res.x = _periodic(period, v.x);
+	res.y = _periodic(period, v.y);
+	res.z = _periodic(period, v.z);
+	return res;
+}
+
+/* Helper for function below */
 static __inline__ double _closePeriodic(double period, double val)
 {
 	if (UNLIKELY(val < -period/2.0)) {
@@ -281,8 +312,6 @@ static __inline__ double _closePeriodic(double period, double val)
  *     -period/2.0 <= res.x   &&   res.x < period/2.0
  *     -period/2.0 <= res.y   &&   res.y < period/2.0
  *     -period/2.0 <= res.z   &&   res.z < period/2.0
- * WARNING: PostConditions are 'modulo' numerical errors! NOT strictly 
- * guaranteed!
  */
 static __inline__ Vec3 closePeriodic(double period, Vec3 v)
 {
@@ -295,9 +324,9 @@ static __inline__ Vec3 closePeriodic(double period, Vec3 v)
 	res.y = _closePeriodic(period, v.y);
 	res.z = _closePeriodic(period, v.z);
 	
-	//assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
-	//assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
-	//assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
+	assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
+	assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
+	assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
 
 	return res;
 }
@@ -328,8 +357,6 @@ static __inline__ double _fastPeriodic(double period, double val)
  *     -period/2.0 <= res.x   &&   res.x < period/2.0
  *     -period/2.0 <= res.y   &&   res.y < period/2.0
  *     -period/2.0 <= res.z   &&   res.z < period/2.0
- * WARNING: PostConditions are 'modulo' numerical errors! NOT strictly 
- * guaranteed!
  */
 static __inline__ Vec3 fastPeriodic(double period, Vec3 v)
 {
@@ -346,42 +373,9 @@ static __inline__ Vec3 fastPeriodic(double period, Vec3 v)
 	res.y = _fastPeriodic(period, v.y);
 	res.z = _fastPeriodic(period, v.z);
 
-	//assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
-	//assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
-	//assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
-
-	return res;
-}
-
-/* Returns the vector clamped to periodic boundary conditions.
- * This is slower, but works every time. Use the faster functions below for 
- * specific cases.
- * PostConditions:
- *     -period/2.0 <= res.x   &&   res.x < period/2.0
- *     -period/2.0 <= res.y   &&   res.y < period/2.0
- *     -period/2.0 <= res.z   &&   res.z < period/2.0
- * WARNING: PostConditions are 'modulo' numerical errors! NOT strictly 
- * guaranteed!
- */
-static __inline__ Vec3 periodic(double period, Vec3 v)
-{
-	if (LIKELY(length2(v) < SQUARE(period)/4.0))
-		return v;
-
-	Vec3 res;
-	double hp = period / 2.0; /* Half Period */
-	res.x = hp + floor((v.x - hp) / period) * period;
-	res.y = hp + floor((v.y - hp) / period) * period;
-	res.z = hp + floor((v.z - hp) / period) * period;
-
-	/* Numerical maths is *hard*. I have had cases where the assertion 
-	 * res < period/2.0 failed. So we do one more explicit check for 
-	 * those things here with a fastPeriodic(). Blergh. */
-	//res = fastPeriodic(period, res);
-
-	//assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
-	//assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
-	//assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
+	assert(-period/2.0 <= res.x  &&  res.x < period/2.0);
+	assert(-period/2.0 <= res.y  &&  res.y < period/2.0);
+	assert(-period/2.0 <= res.z  &&  res.z < period/2.0);
 
 	return res;
 }
