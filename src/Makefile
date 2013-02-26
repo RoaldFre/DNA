@@ -36,6 +36,12 @@ else
 	CFLAGS = $(GCC_CFLAGS)
 endif
 
+#use 'make target STATIC=' to generate a statically linked binary
+STATIC=no
+ifneq ($(STATIC), no)
+	STATIC_FLAGS = -static
+endif
+
 
 all: hairpin
 
@@ -59,19 +65,19 @@ doubleStrand: $(OBJECTS) doubleStrand.o
 
 hairpin: $(OBJECTS) hairpin.o
 	@echo "LD	hairpin"
-	@$(CC) -o hairpin $(CFLAGS) $(OBJECTS) hairpin.o $(LIBS) -ggdb $(PROFILE)
+	@$(CC) $(STATIC_FLAGS) -o hairpin $(CFLAGS) $(OBJECTS) hairpin.o $(LIBS) -ggdb $(PROFILE)
 hairpindebug:
 	make -B GCC_OPTIM="-O0" CLANG_OPTIM="-O0" DEBUG="-DDEBUG" hairpin
 hairpinCombined: hairpinCombined.o
 	@echo "LD	hairpinCombined"
-	@$(CC) -o hairpinCombined $(CFLAGS) hairpinCombined.o $(LIBS) -ggdb $(PROFILE)
+	@$(CC) $(STATIC_FLAGS) -o hairpinCombined $(CFLAGS) hairpinCombined.o $(LIBS) -ggdb $(PROFILE)
 hairpinCombinedProfile:
 	make -B PROFILE="-pg" hairpinCombined
 
 
 diff: $(OBJECTS) diffusion.o
 	@echo "LD	diffusion"
-	@$(CC) -o diffusion $(CFLAGS) $(OBJECTS) diffusion.o $(LIBS) -ggdb $(PROFILE)
+	@$(CC) $(STATIC_FLAGS) -o diffusion $(CFLAGS) $(OBJECTS) diffusion.o $(LIBS) -ggdb $(PROFILE)
 diffdebug:
 	make -B GCC_OPTIM="-O0" CLANG_OPTIM="-O0" DEBUG="-DDEBUG" diff
 difffastdebug:
@@ -80,7 +86,7 @@ difffastdebug:
 
 tests: $(OBJECTS) tests.o
 	@echo "LD	hairpin"
-	@$(CC) -o tests $(CFLAGS) $(OBJECTS) tests.o $(LIBS) -ggdb $(PROFILE)
+	@$(CC) $(STATIC_FLAGS) -o tests $(CFLAGS) $(OBJECTS) tests.o $(LIBS) -ggdb $(PROFILE)
 testsdebug:
 	make -B GCC_OPTIM="-O0" CLANG_OPTIM="-O0" DEBUG="-DDEBUG" tests
 
