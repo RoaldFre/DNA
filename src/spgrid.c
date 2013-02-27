@@ -42,7 +42,6 @@ typedef struct box Box;
 static void addToBox(Particle *p, Box *b);
 static void removeFromBox(Particle *p, Box *b);
 static Box *boxFromIndex(int ix, int iy, int iz);
-static Box *boxFromParticle(const Particle *p);
 static Box *boxFromNonPeriodicParticle(const Particle *p);
 static Box *boxFromNonPeriodicIndex(int ix, int iy, int iz);
 static void forEveryPairBruteForce(void (*f)(Particle *p1, Particle *p2, void *data), 
@@ -216,8 +215,6 @@ void reboxParticle(Particle *p)
 
 	periodicPosition(p);
 
-	/* THE LINE BELOW IS NOT SAFE, see comment at the top of this file */
-	//Box *correctBox = boxFromParticle(p);
 	Box *correctBox = boxFromNonPeriodicParticle(p);
 	if (correctBox == p->myBox)
 		return;
@@ -239,28 +236,6 @@ void reboxParticles(void)
 	assert(spgridSanityCheck(true, true));
 }
 
-#if 0
-/* Precondition: particle must be within the grid. */
-static Box *boxFromParticle(const Particle *p)
-{
-	die("Using boxFromParticle() is probably not safe!\n");
-	double gs = gridSize;
-	/* shift coordinates from [-gs/2 to gs/2] to [0 to gs] */
-	Vec3 shifted = add(p->pos, (Vec3) {gs/2.0, gs/2.0, gs/2.0});
-
-	assert(p != NULL);
-	assert(!isnan(p->pos.x) && !isnan(p->pos.y) && !isnan(p->pos.z));
-	//assert(0 <= shifted.x  &&  shifted.x < gs);
-	//assert(0 <= shifted.y  &&  shifted.y < gs);
-	//assert(0 <= shifted.z  &&  shifted.z < gs);
-
-	int ix = shifted.x / boxSize;
-	int iy = shifted.y / boxSize;
-	int iz = shifted.z / boxSize;
-
-	return boxFromIndex(ix, iy, iz);
-}
-#endif
 /* Particle may be outside the grid */
 static Box *boxFromNonPeriodicParticle(const Particle *p)
 {
