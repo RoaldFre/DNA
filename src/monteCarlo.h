@@ -3,8 +3,10 @@
 
 #include "physics.h"
 
-/* Request a negative number of monteCarloSweeps to keep on going 
- * indefinitely. */
-Task makeMonteCarloTask(int monteCarloSweeps);
+typedef struct {
+	int sweeps; /* Negative to go on indefinitely */
+	bool verbose;
+} MonteCarloConfig;
+Task makeMonteCarloTask(MonteCarloConfig *config);
 
 #endif

@@ -121,6 +121,10 @@ static IntegratorConf integratorConf = {
 	.timeStep      = DEF_TIMESTEP * FEMTOSECONDS,
 	.reboxInterval = DEF_REBOX_INTERVAL * FEMTOSECONDS,
 };
+static MonteCarloConfig monteCarloConfig = {
+	.sweeps = -1,
+	.verbose = true,
+};
 static double temperature;
 
 static InteractionSettings interactionSettings = {
@@ -142,7 +146,6 @@ static const char* baseSequence = DEF_BASE_SEQUENCE;
 static double worldSize = -1; /* guard */
 static int numBoxes = -1; /* guard */
 static bool useMonteCarlo = false;
-static int monteCarloSweeps = -1;
 static bool noDynamics = false;
 
 
@@ -288,11 +291,11 @@ static void parseArguments(int argc, char **argv)
 					interactionSettings.saltConcentration);
 			break;
 		case 'm':
-			monteCarloSweeps = atoi(optarg);
-			if (monteCarloSweeps < 0)
+			monteCarloConfig.sweeps = atoi(optarg);
+			if (monteCarloConfig.sweeps < 0)
 				die("Invalid number of monte carlo sweeps %s\n", optarg);
 			printf("m: Starting with %d monte carlo sweeps\n", 
-					monteCarloSweeps);
+					monteCarloConfig.sweeps);
 			break;
 		case 'Y':
 			interactionSettings.onlyXYbasePairing = true;
@@ -745,7 +748,7 @@ int main(int argc, char **argv)
 
 	//TODO
 	if (useMonteCarlo)
-		integratorTask = makeMonteCarloTask(monteCarloSweeps);
+		integratorTask = makeMonteCarloTask(&monteCarloConfig);
 
 	/* Combined task */
 	Task *tasks[7];

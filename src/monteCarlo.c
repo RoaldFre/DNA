@@ -1,6 +1,7 @@
 #include "monteCarlo.h"
 #include "spgrid.h"
 #include "render.h"
+#include <string.h>
 
 #define PIVOT_SELECTION_PROBABILITY 0.05
 
@@ -250,9 +251,11 @@ static void monteCarloMove(void)
 typedef struct {
 	long numMoves;
 	long maxMoves;
+	bool verbose;
 } MonteCarloState;
 static void *monteCarloTaskStart(void *initialData)
 {
+	MonteCarloConfig *mcc = (MonteCarloConfig*) initialData;
 	if (world.numStrands != 1)
 		die("Expected a single strand in the world!\n");
 
@@ -266,12 +269,16 @@ static void *monteCarloTaskStart(void *initialData)
 	registerString(&rsc);
 
 	MonteCarloState *state = malloc(sizeof(*state));
-	int sweeps = *(int*) initialData;
-	free(initialData);
-
 	state->numMoves = 0;
-	state->maxMoves = sweeps * world.strands[0].numMonomers;
+	state->maxMoves = mcc->sweeps * world.strands[0].numMonomers;
+	state->verbose = mcc->verbose;
 
+	if (mcc->verbose) {
+		printf("Monte carlo move 0 / %ld (0%%)", state->maxMoves);
+		fflush(stdout);
+	}
+
+	free(initialData);
 	return state;
 }
 static TaskSignal monteCarloTaskTick(void *state)
@@ -282,20 +289,33 @@ static TaskSignal monteCarloTaskTick(void *state)
 		return TASK_STOP;
 
 	monteCarloMove();
+
+	if (mcs->verbose && 0 == mcs->numMoves % MAX(1, mcs->maxMoves / 100)) {
+		printf("\rMonte carlo move %ld / %ld (%ld%%)",
+					mcs->numMoves, mcs->maxMoves,
+					100 * mcs->numMoves / mcs->maxMoves);
+		fflush(stdout);
+	}
+
 	return TASK_OK;
 }
-
-Task makeMonteCarloTask(int monteCarloSweeps)
+static void monteCarloTaskStop(void *state)
 {
+	MonteCarloState *mcs = (MonteCarloState*) state;
+	if (mcs->verbose)
+		printf("\n");
+	free(state);
+}
+Task makeMonteCarloTask(MonteCarloConfig *config)
+{
+	MonteCarloConfig *mccCopy = malloc(sizeof(*mccCopy));
+	memcpy(mccCopy, config, sizeof(*mccCopy));
+
 	Task task;
-
-	int *sweeps = malloc(sizeof(*sweeps));
-	*sweeps = monteCarloSweeps;
-
-	task.initialData = sweeps;
+	task.initialData = mccCopy;
 	task.start = &monteCarloTaskStart;
 	task.tick  = &monteCarloTaskTick;
-	task.stop  = &freePointer;
+	task.stop  = &monteCarloTaskStop;
 	return task;
 }
 
