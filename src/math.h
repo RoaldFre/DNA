@@ -403,6 +403,41 @@ static __inline__ int randIndex(int numElements)
 	return (int) (numElements * rand01());
 }
 
+/* Fills the given array with <count> index values. The index values are 
+ * uniformly sampled from the set 0..<numValues-1> (inclusive) and are ordered in 
+ * increasing fashion.
+ * This has O(count^2) runtime, so it's only useful for small count
+ * (count << numValues) */
+static __inline__ void uniformSortedIndices(int numValues, int count, int *indices)
+{
+	for (int i = 0; i < count; i++) {
+		int newInd, j;
+		for(;;) {
+			newInd = randIndex(numValues);
+			/* Indices[0..i-1] are sorted. Find the position j 
+			 * of the new index. Check if the new index is a 
+			 * duplicate. */
+			/* TODO: bisection is smarter? -> O(log count) 
+			 * runtime. But still need to have the array sorted 
+			 * -> moving elements to insert new one in correct 
+			 *  position has O(count) runtime. So still 
+			 *  quadratic overall. */
+			j = i;
+			while (j > 0 && newInd < indices[j-1])
+				j--;
+			if (j == 0 || newInd != indices[j-1])
+				break; /* Found a unique new index! */
+		}
+
+		/* Insert the new index at the correct position, j. */
+		for (int k = i-1; k >= j; k--) {
+			assert(indices[k] > newInd);
+			indices[k+1] = indices[k];
+		}
+		indices[j] = newInd;
+	}
+}
+
 static __inline__ Vec3 randUniformVec(double low, double high)
 {
 	Vec3 res;
