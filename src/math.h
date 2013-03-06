@@ -17,7 +17,9 @@ extern tinymt64_t tinymt;
 void seedRandomWith(uint64_t seed);
 /* Automatically seeds random number generator based on current time and 
  * PID of process */
-void seedRandom(void);
+uint64_t seedRandom(void);
+bool readSeed(const char *file, uint64_t *seed);
+bool writeSeed(const char *file, uint64_t seed);
 
 typedef struct Vec3
 {

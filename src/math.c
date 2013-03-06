@@ -1,6 +1,6 @@
 #include "math.h"
+#include "system.h"
 #include <unistd.h>
-#include <sys/time.h>
 
 /* This is the parameter set from the check example of tinymt64. */
 tinymt64_t tinymt = {
@@ -13,10 +13,43 @@ void seedRandomWith(uint64_t seed)
 {
 	tinymt64_init(&tinymt, seed);
 }
-void seedRandom(void)
+uint64_t seedRandom(void)
 {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	seedRandomWith(tv.tv_usec ^ tv.tv_sec 
-			^ ((uint64_t)getpid() * 123456789));
+	FILE *stream = fopen("/dev/random", "r");
+	uint64_t seed;
+	int numRead = fread(&seed, sizeof(seed), 1, stream);
+	if (numRead != 1)
+		die("Couldn't seed random number generator\n");
+	fclose(stream);
+
+	seedRandomWith(seed);
+	return seed;
 }
+
+bool readSeed(const char *file, uint64_t *seed)
+{
+	FILE *in = fopen(file, "r");
+	if (in == NULL)
+		return false;
+
+	long long unsigned theSeed;
+	int n = fscanf(in, "%llx", &theSeed);
+	*seed = theSeed;
+	fclose(in);
+
+	return n == 1;
+}
+
+bool writeSeed(const char *file, uint64_t seed)
+{
+	FILE *out = fopen(file, "w");
+	if (out == NULL) {
+		return false;
+	}
+
+	fprintf(out, "%llx\n", (long long unsigned) seed);
+	fclose(out);
+
+	return true;
+}
+

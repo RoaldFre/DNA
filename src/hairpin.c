@@ -39,6 +39,8 @@
 
 static const char* initialStateFile = NULL; /* Read world state from here. */
 static const char* finalStateFile = NULL; /* Dump world state here at end. */
+static const char* randomSeedSource = NULL;
+static const char* randomSeedDest = NULL;
 static MeasurementConf verboseConf =
 {
 	.maxMeasureTime = -1, /* loop forever */
@@ -165,6 +167,8 @@ static void printUsage(void)
 	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
 	printf(" -m <num>  perform the given number of Monte carlo sweeps before anything else\n");
 	printf(" -Y        only enable base pairing between XY base pairs\n");
+	printf(" -y <path> write random number generator seed to this file\n");
+	printf(" -z <path> read random number generator seed from this file\n");
 	printf(" -r        Render\n");
 	printf(" -f <flt>  desired Framerate when rendering.\n");
 	printf("             default: %f)\n", DEF_RENDER_FRAMERATE);
@@ -262,8 +266,8 @@ static void parseArguments(int argc, char **argv)
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
 	/* Unused options:
-	 * E jJ n o q u y zZ */
-	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yg:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:a:")) != -1)
+	 * E jJ n o q u Z */
+	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yy:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -300,6 +304,16 @@ static void parseArguments(int argc, char **argv)
 		case 'Y':
 			interactionSettings.onlyXYbasePairing = true;
 			printf("Y: Only enabling base pairing between XY pairs\n");
+			break;
+		case 'y':
+			randomSeedDest = optarg;
+			printf("y: writing random number generator seed to %s\n",
+							randomSeedDest);
+			break;
+		case 'z':
+			randomSeedSource = optarg;
+			printf("z: reading random number generator seed from %s\n",
+							randomSeedSource);
 			break;
 		case 'g':
 			langevinSettings.gamma = atof(optarg);
@@ -625,9 +639,25 @@ static void determineIdealNumberOfBoxes(void)
 
 int main(int argc, char **argv)
 {
-	seedRandom();
-
 	parseArguments(argc, argv);
+
+	uint64_t seed;
+	if (randomSeedSource == NULL) {
+		seed = seedRandom();
+	} else {
+		if (!readSeed(randomSeedSource, &seed))
+			die("Couldn't read random generator seed file: %s\n", 
+							randomSeedSource);
+		seedRandomWith(seed);
+	}
+
+	if (randomSeedDest != NULL)
+		if (!writeSeed(randomSeedDest, seed))
+			die("Couldn't write random generator seed file: %s\n", 
+							randomSeedDest);
+
+	printf("Random number generator seed: %llx\n", (long long unsigned) seed);
+
 	const char *filenameBase = measurementConf.measureFile;
 
 	if (initialStateFile != NULL) {
