@@ -641,7 +641,7 @@ int main(int argc, char **argv)
 {
 	parseArguments(argc, argv);
 
-	uint64_t seed;
+	uint64_t seed = 0; /* initialize for compiler warning */
 	if (randomSeedSource == NULL) {
 		seed = seedRandom();
 	} else {
@@ -697,8 +697,10 @@ int main(int argc, char **argv)
 	char *measHeaderStrings[2];
 	measHeaderStrings[0] = getWorldInfo();
 	measHeaderStrings[1] = integratorInfo(&integratorConf);
-	char *measHeader = asprintfOrDie("%s%s",
-				measHeaderStrings[0], measHeaderStrings[1]);
+	char *measHeader = asprintfOrDie("%s%s"
+				"# random number generator seed %llx\n",
+				measHeaderStrings[0], measHeaderStrings[1],
+				seed);
 	free(measHeaderStrings[0]); free(measHeaderStrings[1]);
 	measurementConf.measureHeader = measHeader;
 
