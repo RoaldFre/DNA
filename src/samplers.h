@@ -72,6 +72,11 @@ typedef struct {
 	 * hairpin to unzip. If after this time, the hairin is not fully 
 	 * zipped, we will wait untill it is and only then start sampling. */
 	double zippedRelaxationTime;
+
+	/* In case the zipping happenend very fast, extend the 
+	 * zippedRelaxationTime in order to have sampled the 
+	 * zipping+relaxation process for at least minZippingSamplingTime. */
+	double minZippingSamplingTime;
 } HairpinFormationSamplerConfig;
 
 /* When this sampler starts, it sets the temperature to the given 

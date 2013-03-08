@@ -77,6 +77,7 @@ static HairpinFormationSamplerConfig hfc =
 	.zippingTemperature = CELSIUS(20),
 	.unzippingTemperature = CELSIUS(90),
 	.zippedRelaxationTime = 5 * NANOSECONDS,
+	.minZippingSamplingTime = 0,
 };
 static HairpinMeltingTempSamplerConfig hmtc =
 {
@@ -251,6 +252,9 @@ static void printUsage(void)
 	printf("             default: %fC\n", TO_CELSIUS(hfc.unzippingTemperature));
 	printf(" -U <flt>  zipped relaxation phase duration (nanoseconds)\n");
 	printf("             default: %f\n", hfc.zippedRelaxationTime / NANOSECONDS);
+	printf(" -Z <flt>  minimum duration of Zipping+relaxation phase (nanoseconds).\n");
+	printf("           The relaxation phase duration is extended when required.\n");
+	printf("             default: %f\n", hfc.minZippingSamplingTime / NANOSECONDS);
 	printf("Parameters for hairpin state measurement:\n");
 	printf(" -a <flt><C|K> startTemp\n");
 	printf("             default: same as initial temperature\n");
@@ -266,8 +270,8 @@ static void parseArguments(int argc, char **argv)
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
 	/* Unused options:
-	 * E jJ n o q u Z */
-	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yy:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:a:")) != -1)
+	 * E jJ n o q u */
+	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yy:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -520,6 +524,11 @@ static void parseArguments(int argc, char **argv)
 			hfc.zippedRelaxationTime = atof(optarg) * NANOSECONDS;
 			printf("U: Setting formation zipped relaxation time to %e\n", 
 						hfc.zippedRelaxationTime);
+			break;
+		case 'Z':
+			hfc.minZippingSamplingTime = atof(optarg) * NANOSECONDS;
+			printf("Z: Setting min zipping+relax sampling time to %e\n", 
+						hfc.minZippingSamplingTime);
 			break;
 		case 'a':
 			hsc.temperature = parseTemperature(optarg);
