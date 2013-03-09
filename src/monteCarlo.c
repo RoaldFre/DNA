@@ -3,16 +3,63 @@
 #include "render.h"
 #include <string.h>
 
-#define PIVOT_SELECTION_PROBABILITY 0.05
 
+/* TODO make part of MonteCarloState, also for all other tasks that use a 
+ * renderString. */
 #define RENDER_STRING_CHARS 80
 static char renderString[RENDER_STRING_CHARS];
-static double previousPotentialEnergy;
 
-#define ACCEPTANCE_BUNCH 10000 /* update acceptance after this many moves */
-static int totalAttemptedMoves = 0;
-static int totalAcceptedMoves = 0;
-static float acceptance = 0;
+
+#define TARGET_ACCEPTANCE_RATIO 0.3 /* Aim for this acceptance ratio */
+#define ACCEPTANCE_BUNCH 5000 /* update acceptance after this many moves */
+
+/* Acceptance stats of the current and previous period. A period is defined 
+ * as ACCEPTANCE_BUNCH moves */
+typedef struct {
+	long attempted; /* Number of attempted moves in this period */
+	long accepted;  /* Number of accepted moves in this period */
+	float prevAcceptance; /* The acceptance of the previous period */
+} Acceptance;
+
+struct monteCarloMover {
+	/* Short description of the type of Monte Carlo move. */
+	const char *description;
+
+	/* Accumulate acceptance data here */
+	Acceptance acceptance;
+
+	/* Data for the Monte Carlo move (e.g. parameters) */
+	void *data;
+	
+	/* Set up and return the data pointer */
+	void *(*init)(void);
+
+	/* Perform a move. */
+	void (*doMove)(void *data);
+
+	/* Undo the last move. */
+	void (*undoMove)(void *data);
+
+	/* Update the parameters of this type of Monte Carlo move to reach 
+	 * the target acceptance ratio. */
+	void (*updateParameters)(double acceptance, double targetAcceptance,
+								void *data);
+
+	/* De-initialize */
+	void (*exit)(void *data);
+};
+
+
+/* PIVOT MOVE */
+
+#define INITIAL_NUM_PIVOT_POINTS_FRACTION (0.05)
+#define INITIAL_PIVOT_ANGLE_STDDEV        (30 * DEGREE)
+
+typedef struct {
+	Strand *s; /* The strand to perturb */
+	double maxNumPivPts; /* up to floor(maxNumPivPts) pivot points */
+	double angleStdDev; /* std deviation of the generated pivot angle */
+} PivotConfig;
 
 typedef enum {
 	PIVOT_PHOSPHATE = 0, /* pivot around the phosphate */
@@ -141,76 +188,78 @@ static PivotPoint generatePivotPoint(Strand *s, int pivotIndex)
 }
 
 
-/* The given pivotChain must have enough allocated space for at least 
- * s->numMonomers pivot points! */
-static void generatePivotChain(PivotChain *chain, Strand *s,
-					double selectionProbability)
+/* Generates a new pivot chain (with chain->numPivotPoints points). The 
+ * given pivotChain must have enough space allocated for these points. */
+static void generatePivotChain(PivotChain *chain, Strand *s)
 {
-	int numPivPts = 0;
-	for (int i = 0; i < s->numMonomers; i++) {
-		/* TODO this is probably wasteful on random numbers. 
-		 * Especially for low selectionProbability.
-		 * Better: random number between 1 and numMonomers, then 
-		 * generate that many pivot points with pivotIndices 
-		 * sampled uniformly over subsets of permutations of 
-		 * 1..numMonomers (how to do that fast?) */
-		if (rand01() > selectionProbability)
-			continue;
-
-		/* Generate new pivot point */
-		chain->pivotPoints[numPivPts] = generatePivotPoint(s, i);
-		numPivPts++;
-	}
-	chain->numPivotPoints = numPivPts;
+	//TODO don't realloc all the time?
+	int *indices = calloc(chain->numPivotPoints, sizeof(*indices));
+	uniformSortedIndices(s->numMonomers, chain->numPivotPoints, indices);
+	for (int i = 0; i < chain->numPivotPoints; i++)
+		chain->pivotPoints[i] = generatePivotPoint(s, indices[i]);
+	free(indices);
 }
 
-static void pivotMove(Strand *s)
+static void *initPivotMove(void)
 {
+	if (world.numStrands != 1)
+		die("Expected a single strand in the world!\n");
+
+	PivotConfig *cfg = malloc(sizeof(*cfg));
+	cfg->s = &world.strands[0];
+	int n = cfg->s->numMonomers;
+	cfg->maxNumPivPts = MAX(1, n * INITIAL_NUM_PIVOT_POINTS_FRACTION);
+	cfg->angleStdDev = INITIAL_PIVOT_ANGLE_STDDEV;
+
+	return cfg;
+}
+
+static void pivotMove(void *data)
+{
+	PivotConfig *cfg = (PivotConfig *) data;
 	PivotChain chain;
-	//TODO don't realloc all the time
-	chain.pivotPoints = calloc(s->numMonomers, sizeof(*chain.pivotPoints));
+	int n = 1 + randIndex((int) cfg->maxNumPivPts);
+	chain.numPivotPoints = n;
+	chain.pivotPoints = calloc(n, sizeof(*chain.pivotPoints));
 
-	generatePivotChain(&chain, s, PIVOT_SELECTION_PROBABILITY);
-	applyPivotChain(s, chain);
+	generatePivotChain(&chain, cfg->s);
+	applyPivotChain(cfg->s, chain);
 
-	free(chain.pivotPoints);
+	free(chain.pivotPoints); //TODO don't realloc all the time
 }
 
-#if 0
-/* Move a random single particle */
-static void jiggleMove(void)
+static void undoPivotMove(void *data)
 {
-	Strand *s = &world.strands[0];
-	int n = s->numMonomers;
-	int i = randIndex(3*n);
-	//Vec3 displacement = randUniformVec(-4*ANGSTROM, 4*ANGSTROM);
-	Vec3 displacement = randNormVec(2*ANGSTROM);
-
-	s->all[i].pos = add(s->all[i].pos, displacement);
-	double V2 = getPotentialEnergy();
-
-	double dE = V2 - previousPotentialEnergy;
-	double beta = 1.0/(BOLTZMANN_CONSTANT * getHeatBathTemperature());
-	if (dE < 0 || rand01() < exp(-dE * beta)) {
-		/* Move is accepted -> update boxes of moved particle! */
+	Strand *s = ((PivotConfig*) data)->s;
+	for (int i = 0; i < 3*s->numMonomers; i++) {
+		s->all[i].pos = s->all[i].prevPos;
 		reboxParticle(&s->all[i]);
-		previousPotentialEnergy = V2;
-		totalAcceptedMoves++;
-	} else {
-		/* Move is rejected -> reset back to original configuration! */
-		s->all[i].pos = sub(s->all[i].pos, displacement);
 	}
 }
-#endif
 
-static bool acceptMove(void)
+MonteCarloMover pivotMover = {
+	.description = "Pivot",
+	.init = &initPivotMove,
+	.doMove = &pivotMove,
+	.undoMove = &undoPivotMove,
+	.updateParameters = NULL, //TODO
+	.exit = &freePointer,
+};
+
+
+
+
+
+/* GENERIC MONTE CARLO MOVE DRIVER */
+
+static bool acceptMove(double *previousPotentialEnergy)
 {
 	double V = getPotentialEnergy();
-	double dE = V - previousPotentialEnergy;
+	double dE = V - *previousPotentialEnergy;
 	double beta = 1.0/(BOLTZMANN_CONSTANT * getHeatBathTemperature());
 	if (dE < 0 || rand01() < exp(-dE * beta)) {
 		/* Move is accepted */
-		previousPotentialEnergy = V;
+		*previousPotentialEnergy = V;
 		return true;
 	} else {
 		/* Move is rejected */
@@ -218,60 +267,93 @@ static bool acceptMove(void)
 	}
 }
 
-static void undoPivotMove(Strand *s)
+/* Update acceptance stats. If we exceed ACCEPTANCE_BUNCH, then update acc 
+ * accordingly and call the update function (if it isn't NULL) with the 
+ * given data */
+static void updateAcceptance(Acceptance *acc, bool accepted,
+			void (*update)(double, double, void*), void *data)
 {
-	for (int i = 0; i < 3*s->numMonomers; i++) {
-		s->all[i].pos = s->all[i].prevPos;
-		reboxParticle(&s->all[i]);
-	}
-}
+	acc->attempted++;
+	if (accepted)
+		acc->accepted++;
 
-static void monteCarloMove(void)
-{
-	totalAttemptedMoves++;
-	if (totalAttemptedMoves > ACCEPTANCE_BUNCH) {
-		acceptance = ((float) totalAcceptedMoves)
-				/ (totalAttemptedMoves - 1);
-		totalAttemptedMoves = 1;
-		totalAcceptedMoves = 0;
-	}
+	if (acc->attempted < ACCEPTANCE_BUNCH)
+		return;
 
-	Strand *s = &world.strands[0];
-	pivotMove(s);
-	if (acceptMove()) {
-		totalAcceptedMoves++;
-	} else {
-		undoPivotMove(s);
-	}
+	acc->prevAcceptance = ((float) acc->accepted) / acc->attempted;
+	acc->accepted = 0;
+	acc->attempted = 0;
 
-	snprintf(renderString, RENDER_STRING_CHARS, "acceptance: %f",
-								acceptance);
+	if (update != NULL)
+		update(acc->prevAcceptance, TARGET_ACCEPTANCE_RATIO, data);
 }
 
 typedef struct {
-	long numMoves;
-	long maxMoves;
-	bool verbose;
+	long numMoves; /* Number of (attempted) moves up till now */
+	long maxMoves; /* Maximum number of (attempted) moves */
+	Acceptance totalAcceptance; /* Total acceptance of last few moves */
+	double previousPotentialEnergy;
+	MonteCarloMoves moves; /* List of possible moves */
+	bool verbose; /* Make some noise? */
 } MonteCarloState;
+
+static void monteCarloMove(MonteCarloState *mcs)
+{
+	MonteCarloMoves *moves = &mcs->moves;
+	
+	/* Select a move based on their weights */
+	double totWeight = 0;
+	for (int i = 0; i < moves->numMoves; i++)
+		totWeight += moves->moves[i].weight;
+	double rnd = totWeight * rand01();
+	double acc = 0;
+	int i = 0;
+	while (i < moves->numMoves  &&  rnd > acc)
+		acc += moves->moves[i].weight;
+	MonteCarloMover *m = moves->moves[i].m;
+
+	m->doMove(m->data);
+	bool accepted = acceptMove(&mcs->previousPotentialEnergy);
+	if (!accepted)
+		m->undoMove(m->data);
+	updateAcceptance(&m->acceptance, accepted, m->updateParameters,
+								m->data);
+	updateAcceptance(&mcs->totalAcceptance, accepted, NULL, NULL);
+
+	snprintf(renderString, RENDER_STRING_CHARS, "acceptance: %f",
+					mcs->totalAcceptance.prevAcceptance);
+}
+
+
+
+/* TASK */
+
 static void *monteCarloTaskStart(void *initialData)
 {
 	MonteCarloConfig *mcc = (MonteCarloConfig*) initialData;
 	if (world.numStrands != 1)
 		die("Expected a single strand in the world!\n");
 
-	previousPotentialEnergy = getPotentialEnergy();
+	/* Set up state */
+	MonteCarloState *state = malloc(sizeof(*state));
+	state->numMoves = 0;
+	state->maxMoves = mcc->sweeps * world.strands[0].numMonomers;
+	state->verbose = mcc->verbose;
+	state->previousPotentialEnergy = getPotentialEnergy();
+	state->moves = mcc->moves;
 
+	/* Initialize movers */
+	MonteCarloMoves *m = &state->moves;
+	for (int i = 0; i < m->numMoves; i++)
+		m->moves[i].m->data = m->moves[i].m->init();
+
+	/* Rendering stuff */
 	renderString[0] = '\0';
 	RenderStringConfig rsc;
 	rsc.string = renderString;
 	rsc.x = 10;
 	rsc.y = 60;
 	registerString(&rsc);
-
-	MonteCarloState *state = malloc(sizeof(*state));
-	state->numMoves = 0;
-	state->maxMoves = mcc->sweeps * world.strands[0].numMonomers;
-	state->verbose = mcc->verbose;
 
 	if (mcc->verbose) {
 		if (state->maxMoves > 0)
@@ -291,7 +373,7 @@ static TaskSignal monteCarloTaskTick(void *state)
 	if (mcs->maxMoves >= 0  &&  mcs->numMoves > mcs->maxMoves)
 		return TASK_STOP;
 
-	monteCarloMove();
+	monteCarloMove(mcs);
 
 	if (mcs->verbose && 0 == mcs->numMoves % MAX(1, mcs->maxMoves / 100)) {
 		if (mcs->maxMoves > 0)
