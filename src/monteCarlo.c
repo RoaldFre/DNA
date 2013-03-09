@@ -274,7 +274,10 @@ static void *monteCarloTaskStart(void *initialData)
 	state->verbose = mcc->verbose;
 
 	if (mcc->verbose) {
-		printf("Monte carlo move 0 / %ld (0%%)", state->maxMoves);
+		if (state->maxMoves > 0)
+			printf("Monte carlo move 0 / %ld (0%%)", state->maxMoves);
+		else
+			printf("Monte carlo move 0");
 		fflush(stdout);
 	}
 
@@ -291,9 +294,12 @@ static TaskSignal monteCarloTaskTick(void *state)
 	monteCarloMove();
 
 	if (mcs->verbose && 0 == mcs->numMoves % MAX(1, mcs->maxMoves / 100)) {
-		printf("\rMonte carlo move %ld / %ld (%ld%%)",
+		if (mcs->maxMoves > 0)
+			printf("\rMonte carlo move %ld / %ld (%ld%%)",
 					mcs->numMoves, mcs->maxMoves,
 					100 * mcs->numMoves / mcs->maxMoves);
+		else
+			printf("\rMonte carlo move %ld", mcs->numMoves);
 		fflush(stdout);
 	}
 
