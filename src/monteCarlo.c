@@ -11,7 +11,7 @@ static char renderString[RENDER_STRING_CHARS];
 
 
 #define TARGET_ACCEPTANCE_RATIO 0.3 /* Aim for this acceptance ratio */
-#define ACCEPTANCE_BUNCH 5000 /* update acceptance after this many moves */
+#define ACCEPTANCE_BUNCH 1000 /* update acceptance after this many moves */
 
 /* Acceptance stats of the current and previous period. A period is defined 
  * as ACCEPTANCE_BUNCH moves */
@@ -53,7 +53,8 @@ struct monteCarloMover {
 /* PIVOT MOVE */
 
 #define INITIAL_NUM_PIVOT_POINTS_FRACTION (0.05)
-#define INITIAL_PIVOT_ANGLE_STDDEV        (30 * DEGREE)
+#define INITIAL_PIVOT_ANGLE_STDDEV        (10 * DEGREE)
+#define PIVOT_UPDATE_FRACTION 1.1
 
 typedef struct {
 	Strand *s; /* The strand to perturb */
@@ -70,95 +71,14 @@ typedef enum {
 
 typedef struct {
 	PivotType type;
-	int pivotIndex;
 	Mat4 transfo;
 } PivotPoint;
 
-/* Multiple pivot points for a single strand. Pivot points need to be 
- * sorted with ascending pivotIndex.
- *
- * There can only be at most one pivotPoint for a specific index!
- * TODO generalize */
-typedef struct {
-	int numPivotPoints;
-	PivotPoint* pivotPoints;
-} PivotChain;
-
-/* XXX WARNING: due to numerical errors, the bond spacing at the end of 
- * long chains will start to vary significantly. This will get corrected by 
- * the acceptance probability when bond interactions are still enabled. It 
- * could give a slightly biassed sampling, though.
- * TODO this only is the case for long pivot chains? */
-static void applyPivotChain(Strand *s, PivotChain chain)
-{
-	int n = s->numMonomers;
-	int npts = chain.numPivotPoints;
-	PivotPoint *pts = chain.pivotPoints;
-
-	if (npts == 0)
-		return;
-
-	/* We can't deal with periodic boundary conditions in our 
-	 * transformations! */
-	undoPeriodicBoundaryConditions(s);
-
-	Mat4 transfo = mat4identity();
-	int pivPt = 0;
-
-	for (int i = 0; i < n; i++) {
-		/* Save original positions */
-		s->Ss[i].prevPos = s->Ss[i].pos;
-		s->Bs[i].prevPos = s->Bs[i].pos;
-		s->Ps[i].prevPos = s->Ps[i].pos;
-
-		/* Apply transformation */
-		if (pivPt >= npts || pts[pivPt].pivotIndex != i) {
-			/* Current monomer is not a special pivot monomer */
-			s->Ss[i].pos = mat4point(transfo, s->Ss[i].pos);
-			s->Bs[i].pos = mat4point(transfo, s->Bs[i].pos);
-			s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
-		} else {
-			/* Current monomer *is* a pivot monomer */
-			switch (pts[pivPt].type) {
-			case PIVOT_PHOSPHATE:
-				/* Pivot entire monomer with old transfo */
-				s->Ss[i].pos = mat4point(transfo, s->Ss[i].pos);
-				s->Bs[i].pos = mat4point(transfo, s->Bs[i].pos);
-				s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
-				transfo = mat4multiply(pts[pivPt].transfo, transfo);
-				break;
-			case PIVOT_SUGAR:
-				/* TODO 'half pivot' the base? (rotate 
-				 * 'half' with old transfo and 'half' with 
-				 * new transfo?) */
-				s->Ss[i].pos = mat4point(transfo, s->Ss[i].pos);
-				s->Bs[i].pos = mat4point(transfo, s->Bs[i].pos);
-				transfo = mat4multiply(pts[pivPt].transfo, transfo);
-				s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
-				break;
-			case PIVOT_BASE:
-				s->Ss[i].pos = mat4point(transfo, s->Ss[i].pos);
-				Mat4 baseTransfo = mat4multiply(pts[pivPt].transfo, transfo);
-				s->Bs[i].pos = mat4point(baseTransfo, s->Bs[i].pos);
-				s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
-				break;
-			default:
-				die("Internal error: unknown pivot type\n");
-			}
-			pivPt++;
-		}
-		reboxParticle(&s->Ss[i]);
-		reboxParticle(&s->Bs[i]);
-		reboxParticle(&s->Ps[i]);
-	}
-}
-
-static PivotPoint generatePivotPoint(Strand *s, int pivotIndex)
+static PivotPoint generatePivotPoint(Strand *s, int pivotIndex, PivotConfig *cfg)
 {
 	Vec3 origin;
 	Vec3 axis = randomDirection();	
-	//double theta = 60*DEGREE * (2*rand01() - 1);
-	double theta = 10*DEGREE * randNorm();
+	double theta = cfg->angleStdDev * randNorm();
 
 	PivotType type = NUM_PIVOT_TYPES * rand01();
 
@@ -182,22 +102,100 @@ static PivotPoint generatePivotPoint(Strand *s, int pivotIndex)
 
 	PivotPoint res;
 	res.type = type;
-	res.pivotIndex = pivotIndex;
 	res.transfo = mat4rotationAround(origin, axis, theta);
 	return res;
 }
 
 
-/* Generates a new pivot chain (with chain->numPivotPoints points). The 
- * given pivotChain must have enough space allocated for these points. */
-static void generatePivotChain(PivotChain *chain, Strand *s)
+/* Indices: must be sorted ascendingly and not have repeating values. TODO: 
+ * generalize to more than one (different) pivot move per monomer. */
+static void generateAndApplyPivotMove(Strand *s, int *indices, int numIndices, 
+		PivotConfig *cfg)
 {
-	//TODO don't realloc all the time?
-	int *indices = calloc(chain->numPivotPoints, sizeof(*indices));
-	uniformSortedIndices(s->numMonomers, chain->numPivotPoints, indices);
-	for (int i = 0; i < chain->numPivotPoints; i++)
-		chain->pivotPoints[i] = generatePivotPoint(s, indices[i]);
-	free(indices);
+	int n = s->numMonomers;
+
+	if (numIndices == 0)
+		return;
+
+	/* We can't deal with periodic boundary conditions in our 
+	 * transformations! */
+	undoPeriodicBoundaryConditions(s);
+
+	Mat4 transfo = mat4identity();
+	int pivPt = 0; /* index in the list of indices */
+
+	for (int i = 0; i < n; i++) {
+		/* Save original positions */
+		s->Ss[i].prevPos = s->Ss[i].pos;
+		s->Bs[i].prevPos = s->Bs[i].pos;
+		s->Ps[i].prevPos = s->Ps[i].pos;
+
+		/* Apply transformation */
+		s->Ss[i].pos = mat4point(transfo, s->Ss[i].pos);
+		s->Bs[i].pos = mat4point(transfo, s->Bs[i].pos);
+		s->Ps[i].pos = mat4point(transfo, s->Ps[i].pos);
+
+		/* If the current monomer is a pivot monomer, then same of 
+		 * the transformations above will be redundant. 
+		 * Nonetheless, it is important that we transformed the 
+		 * pivot monomer itself with the 'old' transformation, 
+		 * because otherwise the pivot origin will not be at the 
+		 * correct position! */
+		if (pivPt < numIndices && indices[pivPt] == i) {
+			/* Current monomer *is* a pivot monomer! */
+			PivotPoint pivotPoint = generatePivotPoint(s, indices[pivPt], cfg);
+			switch (pivotPoint.type) {
+			case PIVOT_PHOSPHATE:
+				/* Entire monomer needed to be transformed 
+				 * with the old transformation, which we 
+				 * already did. Just update the accumulated 
+				 * transfo. */
+				transfo = mat4multiply(pivotPoint.transfo, transfo);
+				break;
+			case PIVOT_SUGAR:
+				/* TODO 'half pivot' the base? (rotate 
+				 * 'half' with old transfo and 'half' with 
+				 * new transfo?) */
+				s->Ps[i].pos = mat4point(pivotPoint.transfo, s->Ps[i].pos);
+				transfo = mat4multiply(pivotPoint.transfo, transfo);
+				break;
+			case PIVOT_BASE:
+				/* This transformation is only for the 
+				 * base. Don't update the accumulated 
+				 * transfo. */
+				s->Bs[i].pos = mat4point(pivotPoint.transfo, s->Bs[i].pos);
+				break;
+			default:
+				die("Internal error: unknown pivot type\n");
+			}
+			pivPt++;
+		}
+		/* Rebox after moving */
+		reboxParticle(&s->Ss[i]);
+		reboxParticle(&s->Bs[i]);
+		reboxParticle(&s->Ps[i]);
+	}
+}
+
+static void updatePivotParameters(double acc, double targetAcc, void *data)
+{
+	PivotConfig *cfg = (PivotConfig *) data;
+
+	/* TODO do something more smart -- scale parameterFactor with targetAcc/acc? */
+	double parameterFactor;
+	if (acc > targetAcc)
+		parameterFactor = PIVOT_UPDATE_FRACTION;
+	else
+		parameterFactor = 1.0 / PIVOT_UPDATE_FRACTION;
+
+	cfg->angleStdDev *= parameterFactor;
+	cfg->angleStdDev = MAX(cfg->angleStdDev, 1*DEGREE);
+
+	cfg->maxNumPivPts *= parameterFactor;
+	cfg->maxNumPivPts = MAX(cfg->maxNumPivPts, 1);
+	cfg->maxNumPivPts = MIN(cfg->maxNumPivPts, cfg->s->numMonomers);
+
+	//printf("Adjusted parameters: %f %f\n", cfg->angleStdDev / DEGREE, cfg->maxNumPivPts);
 }
 
 static void *initPivotMove(void)
@@ -217,15 +215,14 @@ static void *initPivotMove(void)
 static void pivotMove(void *data)
 {
 	PivotConfig *cfg = (PivotConfig *) data;
-	PivotChain chain;
-	int n = 1 + randIndex((int) cfg->maxNumPivPts);
-	chain.numPivotPoints = n;
-	chain.pivotPoints = calloc(n, sizeof(*chain.pivotPoints));
+	int n = 1 + (int)(rand01() * cfg->maxNumPivPts);
+	int *indices = calloc(n, sizeof(*indices));
+	uniformSortedIndices(cfg->s->numMonomers, n, indices);
 
-	generatePivotChain(&chain, cfg->s);
-	applyPivotChain(cfg->s, chain);
+	generateAndApplyPivotMove(cfg->s, indices, n, cfg);
 
-	free(chain.pivotPoints); //TODO don't realloc all the time
+	//TODO don't realloc all the time
+	free(indices);
 }
 
 static void undoPivotMove(void *data)
@@ -242,7 +239,7 @@ MonteCarloMover pivotMover = {
 	.init = &initPivotMove,
 	.doMove = &pivotMove,
 	.undoMove = &undoPivotMove,
-	.updateParameters = NULL, //TODO
+	.updateParameters = &updatePivotParameters,
 	.exit = &freePointer,
 };
 
