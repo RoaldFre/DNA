@@ -392,6 +392,12 @@ static void monteCarloTaskStop(void *state)
 	MonteCarloState *mcs = (MonteCarloState*) state;
 	if (mcs->verbose)
 		printf("\n");
+
+	/* De-initialize all movers */
+	MonteCarloMoves *m = &mcs->moves;
+	for (int i = 0; i < m->numMoves; i++)
+		m->moves[i].m->exit(m->moves[i].m->data);
+
 	free(state);
 }
 Task makeMonteCarloTask(MonteCarloConfig *config)
