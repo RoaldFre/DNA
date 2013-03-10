@@ -124,17 +124,17 @@ static IntegratorConf integratorConf = {
 	.timeStep      = DEF_TIMESTEP * FEMTOSECONDS,
 	.reboxInterval = DEF_REBOX_INTERVAL * FEMTOSECONDS,
 };
-static MonteCarloMove pivotMove = {
-	.weight = 1.0,
-	.m = &pivotMover,
+static MonteCarloMove moves[] = {
+		{.weight = 1.0, .m = &jiggleMover},
+		{.weight = 1.0, .m = &pivotMover},
 };
 static MonteCarloConfig monteCarloConfig = {
 	.sweeps = -1,
 	.verbose = true,
 	.moves = {
-		  .numMoves = 1,
-	          .moves = &pivotMove,
-	         },
+		  .numMoves = 2,
+	          .moves = moves,
+	         }
 };
 static double temperature;
 

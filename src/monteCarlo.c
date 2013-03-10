@@ -52,9 +52,9 @@ struct monteCarloMover {
 
 /* PIVOT MOVE */
 
-#define INITIAL_NUM_PIVOT_POINTS_FRACTION (0.05)
-#define INITIAL_PIVOT_ANGLE_STDDEV        (10 * DEGREE)
-#define PIVOT_UPDATE_FRACTION 1.1
+#define INITIAL_NUM_PIVOT_POINTS_FRACTION (0.02)
+#define INITIAL_PIVOT_ANGLE_STDDEV        (20 * DEGREE)
+#define PIVOT_UPDATE_FRACTION 1.15
 
 typedef struct {
 	Strand *s; /* The strand to perturb */
@@ -195,7 +195,7 @@ static void updatePivotParameters(double acc, double targetAcc, void *data)
 	cfg->maxNumPivPts = MAX(cfg->maxNumPivPts, 1);
 	cfg->maxNumPivPts = MIN(cfg->maxNumPivPts, cfg->s->numMonomers);
 
-	//printf("Adjusted parameters: %f %f\n", cfg->angleStdDev / DEGREE, cfg->maxNumPivPts);
+	printf("Adjusted parameters: %f %f\n", cfg->angleStdDev / DEGREE, cfg->maxNumPivPts);
 }
 
 static void *initPivotMove(void)
@@ -240,6 +240,62 @@ MonteCarloMover pivotMover = {
 	.doMove = &pivotMove,
 	.undoMove = &undoPivotMove,
 	.updateParameters = &updatePivotParameters,
+	.exit = &freePointer,
+};
+
+
+
+
+
+/* JIGGLE MOVE */
+#define JIGGLE_UPDATE_FRACTION (1.2)
+#define INITIAL_JIGGLE_LENGTH (0.01 * ANGSTROM)
+static void jiggleWorker(Particle *p, void *data)
+{
+	double h = *(double*) data;
+	p->prevPos = p->pos;
+	p->pos = add(p->pos, randUniformVec(-h, h));
+}
+static void undoJiggleWorker(Particle *p)
+{
+	p->pos = p->prevPos;
+}
+static void jiggleMove(void *data)
+{
+	forEveryParticleD(&jiggleWorker, data);
+}
+static void undoJiggleMove(void *data)
+{
+	UNUSED(data);
+	forEveryParticle(&undoJiggleWorker);
+}
+static void updateJiggleParameters(double acc, double targetAcc, void *data)
+{
+	double *h = (double*) data;
+
+	/* TODO do something more smart -- scale parameterFactor with targetAcc/acc? */
+	double parameterFactor;
+	if (acc > targetAcc)
+		parameterFactor = JIGGLE_UPDATE_FRACTION;
+	else
+		parameterFactor = 1.0 / JIGGLE_UPDATE_FRACTION;
+
+	*h *= parameterFactor;
+
+	printf("Adjusted parameter: %f\n", *h / ANGSTROM);
+}
+static void *initJiggleMove(void)
+{
+	double *h = malloc(sizeof(*h));
+	*h = INITIAL_JIGGLE_LENGTH;
+	return h;
+}
+MonteCarloMover jiggleMover = {
+	.description = "Jiggle",
+	.init = &initJiggleMove,
+	.doMove = &jiggleMove,
+	.undoMove = &undoJiggleMove,
+	.updateParameters = &updateJiggleParameters,
 	.exit = &freePointer,
 };
 
@@ -306,7 +362,8 @@ static void monteCarloMove(MonteCarloState *mcs)
 	double acc = 0;
 	int i = 0;
 	while (i < moves->numMoves  &&  rnd > acc)
-		acc += moves->moves[i].weight;
+		acc += moves->moves[i++].weight;
+	i--;
 	MonteCarloMover *m = moves->moves[i].m;
 
 	m->doMove(m->data);

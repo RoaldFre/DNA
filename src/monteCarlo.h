@@ -6,13 +6,13 @@
 typedef struct monteCarloMover MonteCarloMover;
 
 typedef struct MonteCarloMove {
-	/* The mover for this type of move. */
-	MonteCarloMover *m;
-
 	/* Weight of this move: how likely is it to be selected, compared 
 	 * to other moves. Only relative values w.r.t other weights in the 
 	 * same list of MonteCarloMoves are relevant. */
 	double weight;
+
+	/* The mover for this type of move. */
+	MonteCarloMover *m;
 } MonteCarloMove;
 
 typedef struct {
@@ -21,8 +21,11 @@ typedef struct {
 } MonteCarloMoves;
 
 
-/* Pivot mover */
+/* Pivot mover: Randomly pivot the strand around random positions. */
 extern MonteCarloMover pivotMover;
+
+/* Jiggle mover: Randomly perturb the positions of the particles in the strand. */
+extern MonteCarloMover jiggleMover;
 
 
 
