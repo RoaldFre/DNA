@@ -176,6 +176,7 @@ static void printUsage(void)
 	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
 	printf(" -m <num>  perform the given number of Monte carlo sweeps before anything else\n");
 	printf(" -Y        only enable base pairing between XY base pairs\n");
+	printf(" -n        No base pairing interaction at all\n");
 	printf(" -y <path> write random number generator seed to this file\n");
 	printf(" -z <path> read random number generator seed from this file\n");
 	printf(" -r        Render\n");
@@ -278,8 +279,8 @@ static void parseArguments(int argc, char **argv)
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
 	/* Unused options:
-	 * E jJ n o q u */
-	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yy:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
+	 * E jJ o q u */
+	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -316,6 +317,10 @@ static void parseArguments(int argc, char **argv)
 		case 'Y':
 			interactionSettings.onlyXYbasePairing = true;
 			printf("Y: Only enabling base pairing between XY pairs\n");
+			break;
+		case 'n':
+			interactionSettings.enableBasePair = false;
+			printf("n: Disabling base pairing\n");
 			break;
 		case 'y':
 			randomSeedDest = optarg;
