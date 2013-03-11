@@ -44,6 +44,11 @@ typedef struct particle
 			 by the integrator task. */
 	Vec3 vel; /* Velocity */
 	Vec3 F;   /* Force */
+#ifdef ALTERNATIVE_LANGEVIN
+	Vec3 fPrev; /* Force/mass at previous time step. Only needed for 
+		       alternative Langevin integrator. */
+	Vec3 xi; /* Random component of force at previous time step. */
+#endif
 	ParticleType type;
 	struct particle *prev, *next; /* Previous/Next particle in box */
 	struct strand *strand; /* The strand I belong to */

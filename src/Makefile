@@ -44,6 +44,12 @@ ifneq ($(STATIC), no)
 	STATIC_FLAGS = -static
 endif
 
+#use 'make target LANGEVIN=' to build with alterative Langevin integrator
+LANGEVIN=regular
+ifneq ($(LANGEVIN), regular)
+	DEFINES += -DALTERNATIVE_LANGEVIN
+endif
+
 
 all: hairpin
 
