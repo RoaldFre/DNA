@@ -96,8 +96,11 @@ static __inline__ bool isSaneVector(Vec3 v)
  *
  * This is useful for rare bugs because it only checks for vector sanity, 
  * whereas compiling with assertions checks all assertions and is therefore 
- * slower. */
-#define DEBUG_VECTOR_SANITY true
+ * slower.
+ *
+ * DO NOT ENABLE THIS FOR RELEASES! It will stay enabled even when building 
+ * a non-debug version!  */
+#define DEBUG_VECTOR_SANITY false
 
 static __inline__ void debugVectorSanity(Vec3 v, const char *location)
 {
