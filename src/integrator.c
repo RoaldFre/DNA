@@ -153,19 +153,21 @@ static void verlet(void)
 #ifdef ALTERNATIVE_LANGEVIN
 /* Alternative Langevin integrator. This one should be accurate up to 
  * second order. It also uses two standard normally distributed random 
- * vectors per iteration instead of one and has to store two extra vectors 
- * per particle. Only use this for testing purposes, as it is slower (and 
+ * vectors per iteration instead of one and has to store three extra 
+ * vectors per particle. Moreover, it needs two passes, with one 
+ * calculateForces() pass in between middle.
+ * Only use this for testing purposes, as it is slower (and 
  * less accurate[?]) than the regular integrator below. */
-static void langevin2helper(Particle *p, void *data)
+static void langevin2helper1(Particle *p, void *data)
 {
 	LangevinSettings *settings = (LangevinSettings*) data;
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos,   "start langevin2helper");
-		debugVectorSanity(p->vel,   "start langevin2helper");
-		debugVectorSanity(p->F,     "start langevin2helper");
-		debugVectorSanity(p->fPrev, "start langevin2helper");
-		debugVectorSanity(p->xi,    "start langevin2helper");
+		debugVectorSanity(p->pos,   "start langevin2helper1");
+		debugVectorSanity(p->vel,   "start langevin2helper1");
+		debugVectorSanity(p->F,     "start langevin2helper1");
+		debugVectorSanity(p->fPrev, "start langevin2helper1");
+		debugVectorSanity(p->xi,    "start langevin2helper1");
 	} else {
 		assert(isSaneVector(p->pos));
 		assert(isSaneVector(p->vel));
@@ -180,30 +182,45 @@ static void langevin2helper(Particle *p, void *data)
 	double T   = getHeatBathTemperature();
 	double s   = sqrt(2 * BOLTZMANN_CONSTANT * T * g / p->m);
 
-	Vec3 f = scale(p->F, 1/p->m);
+	Vec3 f = scale(p->F, 1/p->m); /* f(r(t)) */
 	Vec3 gv = scale(p->vel, g);
 	Vec3 xi = randNormVec(1);
 	Vec3 theta = randNormVec(1);
 	Vec3 R = add(scale(xi, 1/2.0), scale(theta, 1/(2.0 * sqrt(3.0))));
 	Vec3 A = add(scale(sub(f, gv), SQUARE(dt)/2.0),  scale(R, s*dt*sdt));
 
+	/* r(t) -> r(t + dt) */
 	p->pos = add(add(p->pos, scale(p->vel, dt)), A);
-	p->vel = add(add(add(add(
-			p->vel,
-			scale(add(p->fPrev, f), dt/2)),
-			scale(gv, -dt)),
-			scale(p->xi, s*sdt)),
-			scale(A, -g));
-	p->fPrev = f;
-	p->xi = xi;
+	p->fPrev = f; /* f(r(t)) */
+	p->xi = xi;   /* xi(t) */
+	p->A = A;     /* A(t) */
+
 
 
 	if (DEBUG_VECTOR_SANITY) {
-		debugVectorSanity(p->pos,   "end langevin2helper");
-		debugVectorSanity(p->vel,   "end langevin2helper");
-		debugVectorSanity(p->F,     "end langevin2helper");
-		debugVectorSanity(p->fPrev, "end langevin2helper");
-		debugVectorSanity(p->xi,    "end langevin2helper");
+		debugVectorSanity(p->pos,   "end langevin2helper1");
+		debugVectorSanity(p->vel,   "end langevin2helper1");
+		debugVectorSanity(p->F,     "end langevin2helper1");
+		debugVectorSanity(p->fPrev, "end langevin2helper1");
+		debugVectorSanity(p->xi,    "end langevin2helper1");
+	} else {
+		assert(isSaneVector(p->pos));
+		assert(isSaneVector(p->vel));
+		assert(isSaneVector(p->F));
+		assert(isSaneVector(p->fPrev));
+		assert(isSaneVector(p->xi));
+	}
+}
+static void langevin2helper2(Particle *p, void *data)
+{
+	LangevinSettings *settings = (LangevinSettings*) data;
+
+	if (DEBUG_VECTOR_SANITY) {
+		debugVectorSanity(p->pos,   "start langevin2helper2");
+		debugVectorSanity(p->vel,   "start langevin2helper2");
+		debugVectorSanity(p->F,     "start langevin2helper2");
+		debugVectorSanity(p->fPrev, "start langevin2helper2");
+		debugVectorSanity(p->xi,    "start langevin2helper2");
 	} else {
 		assert(isSaneVector(p->pos));
 		assert(isSaneVector(p->vel));
@@ -212,13 +229,45 @@ static void langevin2helper(Particle *p, void *data)
 		assert(isSaneVector(p->xi));
 	}
 
+	double dt  = getTimeStep();
+	double sdt = sqrt(dt);
+	double g   = settings->gamma;
+	double T   = getHeatBathTemperature();
+	double s   = sqrt(2 * BOLTZMANN_CONSTANT * T * g / p->m);
+
+	Vec3 f = scale(p->F, 1/p->m); /* f(r(t + dt)) */
+	Vec3 gv = scale(p->vel, g);
+
+	/* v(t) -> v(t + dt) */
+	p->vel = add(add(add(add(
+			p->vel,
+			scale(add(p->fPrev, f), dt/2)),
+			scale(gv, -dt)),
+			scale(p->xi, s*sdt)),
+			scale(p->A, -g));
+
+	if (DEBUG_VECTOR_SANITY) {
+		debugVectorSanity(p->pos,   "end langevin2helper2");
+		debugVectorSanity(p->vel,   "end langevin2helper2");
+		debugVectorSanity(p->F,     "end langevin2helper2");
+		debugVectorSanity(p->fPrev, "end langevin2helper2");
+		debugVectorSanity(p->xi,    "end langevin2helper2");
+	} else {
+		assert(isSaneVector(p->pos));
+		assert(isSaneVector(p->vel));
+		assert(isSaneVector(p->F));
+		assert(isSaneVector(p->fPrev));
+		assert(isSaneVector(p->xi));
+	}
 }
+
 /* Alternative integrator for Langevin dynamics.
  * Based on the work of Vanden-Eijden and Ciccotti. Accurate up to dt^2. */
 static void langevin2(LangevinSettings *settings)
 {
+	forEveryParticleD(&langevin2helper1, settings);
 	calculateForces();
-	forEveryParticleD(&langevin2helper, settings);
+	forEveryParticleD(&langevin2helper2, settings);
 }
 
 #else //ALTERNATIVE_LANGEVIN

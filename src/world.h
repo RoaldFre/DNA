@@ -48,6 +48,7 @@ typedef struct particle
 	Vec3 fPrev; /* Force/mass at previous time step. Only needed for 
 		       alternative Langevin integrator. */
 	Vec3 xi; /* Random component of force at previous time step. */
+	Vec3 A;
 #endif
 	ParticleType type;
 	struct particle *prev, *next; /* Previous/Next particle in box */
