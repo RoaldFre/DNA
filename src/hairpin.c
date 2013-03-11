@@ -126,7 +126,7 @@ static IntegratorConf integratorConf = {
 };
 static MonteCarloMove moves[] = {
 		{.weight = 1.0, .m = &jiggleMover},
-		{.weight = 1.0, .m = &pivotMover},
+		{.weight = 5.0, .m = &pivotMover},
 };
 static MonteCarloConfig monteCarloConfig = {
 	.sweeps = -1,

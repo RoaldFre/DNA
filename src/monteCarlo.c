@@ -10,6 +10,12 @@
 static char renderString[RENDER_STRING_CHARS];
 
 
+static void initializePreviousPosition(Particle *p)
+{
+	p->prevPos = p->pos;
+}
+
+
 #define TARGET_ACCEPTANCE_RATIO 0.3 /* Aim for this acceptance ratio */
 #define ACCEPTANCE_BUNCH 1000 /* update acceptance after this many moves */
 
@@ -195,13 +201,15 @@ static void updatePivotParameters(double acc, double targetAcc, void *data)
 	cfg->maxNumPivPts = MAX(cfg->maxNumPivPts, 1);
 	cfg->maxNumPivPts = MIN(cfg->maxNumPivPts, cfg->s->numMonomers);
 
-	printf("Adjusted parameters: %f %f\n", cfg->angleStdDev / DEGREE, cfg->maxNumPivPts);
+	//printf("Adjusted parameters: %f %f\n", cfg->angleStdDev / DEGREE, cfg->maxNumPivPts);
 }
 
 static void *initPivotMove(void)
 {
 	if (world.numStrands != 1)
 		die("Expected a single strand in the world!\n");
+
+	forEveryParticle(&initializePreviousPosition);
 
 	PivotConfig *cfg = malloc(sizeof(*cfg));
 	cfg->s = &world.strands[0];
@@ -255,10 +263,12 @@ static void jiggleWorker(Particle *p, void *data)
 	double h = *(double*) data;
 	p->prevPos = p->pos;
 	p->pos = add(p->pos, randUniformVec(-h, h));
+	reboxParticle(p);
 }
 static void undoJiggleWorker(Particle *p)
 {
 	p->pos = p->prevPos;
+	reboxParticle(p);
 }
 static void jiggleMove(void *data)
 {
@@ -282,10 +292,11 @@ static void updateJiggleParameters(double acc, double targetAcc, void *data)
 
 	*h *= parameterFactor;
 
-	printf("Adjusted parameter: %f\n", *h / ANGSTROM);
+	//printf("Adjusted parameter: %f\n", *h / ANGSTROM);
 }
 static void *initJiggleMove(void)
 {
+	forEveryParticle(&initializePreviousPosition);
 	double *h = malloc(sizeof(*h));
 	*h = INITIAL_JIGGLE_LENGTH;
 	return h;
@@ -298,6 +309,73 @@ MonteCarloMover jiggleMover = {
 	.updateParameters = &updateJiggleParameters,
 	.exit = &freePointer,
 };
+
+
+
+/* JIGGLE SOME MOVE */
+/* Looks like -- although this allows for larger jiggle lengths -- 
+ * perturbing *all* particles is still more efficient due to the O(N) cost 
+ * of getting the potential energy. */
+#define JIGGLE_SOME_UPDATE_FRACTION (1.2)
+#define JIGGLE_SOME_PARTICLE_FRACTION (0.1)
+#define INITIAL_JIGGLE_SOME_LENGTH (0.05 * ANGSTROM)
+typedef struct {
+	double h; /* Jiggle length */
+	Strand *s; /* Strand to jiggle */
+	int n; /*  Number of particles to jiggle (must be <= s->numMonomers) */
+} JiggleSomeConfig;
+static void jiggleSomeMove(void *data)
+{
+	JiggleSomeConfig *jsc = (JiggleSomeConfig*) data;
+
+	int *indices = calloc(jsc->n, sizeof(*indices));
+	uniformSortedIndices(3 * jsc->s->numMonomers, jsc->n, indices);
+
+	for (int i = 0; i < jsc->n; i++)
+		jiggleWorker(&jsc->s->all[indices[i]], &jsc->h);
+}
+static void updateJiggleSomeParameters(double acc, double targetAcc, void *data)
+{
+	JiggleSomeConfig *jsc = (JiggleSomeConfig*) data;
+
+	/* TODO do something more smart -- scale parameterFactor with targetAcc/acc? */
+	double parameterFactor;
+	if (acc > targetAcc)
+		parameterFactor = JIGGLE_UPDATE_FRACTION;
+	else
+		parameterFactor = 1.0 / JIGGLE_UPDATE_FRACTION;
+
+	jsc->h *= parameterFactor;
+
+	//printf("Adjusted parameter: %f\n", jsc->h / ANGSTROM);
+}
+static void *initJiggleSomeMove(void)
+{
+	forEveryParticle(&initializePreviousPosition);
+	if (world.numStrands != 1)
+		die("Expected a single strand in the world!\n");
+
+	JiggleSomeConfig *jsc = malloc(sizeof(*jsc));
+	jsc->h = INITIAL_JIGGLE_SOME_LENGTH;
+	jsc->s = &world.strands[0];
+	jsc->n = MAX(1, 3*jsc->s->numMonomers * JIGGLE_SOME_PARTICLE_FRACTION);
+	return jsc;
+}
+MonteCarloMover jiggleSomeMover = {
+	.description = "JiggleSome",
+	.init = &initJiggleSomeMove,
+	.doMove = &jiggleSomeMove,
+	.undoMove = &undoJiggleMove,
+	.updateParameters = &updateJiggleSomeParameters,
+	.exit = &freePointer,
+};
+
+
+
+
+
+
+
 
 
 

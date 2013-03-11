@@ -27,7 +27,9 @@ extern MonteCarloMover pivotMover;
 /* Jiggle mover: Randomly perturb the positions of the particles in the strand. */
 extern MonteCarloMover jiggleMover;
 
-
+/* Jiggle Some mover: Randomly perturb the positions of some particles in 
+ * the strand. */
+extern MonteCarloMover jiggleSomeMover;
 
 typedef struct {
 	int sweeps; /* Negative to go on indefinitely */
