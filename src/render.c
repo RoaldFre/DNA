@@ -320,24 +320,32 @@ static void createSphere(int slices, int *numVert, Vertex3 **vertices, int *numI
 	return;
 }
 
-static int getIterationsPerSecond(void)
+static void getProgressPerSecond(int *iterationsPerSec, double *timePerSec)
 {
 	static int ips = 0;
-	static long tock = 0;
+	static double tps = 0;
 	static long prevIterations = 0;
-	long tick;
+	static double prevTime = 0;
+	static long tock = 0;
 
-	tick = SDL_GetTicks(); /* milliseconds */
+	long tick = SDL_GetTicks(); /* milliseconds */
 
 	if (tick - tock > 1000) {
 		int dt = tick - tock;
 		tock = tick;
+
 		long currIterations = getIteration();
 		long deltaIterations = currIterations - prevIterations;
 		prevIterations = currIterations;
 		ips = deltaIterations * 1000 / dt;
+
+		double currTime = getTime();
+		double deltaTime = currTime - prevTime;
+		prevTime = currTime;
+		tps = deltaTime * 1000 / dt;
 	}
-	return ips;
+	*iterationsPerSec = ips;
+	*timePerSec = tps;
 }
 static void calcFps(void)
 {
@@ -676,9 +684,11 @@ static void render(RenderConf *rc)
 			getTime() / MICROSECONDS, getIntegratorTimeStep() / FEMTOSECONDS);
 	renderString(string, 10, 25);
 
-	int ips = getIterationsPerSecond();
-	snprintf(string, n, "ips = %d   (dt/min = %f ns)",
-			ips, ips * getIntegratorTimeStep() / NANOSECONDS * 60);
+	int ips;
+	double tps;
+	getProgressPerSecond(&ips, &tps);
+	snprintf(string, n, "ips = %d   (time/min = %f ns)",
+			ips, tps / NANOSECONDS * 60);
 	renderString(string, 10, 10);
 
 	glLoadIdentity();

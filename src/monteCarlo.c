@@ -15,6 +15,10 @@ static void initializePreviousPosition(Particle *p)
 	p->prevPos = p->pos;
 }
 
+/* One MC sweep 'equals' this time, so we can still use the measurement 
+ * machinery, which relies on the simulated time to determine when to 
+ * sample. */
+#define SWEEP_TIME (1 * PICOSECONDS)
 
 #define TARGET_ACCEPTANCE_RATIO 0.3 /* Aim for this acceptance ratio */
 #define ACCEPTANCE_BUNCH 1000 /* update acceptance after this many moves */
@@ -426,6 +430,7 @@ typedef struct {
 	double previousPotentialEnergy;
 	MonteCarloMoves moves; /* List of possible moves */
 	bool verbose; /* Make some noise? */
+	double timeStep; /* Time step for every MC move */
 } MonteCarloState;
 
 static void monteCarloMove(MonteCarloState *mcs)
@@ -454,6 +459,8 @@ static void monteCarloMove(MonteCarloState *mcs)
 
 	snprintf(renderString, RENDER_STRING_CHARS, "acceptance: %f",
 					mcs->totalAcceptance.prevAcceptance);
+
+	advanceTimeBy(mcs->timeStep);
 }
 
 
@@ -473,6 +480,7 @@ static void *monteCarloTaskStart(void *initialData)
 	state->verbose = mcc->verbose;
 	state->previousPotentialEnergy = getPotentialEnergy();
 	state->moves = mcc->moves;
+	state->timeStep = SWEEP_TIME / world.strands[0].numMonomers;
 
 	/* Initialize movers */
 	MonteCarloMoves *m = &state->moves;
