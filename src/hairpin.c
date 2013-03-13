@@ -174,7 +174,7 @@ static void printUsage(void)
 	printf("             default: %s\n", DEF_INITIAL_TEMPERATURE);
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
 	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
-	printf(" -m <num>  perform the given number of Monte carlo sweeps before anything else\n");
+	printf(" -m <num>  perform the given number of Monte carlo sweeps and then quit\n");
 	printf(" -Y        only enable base pairing between XY base pairs\n");
 	printf(" -n        No base pairing interaction at all\n");
 	printf(" -y <path> write random number generator seed to this file\n");
@@ -311,7 +311,7 @@ static void parseArguments(int argc, char **argv)
 			monteCarloConfig.sweeps = atoi(optarg);
 			if (monteCarloConfig.sweeps < 0)
 				die("Invalid number of monte carlo sweeps %s\n", optarg);
-			printf("m: Starting with %d monte carlo sweeps\n", 
+			printf("m: Stopping after %d monte carlo sweeps\n", 
 					monteCarloConfig.sweeps);
 			break;
 		case 'Y':
