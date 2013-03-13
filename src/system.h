@@ -47,6 +47,11 @@ bool run(Task *task);
 /* Get the number of the last completed iteration. */
 long getIteration(void);
 
+/* Get the simulated time. */
+double getTime(void);
+/* Advance the time by the given time step. */
+void advanceTimeBy(double timeStep);
+
 
 
 /* Exit the program with an error. Print the given message. */

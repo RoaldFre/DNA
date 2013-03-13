@@ -38,11 +38,8 @@ Task makeIntegratorTask(IntegratorConf *conf);
  * prefixed with '#'.  You need to free the string pointer afterwards! */
 char *integratorInfo(IntegratorConf *conf);
 
-double getTimeStep(void);
-void setTimeStep(double dt);
-
-/* Get the simulated time. */
-double getTime(void);
+double getIntegratorTimeStep(void);
+void setIntegratorTimeStep(double dt);
 
 
 

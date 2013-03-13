@@ -412,14 +412,14 @@ static bool handleEvents(void)
 				return false;
 				break;
 			case SDLK_UP:
-				setTimeStep(getTimeStep() * 1.02);
+				setIntegratorTimeStep(getIntegratorTimeStep() * 1.02);
 				printf("Time step: %f\n", 
-						getTimeStep() / FEMTOSECONDS);
+						getIntegratorTimeStep() / FEMTOSECONDS);
 				break;
 			case SDLK_DOWN:
-				setTimeStep(getTimeStep() / 1.02);
+				setIntegratorTimeStep(getIntegratorTimeStep() / 1.02);
 				printf("Time step: %f\n",
-						getTimeStep() / FEMTOSECONDS);
+						getIntegratorTimeStep() / FEMTOSECONDS);
 				break;
 			case SDLK_SPACE:
 				setHeatBathTemperature(getHeatBathTemperature() * 1.02);
@@ -673,12 +673,12 @@ static void render(RenderConf *rc)
 	renderString(string, 10, 40);
 
 	snprintf(string, n, "t = %f µs   (dt = %f fs)",
-			getTime() * 1e6, getTimeStep() / FEMTOSECONDS);
+			getTime() / MICROSECONDS, getIntegratorTimeStep() / FEMTOSECONDS);
 	renderString(string, 10, 25);
 
 	int ips = getIterationsPerSecond();
 	snprintf(string, n, "ips = %d   (dt/min = %f ns)",
-			ips, ips * getTimeStep() / NANOSECONDS * 60);
+			ips, ips * getIntegratorTimeStep() / NANOSECONDS * 60);
 	renderString(string, 10, 10);
 
 	glLoadIdentity();

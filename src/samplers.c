@@ -332,7 +332,7 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 	octaveScalar("unzipConfirmationTime",  hfc->unzipConfirmationTime);
 	octaveScalar("minZippingSamplingTime", hfc->minZippingSamplingTime);
 	octaveScalar("numMonomers",            n);
-	octaveScalar("timestep",               getTimeStep());
+	octaveScalar("IntegratorTimestep",     getIntegratorTimeStep());
 	octaveScalar("sampleInterval",         sd->sampleInterval);
 
 	return hfd;
@@ -508,7 +508,7 @@ static void* hairpinStateStart(SamplerData *sd, void *conf)
 	octaveComment("temperatureBeforeStart  %e", getHeatBathTemperature());
 	octaveComment("energyThreshold %e",         hsc->energyThreshold);
 	octaveComment("numMonomers %d",             n);
-	octaveComment("timestep %e",                getTimeStep());
+	octaveComment("integratorTimestep %e",      getIntegratorTimeStep());
 	octaveComment("sampleInterval %e",          sd->sampleInterval);
 
 	/* Set temperature if necessary */
@@ -592,13 +592,13 @@ static void* hairpinMeltingTempStart(SamplerData *sd, void *conf)
 	 * when 'hmtc->verbose' is true. */
 	hmtd->averageBPsPerStep = calloc(sizeof(*hmtd->averageBPsPerStep), 
 					hmtc->numSteps);
-	octaveScalar("sampleStartTime",   getTime());
-	octaveScalar("temperature",       getHeatBathTemperature());
-	octaveScalar("relaxationTime",    hmtc->relaxationTime);
-	octaveScalar("measureTime",       hmtc->measureTime);
-	octaveScalar("numMonomers",       n);
-	octaveScalar("timestep",          getTimeStep());
-	octaveScalar("sampleInterval",    sd->sampleInterval);
+	octaveScalar("sampleStartTime",    getTime());
+	octaveScalar("temperature",        getHeatBathTemperature());
+	octaveScalar("relaxationTime",     hmtc->relaxationTime);
+	octaveScalar("measureTime",        hmtc->measureTime);
+	octaveScalar("numMonomers",        n);
+	octaveScalar("IntegratorTimestep", getIntegratorTimeStep());
+	octaveScalar("sampleInterval",     sd->sampleInterval);
 
 	octaveMatrixHeader("temperatures", hmtc->numSteps, 1);
 	for (int i = 0; i < hmtc->numSteps; i++)

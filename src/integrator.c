@@ -5,20 +5,13 @@
 
 static double timeStep;
 
-__inline__ double getTimeStep(void)
+__inline__ double getIntegratorTimeStep(void)
 {
 	return timeStep;
 }
-__inline__ void setTimeStep(double dt)
+__inline__ void setIntegratorTimeStep(double dt)
 {
 	timeStep = dt;
-}
-
-static double simulationTime = 0;
-
-double getTime(void)
-{
-	return simulationTime;
 }
 
 
@@ -80,7 +73,7 @@ static void thermostat(double tau)
 	double Tk = getKineticTemperature();
 	assert(isSaneNumber(Tk));
 	double T0 = getHeatBathTemperature();
-	double dt = getTimeStep();
+	double dt = getIntegratorTimeStep();
 	double lambda2 = 1 + dt/tau * (T0/Tk - 1);
 	double lambda;
 	if (lambda2 >= 0)
@@ -93,7 +86,7 @@ static void thermostat(double tau)
 
 static void verletHelper1(Particle *p)
 {
-	double dt = getTimeStep();
+	double dt = getIntegratorTimeStep();
 
 	if (DEBUG_VECTOR_SANITY) {
 		debugVectorSanity(p->pos, "start verletHelper1");
@@ -121,7 +114,7 @@ static void verletHelper1(Particle *p)
 }
 static void verletHelper2(Particle *p)
 {
-	double dt = getTimeStep();
+	double dt = getIntegratorTimeStep();
 
 	if (DEBUG_VECTOR_SANITY) {
 		debugVectorSanity(p->pos, "start verletHelper2");
@@ -176,7 +169,7 @@ static void langevin2helper1(Particle *p, void *data)
 		assert(isSaneVector(p->xi));
 	}
 
-	double dt  = getTimeStep();
+	double dt  = getIntegratorTimeStep();
 	double sdt = sqrt(dt);
 	double g   = settings->gamma;
 	double T   = getHeatBathTemperature();
@@ -229,7 +222,7 @@ static void langevin2helper2(Particle *p, void *data)
 		assert(isSaneVector(p->xi));
 	}
 
-	double dt  = getTimeStep();
+	double dt  = getIntegratorTimeStep();
 	double sdt = sqrt(dt);
 	double g   = settings->gamma;
 	double T   = getHeatBathTemperature();
@@ -276,7 +269,7 @@ static void langevinBBKhelper(Particle *p, void *data)
 {
 	LangevinSettings *settings = (LangevinSettings*) data;
 
-	double dt = getTimeStep();
+	double dt = getIntegratorTimeStep();
 	double g  = settings->gamma;
 	double T  = getHeatBathTemperature();
 
@@ -363,7 +356,7 @@ static void stepPhysics(Integrator integrator)
 		break;
 	}
 
-	simulationTime += timeStep;
+	advanceTimeBy(getIntegratorTimeStep());
 }
 
 static void initializeParticle(Particle *p)
@@ -392,7 +385,7 @@ static void *integratorTaskStart(void *initialData)
 	state->reboxInterval = ic->reboxInterval;
 	state->lastReboxTime = getTime();
 
-	setTimeStep(ic->timeStep);
+	setIntegratorTimeStep(ic->timeStep);
 
 #ifdef ALTERNATIVE_LANGEVIN
 	printf("Built for alternative Langevin integrator\n");

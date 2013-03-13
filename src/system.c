@@ -3,11 +3,22 @@
 #include "task.h"
 
 static long iteration = 0;
+static double simulationTime = 0;
 
 long getIteration(void)
 {
 	return iteration;
 }
+
+double getTime(void)
+{
+	return simulationTime;
+}
+void advanceTimeBy(double timeStep)
+{
+	simulationTime += timeStep;
+}
+
 
 /* Returns true if everything went according to plan. False if something 
  * unexpected happened. */
