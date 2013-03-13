@@ -1,6 +1,8 @@
 % function [tau1, tau1Stddev, tau2, tau2Stddev, offset, offsetStddev, amplFrac, amplFracStddev, time, meanEndToEndDist, errEndToEndDist] = averageEndToEndDist2times(filesglob, decimateFactor)
 function [tau1, tau1Stddev, tau2, tau2Stddev, offset, offsetStddev, amplFrac, amplFracStddev, time, meanEndToEndDist, errEndToEndDist] = averageEndToEndDist2times(filesglob, decimateFactor)
 
+addpath("generic");
+
 if (nargin < 1)
 	error "Not enough required arguments given!"
 elseif (nargin < 2)
@@ -35,7 +37,7 @@ tauGuess = 9.7e-8 * (N / 84.0) ^ 2.088;
 tau1Guess = tauGuess;
 tau2Guess = tauGuess / 5;
 
-[tau1, tau2, offset, amplFrac, tau1Stddev, tau2Stddev, offsetStddev, amplFracStddev] = endToEndRegressionFixedInitialLength2times(time, meanEndToEndDist, initialLength, tau1Guess, tau2Guess, 1.3e-8, 0.8, errEndToEndDist);
+[tau1, tau2, offset, amplFrac, tau1Stddev, tau2Stddev, offsetStddev, amplFracStddev] = exponentialRelaxationFixedInitial2times(time, meanEndToEndDist, initialLength, tau1Guess, tau2Guess, 1.3e-8, 0.8, errEndToEndDist);
 tau1Info = [tau1, tau1Stddev]
 tau2Info = [tau2, tau2Stddev]
 offsetInfo = [offset, offsetStddev]
