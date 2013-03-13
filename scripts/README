@@ -1,0 +1,11 @@
+You need some extra generic GNU Octave scripts in the sub directory 
+'generic'.
+These scripts are hosted at https://github.com/RoaldFre/octaveScripts
+
+If you are in the scripts directory of the DNA project, you can grab the 
+latest version of these extra scripts with
+
+$ git clone https://github.com/RoaldFre/octaveScripts.git generic
+
+This will pull in all the required scripts to scripts/generic/
+

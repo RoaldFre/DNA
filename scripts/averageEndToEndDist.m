@@ -1,6 +1,8 @@
 % function [tau, tauStddev, offset, offsetStddev, amplitude, amplitudeStddev, time, meanEndToEndDist, errEndToEndDist] = averageEndToEndDist(filesglob, decimateFactor)
 function [tau, tauStddev, offset, offsetStddev, amplitude, amplitudeStddev, time, meanEndToEndDist, errEndToEndDist] = averageEndToEndDist(filesglob, decimateFactor)
 
+addpath("generic");
+
 if (nargin < 1)
 	error "Not enough required arguments given!"
 elseif (nargin < 2)
@@ -31,7 +33,7 @@ set(h1, "linewidth", 1);
 
 initialLength = meanEndToEndDist(1); % This should have no error, as all strands have the same initial length!
 
-[tau, offset, beta, tauStddev, offsetStddev, betaStddev] = endToEndRegressionFixedInitialLength(time, meanEndToEndDist, initialLength, 4e-8, 1.3e-8, 0.75, errEndToEndDist);
+[tau, offset, beta, tauStddev, offsetStddev, betaStddev] = exponentialRelaxationFixedInitial(time, meanEndToEndDist, initialLength, 4e-8, 1.3e-8, 0.75, errEndToEndDist);
 tauInfo = [tau, tauStddev]
 offsetInfo = [offset, offsetStddev]
 betaInfo = [beta, betaStddev]
