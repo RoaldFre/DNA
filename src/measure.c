@@ -63,7 +63,7 @@ typedef struct measTaskState
 	SamplerData samplerData;
 	enum {RELAXING, SAMPLING} measStatus;
 	MeasurementConf measConf;
-	double prevSampleTime; /* Time of last sample */
+	double nextSampleTime; /* Time to take next sample */
 	double startingTime; /* Time at which measurement task was started */
 	double verboseTime;  /* Time after which we have to say something */
 	StreamState streamState; /* For stdout redirection */
@@ -165,7 +165,7 @@ static void *measStart(void *initialData)
 
 	state->startingTime = getTime();
 	/* So we start sampling immediately if measureWait == 0 : */
-	state->prevSampleTime = getTime() - meas->measConf.measureInterval;
+	state->nextSampleTime = getTime();
 	state->sampler = meas->sampler; /* struct copy */
 	state->measConf = meas->measConf; /* struct copy */
 	state->measStatus = (meas->measConf.measureWait > 0 ?
@@ -225,13 +225,11 @@ static TaskSignal measTick(void *state)
 			measState->samplerState = samplerStart(measState);
 
 			measState->measStatus = SAMPLING;
-			measState->prevSampleTime = relTime - measWait;
-			/* bit of a hack to start sampling immediately: */
-			measState->prevSampleTime -= measInterval;
+			measState->nextSampleTime = time;
 		}
 		break;
 	case SAMPLING:
-		if (time - measState->prevSampleTime < measInterval)
+		if (time < measState->nextSampleTime)
 			break;
 
 		if (verbose) {
@@ -245,7 +243,7 @@ static TaskSignal measTick(void *state)
 			fflush(stdout);
 		}
 
-		measState->prevSampleTime = time;
+		measState->nextSampleTime += measInterval;
 		samplerSignal = samplerSample(measState);
 		measState->samplerData.sample++;
 		
