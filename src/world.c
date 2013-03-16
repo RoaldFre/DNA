@@ -423,12 +423,18 @@ void readWorld(const char *filename)
 
 	assert(filename != NULL);
 	FILE *in = fopen(filename, "r");
-	if (in == NULL)
+	if (in == NULL) {
+		perror("fopen");
 		die("writeWorld: can't open file '%s'!\n", filename);
+	}
 
-	if (fscanf(in, MAGIC "\n") != 0  ||  errno)
+	errno = 0;
+	if (fscanf(in, MAGIC "\n") != 0  ||  errno) {
+		if (errno != 0)
+			perror("fscanf");
 		die("readWorld: couldn't find valid magic '%s'"
 				"in file '%s'!\n", MAGIC, filename);
+	}
 
 	if (fscanf(in, "%le\n%d\n", &world.worldSize, &world.numStrands) != 2)
 		die("readWorld: couldn't get worldSize or numStrands\n");
