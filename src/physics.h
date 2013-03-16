@@ -201,9 +201,6 @@ void killMomentum(void);
 
 double VbasePair(Particle *p1, Particle *p2);
 
-double nearestLineDistance(Vec3 *pos1, Vec3 *pos2, Vec3 *dist1, Vec3 *dist2);
-double getExclusionCutOff(ParticleType t1, ParticleType t2);
-
 void dumpStats(void);
 bool physicsCheck(void);
 
