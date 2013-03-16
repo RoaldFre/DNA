@@ -11,6 +11,25 @@
 static InteractionSettings interactions;
 static double truncationLenSq; /* Cached: interactions.truncationLen^2 */
 
+
+/* ===== EXTRA INTERACTIONS ===== */
+typedef struct extraIntNode {
+	ExtraInteraction i;
+	struct extraIntNode *next;
+} ExtraIntNode;
+
+static ExtraIntNode *extraIntList = NULL;
+
+void registerExtraInteraction(ExtraInteraction *interaction)
+{
+	ExtraIntNode *node = malloc(sizeof(*node));
+	node->i = *interaction; /* struct copy */
+	node->next = extraIntList;
+	extraIntList = node;
+}
+
+
+
 /* ===== CACHED STUFF FOR PERFORMANCE ===== */
 static double invDebLength; /* Inverse Debye length for Coulomb screening */
 static double calcInvDebyeLength(void);
@@ -1065,6 +1084,13 @@ void calculateForces(void)
 		forEveryPair(&mutuallyExclusivePairForces);
 	else
 		forEveryPair(&pairForces);
+
+	/* Extra interactions */
+	ExtraIntNode *node = extraIntList;
+	while (node != NULL) {
+		node->i.addForces(node->i.data);
+		node = node->next;
+	}
 }
 
 
@@ -1160,8 +1186,18 @@ static PotentialEnergies calcPotentialEnergies(void) {
 
 double getPotentialEnergy(void) {
 	PotentialEnergies pe = calcPotentialEnergies();
-	return pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + 
-			pe.Coulomb + pe.exclusion;
+	double V = pe.bond + pe.angle + pe.dihedral + pe.stack
+			+ pe.basePair + pe.Coulomb + pe.exclusion;
+
+
+	/* Extra potentials */
+	ExtraIntNode *node = extraIntList;
+	while (node != NULL) {
+		V += node->i.potential(node->i.data);
+		node = node->next;
+	}
+
+	return V;
 }
 
 
@@ -1228,8 +1264,19 @@ void dumpStats()
 	double T = getKineticTemperature();
 	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.exclusion;
 
-	printf("E = %e, K = %e, Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Ve = %e, T = %f\n",
-			E, K, pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.exclusion, T);
+	printf("Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Ve = %e",
+			pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.exclusion);
+
+	/* Extra interactions */
+	ExtraIntNode *node = extraIntList;
+	while (node != NULL) {
+		double V = node->i.potential(node->i.data) / ELECTRON_VOLT;
+		printf(", V%s = %e\n", node->i.symbol, V);
+		E += V;
+		node = node->next;
+	}
+
+	printf(", E = %e, K = %e, T = %f\n", E, K, T);
 }
 
 
@@ -1273,6 +1320,34 @@ Vec3 getMonomerCOM(Strand *s, int monomer)
 
 	return scale(COM, 1/(base->m + sugar->m + phosphate->m));
 }
+
+void distributeForceOverMonomer(Vec3 F, Strand *strand, int monomer)
+{
+	Particle *b = &strand->Bs[monomer];
+	Particle *s = &strand->Ss[monomer];
+	Particle *p = &strand->Ps[monomer];
+
+	double M = b->m + s->m + p->m;
+
+	b->F = add(b->F, scale(F, b->m / M));
+	s->F = add(s->F, scale(F, s->m / M));
+	p->F = add(p->F, scale(F, p->m / M));
+}
+
+Vec3 endToEndVector(Strand *s)
+{
+	return nearestImageVector(getMonomerCOM(s, 0),
+	                          getMonomerCOM(s, s->numMonomers - 1));
+}
+Vec3 endToEndDirection(Strand *s)
+{
+	return normalize(endToEndVector(s));
+}
+double endToEndDistance(Strand *s)
+{
+	return length(endToEndVector(s));
+}
+
 
 double parseTemperature(const char *string)
 {

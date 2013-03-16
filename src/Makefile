@@ -5,7 +5,7 @@ DEFINES=-D_GNU_SOURCE
 #MARCH=native
 MARCH=core2
 
-OBJECTS = system.o math.o task.o measure.o samplers.o physics.o integrator.o monteCarlo.o world.o spgrid.o tinymt/tinymt64.o render.o octave.o
+OBJECTS = system.o math.o task.o measure.o samplers.o physics.o extraInteractions.o integrator.o monteCarlo.o world.o spgrid.o tinymt/tinymt64.o render.o octave.o
 EXTRA_RENDER_OBJECTS = font.o mathlib/vector.o mathlib/quaternion.o mathlib/matrix.o
 
 LIBS = -lm

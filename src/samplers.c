@@ -227,10 +227,7 @@ static SamplerSignal endToEndDistSample(SamplerData *sd, void *state)
 	EndToEndDistConf *etedc = (EndToEndDistConf*) state;
 	Strand *s = etedc->strand;
 
-	double endToEndDist = distance(
-			getMonomerCOM(s, 0),
-			getMonomerCOM(s, s->numMonomers - 1));
-	printf("%e\t%e\n", getTime(), endToEndDist);
+	printf("%e\t%e\n", getTime(), endToEndDistance(s));
 
 	return SAMPLER_OK;
 }

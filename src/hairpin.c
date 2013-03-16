@@ -10,6 +10,7 @@
 #include "world.h"
 #include "spgrid.h"
 #include "integrator.h"
+#include "extraInteractions.h"
 #include "monteCarlo.h"
 #include "render.h"
 #include "samplers.h"
@@ -152,6 +153,11 @@ static InteractionSettings interactionSettings = {
 	.saltConcentration   = DEF_SALT_CONCENTRATION,
 	.truncationLen       = DEF_TRUNCATION_LENGTH * ANGSTROM,
 };
+static EndToEndInteraction etei = {
+	.K = -1, /* guard */
+	.Rref = -1,
+	.s = NULL,
+};
 
 static const char* baseSequence = DEF_BASE_SEQUENCE;
 static double worldSize = -1; /* guard */
@@ -230,6 +236,9 @@ static void printUsage(void)
 	printf(" -e        also measure End-to-end distance of the strand\n");
 	printf("             output: the data filename (see -D) with suffix: '%s'\n",
 							END_TO_END_DIST_FILE_SUFFIX);
+
+	printf(" -u <K>:<Rref>  Umbrella potential on end-to-end distance R: K/2(R - Rref)^2.\n");
+	printf("           For Umbrella sampling of end-to-end distance free energy profile.\n");
 	printf(" -p        also measure raw hairpin base Pairing state\n");
 	printf("             output: the data filename (see -D) with suffix: '%s'\n",
 							BASE_PAIRING_FILE_SUFFIX);
@@ -279,8 +288,8 @@ static void parseArguments(int argc, char **argv)
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
 	/* Unused options:
-	 * E jJ o q u */
-	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:epkhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
+	 * E jJ o q */
+	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:eu:pkhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -575,6 +584,14 @@ static void parseArguments(int argc, char **argv)
 			measureEndToEndDistance = true;
 			printf("e: measuring end to end ditance\n");
 			break;
+		case 'u':
+			sscanf(optarg, "%lf:%lf", &etei.K, &etei.Rref);
+			etei.K *= ELECTRON_VOLT / SQUARE(ANGSTROM);
+			etei.Rref *= ANGSTROM;
+			measureEndToEndDistance = true;
+			printf("u: Umbrella potential on end-to-end distance with K=%e and Rref=%e\n",
+					etei.K, etei.Rref);
+			break;
 		case 'p':
 			measureBasePairing = true;
 			printf("e: measuring base pairing\n");
@@ -612,9 +629,18 @@ static void parseArguments(int argc, char **argv)
 
 static void determineIdealNumberOfBoxes(void)
 {
+	double defaultWorldSize = ((strlen(baseSequence) + 2)
+				* DEF_MONOMER_WORLDSIZE_FACTOR) * ANGSTROM;
 	if (worldSize < 0)
-		worldSize = ((strlen(baseSequence) + 2)
-					* DEF_MONOMER_WORLDSIZE_FACTOR) * ANGSTROM;
+		worldSize = defaultWorldSize;
+
+	if ((etei.K > 0 || measureEndToEndDistance)
+			&&   worldSize < 3 * MAX(defaultWorldSize, etei.Rref)) {
+		worldSize = 3 * MAX(defaultWorldSize, etei.Rref);
+		printf("Need correct end-to-end distance. Increasing world "
+				"size to %f Angstrom\n",
+				worldSize / ANGSTROM);
+	}
 
 	if (interactionSettings.truncationLen < 0) {
 		/* Disable truncation -> no space partitioning */
@@ -715,6 +741,12 @@ int main(int argc, char **argv)
 	}
 	integratorConf.integrator = integrator;
 
+	/* End to end interaction */
+	if (etei.K > 0) {
+		etei.s = &world.strands[0];
+		registerEndToEndInteraction(&etei);
+	}
+
 	/* Measurement header */
 	char *measHeaderStrings[2];
 	measHeaderStrings[0] = getWorldInfo();
@@ -760,6 +792,16 @@ int main(int argc, char **argv)
 	endToEnd.sampler = endToEndDistSampler(&world.strands[0]);
 	endToEnd.measConf = additionalMeasConf; /* struct copy */
 	endToEnd.measConf.measureFile = endToEndFile;
+	char *eteMeasHeader = NULL;
+	/* Add extra header if we are using an end-to-end interaction */
+	if (etei.K > 0) {
+		char *eteHeader = endToEndInteractionHeader(&etei);
+		eteMeasHeader = asprintfOrDie("%s%s",
+				measHeader,
+				eteHeader);
+		free(eteHeader);
+		endToEnd.measConf.measureHeader = eteMeasHeader;
+	}
 	Task endToEndTask = measurementTask(&endToEnd);	
 
 	/* Temperature task */
@@ -828,6 +870,7 @@ int main(int argc, char **argv)
 	free(endToEndFile);
 	free(temperatureFile);
 	free(measHeader);
+	free(eteMeasHeader);
 
 	if (!everythingOK)
 		return 1;

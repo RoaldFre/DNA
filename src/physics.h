@@ -178,6 +178,29 @@ typedef struct {
 /* This needs to be called before doing any physics calculations! */
 void registerInteractions(InteractionSettings interactionSettings);
 
+typedef struct {
+	/* Short (one word) description of the interaction. */
+	const char *name;
+
+	/* Symbol/suffix for this interaction. This will be appended after 
+	 * V to designate the potential energy. For example, for a dihedral 
+	 * interaction, this could be 'd', to give a potential Vd. */
+	const char *symbol;
+
+	/* Data pointer that holds configuration and/or state that gets 
+	 * passed along to the functions below. */
+	void *data;
+
+	/* Return the potential energy associated with this interaction. */
+	double (*potential)(void *data);
+
+	/* Add the forces of this interaction to the relevant particles. */
+	void (*addForces)(void *data);
+} ExtraInteraction;
+
+void registerExtraInteraction(ExtraInteraction *interaction);
+
+
 /* This needs to be called whenever some relevant external setting (like 
  * the heat bath temperature) is changed. */
 void syncPhysics(void);
@@ -191,11 +214,18 @@ double getPotentialEnergy(void);
  * temperature (in Kelvin). Returns -1 in case of error. */
 double parseTemperature(const char *str);
 
+Vec3 endToEndVector(Strand *s);
+Vec3 endToEndDirection(Strand *s);
+double endToEndDistance(Strand *s);
 /* Returns the position vector of the Center Of Mass. */
 Vec3 getCOM(Particle *ps, int num);
 /* Returns the position vector of the Center Of Mass of the given monomer 
  * in the given strand. */
 Vec3 getMonomerCOM(Strand *s, int monomer);
+/* Distributes the force over the monomer. The force is assumed to be 
+ * applied to the COM of the monomer. */
+void distributeForceOverMonomer(Vec3 F, Strand *s, int monomer);
+
 /* Sets the total momentum of the world to zero by shifting the velocities. */
 void killMomentum(void);
 
