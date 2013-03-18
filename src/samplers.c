@@ -293,8 +293,15 @@ typedef struct {
 	double zippingPhaseStartTime;
 	double unzippingPhaseStartTime;
 	double confirmationStartTime; /* Used for both zipping & unzipping */
-	double timeOfConfirmation; /* Used for both zipping & unzipping */
+	double confirmationTime; /* Used for both zipping & unzipping */
 	double relaxationEndTime; /* Time at which to stop relaxation phase */
+
+	/* First time where there were more than the nucleation threshold 
+	 * bound base pairs for the entire time up till now. Negative if no 
+	 * nucleation happened, or if we dropped back down below the 
+	 * nucleation threshold since the previous nucleation. */
+	double nucleationTime;
+
 	HairpinFormationSamplerConfig conf;
 } HairpinFormationSamplerData;
 
@@ -313,6 +320,7 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 	hfd->conf = *hfc; /* struct copy */
 	hfd->status = WAITING_TO_ZIP;
 	hfd->zippingPhaseStartTime = getTime();
+	hfd->nucleationTime = -1;
 
 	/* Set temperature for zipping */
 	setHeatBathTemperature(hfc->zippingTemperature);
@@ -343,6 +351,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 	int correctlyBound = getCorrectlyBoundHairpinBasePairs(
 				&world.strands[0], hfc->energyThreshold);
 	int requiredBounds = hfc->requiredBoundBPs; /* for zipping */
+	int nucleationBounds = hfc->nucleationBoundBPs; /* for zipping */
 	int allowedBounds = hfc->allowedBoundBPs; /* for unzipping */
 
 	if(sd->string != NULL)
@@ -358,6 +367,14 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		printf("[waiting to zip] %e %d ", time, correctlyBound);
 		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
 		octaveEndComment();
+
+		if (correctlyBound >= nucleationBounds) {
+			if (hfd->nucleationTime < 0)
+				hfd->nucleationTime = time;
+		} else {
+			hfd->nucleationTime = -1;
+		}
+
 		if (correctlyBound < requiredBounds)
 			break; /* Keep waiting */
 		
@@ -387,11 +404,15 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		/* We have zipping confirmation! */
 		double timeTillZipping = time - hfd->zippingPhaseStartTime
 						- hfc->zipConfirmationTime;
+
+		double timeTillZippingFromNucl = time - hfd->nucleationTime
+						- hfc->zipConfirmationTime;
 		octaveComment("Confirmed zipping at %e", time);
 		octaveScalar("timeTillZipping", timeTillZipping);
+		octaveScalar("timeTillZippingFromNucl", timeTillZippingFromNucl);
 		octaveComment("Starting relaxation phase in zipped state "
 				"at %e", time);
-		if (timeTillZipping + hfc->zippedRelaxationTime
+		if (timeTillZippingFromNucl + hfc->zippedRelaxationTime
 						< hfc->minZippingSamplingTime) {
 			hfd->relaxationEndTime = time +
 					hfc->minZippingSamplingTime - timeTillZipping;
@@ -400,7 +421,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		} else {
 			hfd->relaxationEndTime = time + hfc->zippedRelaxationTime;
 		}
-		hfd->timeOfConfirmation = time;
+		hfd->confirmationTime = time;
 		hfd->status = RELAXATION_IN_ZIPPED_STATE;
 		/* Intentional fall through */
 	case RELAXATION_IN_ZIPPED_STATE:
@@ -418,7 +439,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 			octaveComment("Relaxation in zipped state: passed "
 					"zippedRelaxationTime but not zipped "
 					"anymore at: %e -- total relax time: %e",
-					time, time - hfd->timeOfConfirmation);
+					time, time - hfd->confirmationTime);
 			break; /* Wait to fully zip again */
 		}
 

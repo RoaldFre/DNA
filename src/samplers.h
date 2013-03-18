@@ -57,6 +57,13 @@ typedef struct {
 	 * whether a hairpin is fully unzipped */
 	int allowedBoundBPs; 
 
+	/* Minimum number of bound basepairs required when determining 
+	 * whether there has been nucleation for the zipping. Nucleation is 
+	 * defined as the first time the number of bound base pairs reaches 
+	 * this threshold, and stays above (or equals) this threshold all 
+	 * the way up to zipping confirmation. */
+	int nucleationBoundBPs; 
+
 	/* Time the molecule has to be fully zipped (according to the 
 	 * requiredBoundBPs criterium) in order for it to be considered a 
 	 * stable hairpin */

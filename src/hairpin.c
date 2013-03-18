@@ -72,6 +72,7 @@ static HairpinFormationSamplerConfig hfc =
 {
 	.energyThreshold = -0.1 * EPSILON,
 	.requiredBoundBPs = -1, /* guard */
+	.nucleationBoundBPs = -1, /* guard */
 	.zipConfirmationTime = 0,
 	.allowedBoundBPs = 0,
 	.unzipConfirmationTime = 1 * NANOSECONDS,
@@ -261,7 +262,8 @@ static void printUsage(void)
 	printf("             default: %f\n", hmtc.relaxationTime / NANOSECONDS);
 	printf(" -V        Be verbose: also dump hairpin state to file\n");
 	printf("Parameters for hairpin formation measurement:\n");
-	printf(" -H <int>  min required bounded base pairs for confirming 'zipped' state\n");
+	printf(" -H <int>:<int>  min required bounded base pairs for confirming 'zipped' state,\n");
+	printf("           followed by min required bounded base pairs for confirming nucleation\n");
 	printf(" -M <int>  max allowed bounded base pairs for confirming 'unzipped' state\n");
 	printf("             default: %d\n", hfc.allowedBoundBPs);
 	printf(" -O <flt><C|K> zipping temperature\n");
@@ -519,9 +521,10 @@ static void parseArguments(int argc, char **argv)
 			printf("v: Being verbose for melting\n");
 			break;
 		case 'H':
-			hfc.requiredBoundBPs = atoi(optarg);
-			printf("H: Setting formation required bound to %d\n", 
-						hfc.requiredBoundBPs);
+			//TODO error handling
+			sscanf(optarg, "%d:%d", &hfc.requiredBoundBPs, &hfc.nucleationBoundBPs);
+			printf("H: Setting formation required bound to %d and nucleation bound to %d\n", 
+						hfc.requiredBoundBPs, hfc.nucleationBoundBPs);
 			break;
 		case 'M':
 			hfc.allowedBoundBPs = atoi(optarg);
@@ -585,6 +588,7 @@ static void parseArguments(int argc, char **argv)
 			printf("e: measuring end to end ditance\n");
 			break;
 		case 'u':
+			//TODO error handling
 			sscanf(optarg, "%lf:%lf", &etei.K, &etei.Rref);
 			etei.K *= ELECTRON_VOLT / SQUARE(ANGSTROM);
 			etei.Rref *= ANGSTROM;
@@ -824,10 +828,10 @@ int main(int argc, char **argv)
 		hairpin.sampler = hairpinMeltingTempSampler(&hmtc);
 		break;
 	case HAIRPIN_FORMATION_TIME:
-		if (hfc.requiredBoundBPs < 0) /* guard */
+		if (hfc.requiredBoundBPs < 0 || hfc.nucleationBoundBPs < 0)
 			die("You need to give the minimum required number "
-					"of bound base pairs to measure "
-					"hairpin formation time!\n");
+					"of (nucleation) bound base pairs "
+					"to measure hairpin formation time!\n");
 		hairpin.sampler = hairpinFormationSampler(&hfc);
 		break;
 	case HAIRPIN_STATE:
