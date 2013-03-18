@@ -410,12 +410,13 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		octaveComment("Confirmed zipping at %e", time);
 		octaveScalar("timeTillZipping", timeTillZipping);
 		octaveScalar("timeTillZippingFromNucl", timeTillZippingFromNucl);
+		octaveScalar("nucleationTime", hfd->nucleationTime);
 		octaveComment("Starting relaxation phase in zipped state "
 				"at %e", time);
 		if (timeTillZippingFromNucl + hfc->zippedRelaxationTime
 						< hfc->minZippingSamplingTime) {
 			hfd->relaxationEndTime = time +
-					hfc->minZippingSamplingTime - timeTillZipping;
+					hfc->minZippingSamplingTime - timeTillZippingFromNucl;
 			octaveComment("Extending zipped relaxation time to "
 					"honor minZippingSamplingTime");
 		} else {
