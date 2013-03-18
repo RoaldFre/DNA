@@ -47,7 +47,7 @@ bool writeSeed(const char *file, uint64_t seed)
 		return false;
 	}
 
-	fprintf(out, "%llx\n", (long long unsigned) seed);
+	fprintf(out, "%llx\n%s\n", (long long unsigned) seed, VERSION);
 	fclose(out);
 
 	return true;

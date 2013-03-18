@@ -687,6 +687,8 @@ static void determineIdealNumberOfBoxes(void)
 
 int main(int argc, char **argv)
 {
+	printf("Hairpin, version: %s\n", VERSION);
+
 	parseArguments(argc, argv);
 
 	uint64_t seed = 0; /* initialize for compiler warning */
@@ -751,8 +753,9 @@ int main(int argc, char **argv)
 	char *measHeaderStrings[2];
 	measHeaderStrings[0] = getWorldInfo();
 	measHeaderStrings[1] = integratorInfo(&integratorConf);
-	char *measHeader = asprintfOrDie("%s%s"
+	char *measHeader = asprintfOrDie("%s%s%s"
 				"# random number generator seed %llx\n",
+				VERSION,
 				measHeaderStrings[0], measHeaderStrings[1],
 				seed);
 	free(measHeaderStrings[0]); free(measHeaderStrings[1]);

@@ -16,6 +16,8 @@
 #include "tinymt/tinymt64.c"
 #include "render.c"
 #include "octave.c"
+#include "monteCarlo.c"
+#include "extraInteractions.c"
 //#include "font.c"
 //#include "mathlib/vector.c"
 //#include "mathlib/quaternion.c"

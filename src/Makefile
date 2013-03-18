@@ -1,7 +1,9 @@
 #Disable building with rendering by passing RENDER= to make
 RENDER = yes
 
-DEFINES=-D_GNU_SOURCE
+VERSION_DEFINE=-DVERSION="\"Tree: $(shell git log -1 --format='%H'), built at $(shell date)\""
+
+DEFINES=-D_GNU_SOURCE $(VERSION_DEFINE)
 #MARCH=native
 MARCH=core2
 
