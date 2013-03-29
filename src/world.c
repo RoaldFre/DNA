@@ -425,7 +425,7 @@ void readWorld(const char *filename)
 	FILE *in = fopen(filename, "r");
 	if (in == NULL) {
 		perror("fopen");
-		die("writeWorld: can't open file '%s'!\n", filename);
+		die("readWorld: can't open file '%s'!\n", filename);
 	}
 
 	errno = 0;
