@@ -331,6 +331,7 @@ static void* hairpinFormationStart(SamplerData *sd, void *conf)
 	octaveScalar("zippingTemperature",     hfc->zippingTemperature);
 	octaveScalar("unzippingTemperature",   hfc->unzippingTemperature);
 	octaveScalar("energyThreshold",        hfc->energyThreshold);
+	octaveScalar("nucleationBoundBPs",     hfc->nucleationBoundBPs);
 	octaveScalar("requiredBoundBPs",       hfc->requiredBoundBPs);
 	octaveScalar("allowedBoundBPs",        hfc->allowedBoundBPs);
 	octaveScalar("zipConfirmationTime",    hfc->zipConfirmationTime);
