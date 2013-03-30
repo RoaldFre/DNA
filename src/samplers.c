@@ -227,7 +227,11 @@ static SamplerSignal endToEndDistSample(SamplerData *sd, void *state)
 	EndToEndDistConf *etedc = (EndToEndDistConf*) state;
 	Strand *s = etedc->strand;
 
-	printf("%e\t%e\n", getTime(), endToEndDistance(s));
+	Vec3 ete = endToEndVector(s);
+
+	printf("%e\t%e\t", getTime(), length(ete));
+	printVectorExp(ete);
+	printf("\n");
 
 	return SAMPLER_OK;
 }
@@ -242,7 +246,7 @@ Sampler endToEndDistSampler(Strand *strand)
 	sampler.start  = &passConf;
 	sampler.sample = &endToEndDistSample;
 	sampler.stop   = &freeState;
-	sampler.header = "# <time> <end to end distance>\n";
+	sampler.header = "# <time> <end-to-end distance> <x,y,z of end-to-end vector>\n";
 	return sampler;
 }
 
