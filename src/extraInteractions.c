@@ -47,3 +47,44 @@ char *harmonicEndToEndIntHeader(HarmonicEndToEndInt *conf)
 		conf->K, conf->Rref);
 }
 
+
+
+/* CONSTANT END-TO-END-FORCE */
+
+static double endToEndForcePotential(void *data)
+{
+	EndToEndForceInt *etefi = (EndToEndForceInt*) data;
+	Vec3 R = endToEndVector(etefi->s);
+	return dot(R, etefi->F);
+}
+
+static void endToEndForceForce(void *data)
+{
+	EndToEndForceInt *etefi = (EndToEndForceInt*) data;
+	Vec3 F = etefi->F;
+	Strand *s = etefi->s;
+	distributeForceOverMonomer(F,            s, 0);
+	distributeForceOverMonomer(scale(F, -1), s, s->numMonomers - 1);
+}
+
+void registerEndToEndForceInt(EndToEndForceInt *conf)
+{
+	ExtraInteraction interaction;
+	interaction.name = "constantEndToEnd";
+	interaction.symbol = "cete";
+	interaction.data = conf;
+	interaction.potential = &endToEndForcePotential;
+	interaction.addForces = &endToEndForceForce;
+	registerExtraInteraction(&interaction);
+}
+
+char *endToEndForceIntHeader(EndToEndForceInt *conf)
+{
+	return asprintfOrDie(
+		"#\n"
+		"# Constant end-to-end force: F on first monomer, -F on last monomer.\n"
+		"# F = %e %e %e\n"
+		"#\n",
+		conf->F.x, conf->F.y, conf->F.z);
+}
+

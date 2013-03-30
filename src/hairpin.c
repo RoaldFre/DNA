@@ -161,6 +161,12 @@ static HarmonicEndToEndInt hetei = {
 	.Rref = -1,
 	.s = NULL,
 };
+static bool harmonicEndToEndInteraction = false;
+static EndToEndForceInt etefi = {
+	.F = {0, 0, 0}, /* guard */
+	.s = NULL,
+};
+static bool endToEndForceInteraction = false;
 
 static const char* baseSequence = DEF_BASE_SEQUENCE;
 static double worldSize = -1; /* guard */
@@ -242,6 +248,7 @@ static void printUsage(void)
 
 	printf(" -u <K>:<Rref>  Umbrella potential on end-to-end distance R: K/2(R - Rref)^2.\n");
 	printf("           For Umbrella sampling of end-to-end distance free energy profile.\n");
+	printf(" -E <Fx>:<Fy>:<Fz>  constant End-to-end force F.\n");
 	printf(" -p        also measure raw hairpin base Pairing state\n");
 	printf("             output: the data filename (see -D) with suffix: '%s'\n",
 							BASE_PAIRING_FILE_SUFFIX);
@@ -292,8 +299,8 @@ static void parseArguments(int argc, char **argv)
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
 	/* Unused options:
-	 * E jJ o q */
-	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:eu:pkhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
+	 * jJ o q */
+	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:eu:E:pkhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -592,11 +599,20 @@ static void parseArguments(int argc, char **argv)
 		case 'u':
 			//TODO error handling
 			sscanf(optarg, "%lf:%lf", &hetei.K, &hetei.Rref);
+			harmonicEndToEndInteraction = true;
 			hetei.K *= ELECTRON_VOLT / SQUARE(ANGSTROM);
 			hetei.Rref *= ANGSTROM;
 			measureEndToEndDistance = true;
 			printf("u: Umbrella potential on end-to-end distance with K=%e and Rref=%e\n",
 					hetei.K, hetei.Rref);
+			break;
+		case 'E':
+			//TODO error handling
+			sscanf(optarg, "%lf:%lf:%lf", &etefi.F.x, &etefi.F.y, &etefi.F.z);
+			endToEndForceInteraction = true;
+			printf("E: Constant end-to-end force: ");
+			printVectorExp(etefi.F);
+			printf("\n");
 			break;
 		case 'p':
 			measureBasePairing = true;
@@ -640,7 +656,7 @@ static void determineIdealNumberOfBoxes(void)
 	if (worldSize < 0)
 		worldSize = defaultWorldSize;
 
-	if ((hetei.K > 0 || measureEndToEndDistance)
+	if ((harmonicEndToEndInteraction || endToEndForceInteraction || measureEndToEndDistance)
 			&&   worldSize < 3 * MAX(defaultWorldSize, hetei.Rref)) {
 		worldSize = 3 * MAX(defaultWorldSize, hetei.Rref);
 		printf("Need correct end-to-end distance. Increasing world "
@@ -749,10 +765,14 @@ int main(int argc, char **argv)
 	}
 	integratorConf.integrator = integrator;
 
-	/* End to end interaction */
-	if (hetei.K > 0) {
+	/* End to end interactions */
+	if (harmonicEndToEndInteraction) {
 		hetei.s = &world.strands[0];
 		registerHarmonicEndToEndInt(&hetei);
+	}
+	if (endToEndForceInteraction) {
+		etefi.s = &world.strands[0];
+		registerEndToEndForceInt(&etefi);
 	}
 
 
@@ -785,7 +805,26 @@ int main(int argc, char **argv)
 				seed, commandLine);
 	free(measHeaderStrings[0]); free(measHeaderStrings[1]);
 	free(commandLine);
+	/* Add extra header if we are using an end-to-end interaction */
+	if (harmonicEndToEndInteraction) {
+		char *eteHeader = harmonicEndToEndIntHeader(&hetei);
+		char *prevMeasHeader = measHeader;
+		measHeader = asprintfOrDie("%s%s",
+				prevMeasHeader,
+				eteHeader);
+		free(prevMeasHeader);
+	}
+	if (endToEndForceInteraction) {
+		char *eteHeader = endToEndForceIntHeader(&etefi);
+		char *prevMeasHeader = measHeader;
+		measHeader = asprintfOrDie("%s%s",
+				prevMeasHeader,
+				eteHeader);
+		free(prevMeasHeader);
+	}
 	measurementConf.measureHeader = measHeader;
+
+
 
 	/* Measurement config for additional measurements (end to end, base 
 	 * pairing, temperature, ...) */
@@ -821,16 +860,6 @@ int main(int argc, char **argv)
 	endToEnd.sampler = endToEndDistSampler(&world.strands[0]);
 	endToEnd.measConf = additionalMeasConf; /* struct copy */
 	endToEnd.measConf.measureFile = endToEndFile;
-	char *eteMeasHeader = NULL;
-	/* Add extra header if we are using an end-to-end interaction */
-	if (hetei.K > 0) {
-		char *eteHeader = harmonicEndToEndIntHeader(&hetei);
-		eteMeasHeader = asprintfOrDie("%s%s",
-				measHeader,
-				eteHeader);
-		free(eteHeader);
-		endToEnd.measConf.measureHeader = eteMeasHeader;
-	}
 	Task endToEndTask = measurementTask(&endToEnd);	
 
 	/* Temperature task */
@@ -904,7 +933,6 @@ int main(int argc, char **argv)
 	free(temperatureFile);
 	free(zippedStateFile);
 	free(measHeader);
-	free(eteMeasHeader);
 
 	if (!everythingOK)
 		return 1;
