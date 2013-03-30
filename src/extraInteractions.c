@@ -23,10 +23,9 @@ static void harmonicEndToEndForce(void *data)
 
 void registerHarmonicEndToEndInt(HarmonicEndToEndInt *conf)
 {
-	/* Register the end-to-end interaction */
 	ExtraInteraction interaction;
-	interaction.name = "endToEnd";
-	interaction.symbol = "ete";
+	interaction.name = "harmonicEndToEnd";
+	interaction.symbol = "hete";
 	interaction.data = conf;
 	interaction.potential = &harmonicEndToEndPotential;
 	interaction.addForces = &harmonicEndToEndForce;
@@ -39,11 +38,11 @@ char *harmonicEndToEndIntHeader(HarmonicEndToEndInt *conf)
 		"# End to end interaction, with an umbrella sampling\n"
 		"# potential on the first and last monomer of the strand.\n"
 		"# This potential is given by\n"
-		"#   V = K * (R - Rref),\n"
+		"#   V = K/2 * (R - Rref)^2,\n"
 		"# with R the end-to-end distance between COM of first\n"
 		"# and last monomer, and parameters:\n"
-		"# <K> <Rref>\n"
-		"%e\t%e\n"
+		"# K = %e\n"
+		"# Rref = %e\n"
 		"#\n",
 		conf->K, conf->Rref);
 }
