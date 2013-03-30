@@ -425,6 +425,9 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		}
 		hfd->confirmationTime = time;
 		hfd->status = RELAXATION_IN_ZIPPED_STATE;
+
+		writeWorld(hfc->zippedStateFile);
+
 		/* Intentional fall through */
 	case RELAXATION_IN_ZIPPED_STATE:
 		octaveStartComment();

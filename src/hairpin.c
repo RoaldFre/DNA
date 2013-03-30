@@ -20,6 +20,7 @@
 #define END_TO_END_DIST_FILE_SUFFIX "_endToEnd"
 #define BASE_PAIRING_FILE_SUFFIX "_basePairing"
 #define TEMPERATURE_FILE_SUFFIX "_temperature"
+#define ZIPPED_STATE_FILE_SUFFIX "_zippedState"
 
 /* Defaults */
 #define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
@@ -80,6 +81,7 @@ static HairpinFormationSamplerConfig hfc =
 	.unzippingTemperature = CELSIUS(90),
 	.zippedRelaxationTime = 5 * NANOSECONDS,
 	.minZippingSamplingTime = 0,
+	.zippedStateFile = NULL,
 };
 static HairpinMeltingTempSamplerConfig hmtc =
 {
@@ -823,6 +825,7 @@ int main(int argc, char **argv)
 
 	/* Hairpin task */
 	Measurement hairpin;
+	char *zippedStateFile = NULL;
 	switch (hairpinMeasurementType) {
 	case HAIRPIN_MELTING_TEMPERATURE:
 		hairpin.sampler = hairpinMeltingTempSampler(&hmtc);
@@ -832,6 +835,9 @@ int main(int argc, char **argv)
 			die("You need to give the minimum required number "
 					"of (nucleation) bound base pairs "
 					"to measure hairpin formation time!\n");
+		zippedStateFile = asprintfOrDie("%s%s", filenameBase,
+						ZIPPED_STATE_FILE_SUFFIX);
+		hfc.zippedStateFile = zippedStateFile;
 		hairpin.sampler = hairpinFormationSampler(&hfc);
 		break;
 	case HAIRPIN_STATE:
@@ -876,6 +882,7 @@ int main(int argc, char **argv)
 	free(basePairFile);
 	free(endToEndFile);
 	free(temperatureFile);
+	free(zippedStateFile);
 	free(measHeader);
 	free(eteMeasHeader);
 

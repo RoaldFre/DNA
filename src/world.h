@@ -123,7 +123,7 @@ void freeWorld(void);
 void freeStrand(Strand *strand);
 
 /* Write the current state of the world to the given file. Can be read with 
- * readWorld(). */
+ * readWorld(). If filename == NULL, don't do anything. */
 void writeWorld(const char *filename);
 /* Read, allocate and fill the world with the state from the given file. 
  * The file must be produced by writeWorld(). */

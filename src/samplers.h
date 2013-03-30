@@ -84,6 +84,10 @@ typedef struct {
 	 * zippedRelaxationTime in order to have sampled the 
 	 * zipping+relaxation process for at least minZippingSamplingTime. */
 	double minZippingSamplingTime;
+
+	/* Write the state of the world at the time of zipping confirmation 
+	 * to this file. Do nothing if this is NULL. */
+	const char *zippedStateFile;
 } HairpinFormationSamplerConfig;
 
 /* When this sampler starts, it sets the temperature to the given 

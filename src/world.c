@@ -378,7 +378,9 @@ static void writeStrand(FILE *out, Strand *s)
 #define MAGIC "DNAv1"
 void writeWorld(const char *filename)
 {
-	assert(filename != NULL);
+	if (filename == NULL)
+		return;
+
 	FILE *out = fopen(filename, "w");
 	if (out == NULL)
 		die("writeWorld: can't open file '%s'!\nfopen error: %s\n", 
