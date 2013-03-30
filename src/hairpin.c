@@ -755,16 +755,36 @@ int main(int argc, char **argv)
 		registerEndToEndInteraction(&etei);
 	}
 
+
+	/* Reconstruct command line */
+	int bufferSize = 0;
+	for (int i = 0; i < argc; i++)
+		bufferSize += 1 + strlen(argv[i]); /* + 1 for space & 
+						      terminating null */
+	char *commandLine = calloc(bufferSize, sizeof(*commandLine));
+	int cumulativeLength = 0;
+	for (int i = 0; i < argc; i++) {
+		int n = strlen(argv[i]);
+		memcpy(&commandLine[cumulativeLength], argv[i], n);
+		cumulativeLength += n;
+		commandLine[cumulativeLength] = ' ';
+		cumulativeLength += 1;
+	}
+	/* change last space to a null byte */
+	commandLine[cumulativeLength - 1] = '\0';
+
+
 	/* Measurement header */
 	char *measHeaderStrings[2];
 	measHeaderStrings[0] = getWorldInfo();
 	measHeaderStrings[1] = integratorInfo(&integratorConf);
-	char *measHeader = asprintfOrDie("%s%s%s"
+	char *measHeader = asprintfOrDie("# %s\n# %s\n%s%s"
 				"# random number generator seed %llx\n",
-				"# "VERSION"\n",
+				VERSION, commandLine,
 				measHeaderStrings[0], measHeaderStrings[1],
-				seed);
+				seed, commandLine);
 	free(measHeaderStrings[0]); free(measHeaderStrings[1]);
+	free(commandLine);
 	measurementConf.measureHeader = measHeader;
 
 	/* Measurement config for additional measurements (end to end, base 
