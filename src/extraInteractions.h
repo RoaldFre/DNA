@@ -9,13 +9,13 @@ typedef struct {
 	double K;
 	double Rref;
 	Strand *s;
-} EndToEndInteraction;
+} HarmonicEndToEndInt;
 
-void registerEndToEndInteraction(EndToEndInteraction *conf);
+void registerHarmonicEndToEndInt(HarmonicEndToEndInt *conf);
 
 /* This is a suitable header to put at the top of an end-to-end 
  * measurement. It dumps the config parameters as non-comment in two 
  * columns. You need to free the returned pointer afterwards. */
-char *endToEndInteractionHeader(EndToEndInteraction *conf);
+char *harmonicEndToEndIntHeader(HarmonicEndToEndInt *conf);
 
 #endif

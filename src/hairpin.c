@@ -156,7 +156,7 @@ static InteractionSettings interactionSettings = {
 	.saltConcentration   = DEF_SALT_CONCENTRATION,
 	.truncationLen       = DEF_TRUNCATION_LENGTH * ANGSTROM,
 };
-static EndToEndInteraction etei = {
+static HarmonicEndToEndInt hetei = {
 	.K = -1, /* guard */
 	.Rref = -1,
 	.s = NULL,
@@ -591,12 +591,12 @@ static void parseArguments(int argc, char **argv)
 			break;
 		case 'u':
 			//TODO error handling
-			sscanf(optarg, "%lf:%lf", &etei.K, &etei.Rref);
-			etei.K *= ELECTRON_VOLT / SQUARE(ANGSTROM);
-			etei.Rref *= ANGSTROM;
+			sscanf(optarg, "%lf:%lf", &hetei.K, &hetei.Rref);
+			hetei.K *= ELECTRON_VOLT / SQUARE(ANGSTROM);
+			hetei.Rref *= ANGSTROM;
 			measureEndToEndDistance = true;
 			printf("u: Umbrella potential on end-to-end distance with K=%e and Rref=%e\n",
-					etei.K, etei.Rref);
+					hetei.K, hetei.Rref);
 			break;
 		case 'p':
 			measureBasePairing = true;
@@ -640,9 +640,9 @@ static void determineIdealNumberOfBoxes(void)
 	if (worldSize < 0)
 		worldSize = defaultWorldSize;
 
-	if ((etei.K > 0 || measureEndToEndDistance)
-			&&   worldSize < 3 * MAX(defaultWorldSize, etei.Rref)) {
-		worldSize = 3 * MAX(defaultWorldSize, etei.Rref);
+	if ((hetei.K > 0 || measureEndToEndDistance)
+			&&   worldSize < 3 * MAX(defaultWorldSize, hetei.Rref)) {
+		worldSize = 3 * MAX(defaultWorldSize, hetei.Rref);
 		printf("Need correct end-to-end distance. Increasing world "
 				"size to %f Angstrom\n",
 				worldSize / ANGSTROM);
@@ -750,9 +750,9 @@ int main(int argc, char **argv)
 	integratorConf.integrator = integrator;
 
 	/* End to end interaction */
-	if (etei.K > 0) {
-		etei.s = &world.strands[0];
-		registerEndToEndInteraction(&etei);
+	if (hetei.K > 0) {
+		hetei.s = &world.strands[0];
+		registerHarmonicEndToEndInt(&hetei);
 	}
 
 
@@ -823,8 +823,8 @@ int main(int argc, char **argv)
 	endToEnd.measConf.measureFile = endToEndFile;
 	char *eteMeasHeader = NULL;
 	/* Add extra header if we are using an end-to-end interaction */
-	if (etei.K > 0) {
-		char *eteHeader = endToEndInteractionHeader(&etei);
+	if (hetei.K > 0) {
+		char *eteHeader = harmonicEndToEndIntHeader(&hetei);
 		eteMeasHeader = asprintfOrDie("%s%s",
 				measHeader,
 				eteHeader);

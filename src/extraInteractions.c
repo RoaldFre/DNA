@@ -1,36 +1,38 @@
 #include "extraInteractions.h"
 #include "physics.h"
 
-static double endToEndPotential(void *data)
+/* HARMONIC END-TO-END POTENTIAL */
+
+static double harmonicEndToEndPotential(void *data)
 {
-	EndToEndInteraction *etei = (EndToEndInteraction*) data;
-	double R = endToEndDistance(etei->s);
-	return 0.5 * etei->K * SQUARE(R - etei->Rref);
+	HarmonicEndToEndInt *hetei = (HarmonicEndToEndInt*) data;
+	double R = endToEndDistance(hetei->s);
+	return 0.5 * hetei->K * SQUARE(R - hetei->Rref);
 }
-static void endToEndForce(void *data)
+static void harmonicEndToEndForce(void *data)
 {
-	EndToEndInteraction *etei = (EndToEndInteraction*) data;
-	Strand *s = etei->s;
-	double R = endToEndDistance(etei->s);
-	Vec3 Rdir = endToEndDirection(etei->s);
-	Vec3 F = scale(Rdir, etei->K * (R - etei->Rref));
+	HarmonicEndToEndInt *hetei = (HarmonicEndToEndInt*) data;
+	Strand *s = hetei->s;
+	double R = endToEndDistance(hetei->s);
+	Vec3 Rdir = endToEndDirection(hetei->s);
+	Vec3 F = scale(Rdir, hetei->K * (R - hetei->Rref));
 
 	distributeForceOverMonomer(F,            s, 0);
 	distributeForceOverMonomer(scale(F, -1), s, s->numMonomers - 1);
 }
 
-void registerEndToEndInteraction(EndToEndInteraction *conf)
+void registerHarmonicEndToEndInt(HarmonicEndToEndInt *conf)
 {
 	/* Register the end-to-end interaction */
 	ExtraInteraction interaction;
 	interaction.name = "endToEnd";
 	interaction.symbol = "ete";
 	interaction.data = conf;
-	interaction.potential = &endToEndPotential;
-	interaction.addForces = &endToEndForce;
+	interaction.potential = &harmonicEndToEndPotential;
+	interaction.addForces = &harmonicEndToEndForce;
 	registerExtraInteraction(&interaction);
 }
-char *endToEndInteractionHeader(EndToEndInteraction *conf)
+char *harmonicEndToEndIntHeader(HarmonicEndToEndInt *conf)
 {
 	return asprintfOrDie(
 		"#\n"
@@ -45,3 +47,4 @@ char *endToEndInteractionHeader(EndToEndInteraction *conf)
 		"#\n",
 		conf->K, conf->Rref);
 }
+
