@@ -761,7 +761,7 @@ int main(int argc, char **argv)
 	measHeaderStrings[1] = integratorInfo(&integratorConf);
 	char *measHeader = asprintfOrDie("%s%s%s"
 				"# random number generator seed %llx\n",
-				"# "VERSION,
+				"# "VERSION"\n",
 				measHeaderStrings[0], measHeaderStrings[1],
 				seed);
 	free(measHeaderStrings[0]); free(measHeaderStrings[1]);
