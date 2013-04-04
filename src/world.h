@@ -41,14 +41,15 @@ typedef struct particle
 	double m; /* Mass */
 	Vec3 pos; /* Position */
 	Vec3 prevPos; /* Position at previous time step. This gets managed 
-			 by the integrator task. */
+			 by the integrator task.
+			 NOTE: even with ALTERNATIVE_LANGEVIN, we still 
+			 need this for the monte carlo dynamics! */
 	Vec3 vel; /* Velocity */
 	Vec3 F;   /* Force */
 #ifdef ALTERNATIVE_LANGEVIN
 	Vec3 fPrev; /* Force/mass at previous time step. Only needed for 
 		       alternative Langevin integrator. */
-	Vec3 xi; /* Random component of force at previous time step. */
-	Vec3 A;
+	Vec3 rnd; /* Random component of force at previous time step. */
 #endif
 	ParticleType type;
 	struct particle *prev, *next; /* Previous/Next particle in box */
