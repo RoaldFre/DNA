@@ -154,7 +154,7 @@ typedef struct {
 	/* True for Knotts' model */
 	bool mutuallyExclusivePairForces;
 
-	enum {
+	enum BasePairInteraction {
 		/* Every pair of bases in the world participates in base 
 		 * pairing. */
 		BASE_PAIR_ALL,
@@ -163,6 +163,10 @@ typedef struct {
 		 * participate in base pairing, where n is the length of 
 		 * the strand. */
 		BASE_PAIR_HAIRPIN,
+
+		/* Base pairing for XY pairs is as BASE_PAIR_HAIRPIN, base 
+		 * pairing for the other bases is as BASE_PAIR_ALL. */
+		BASE_PAIR_XY_HAIRPIN_REST_ALL,
 
 		/* Bases at position i of one strand pair with bases of 
 		 * position i in another strand participate in base 

@@ -190,6 +190,11 @@ static void printUsage(void)
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
 	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
 	printf(" -m <num>  perform the given number of Monte carlo sweeps and then quit\n");
+	printf(" -j <type> base pairing interaction. Values for <type>:\n");
+	printf("             h: matching bases according to hairpin position [default]\n");
+	printf("             a: all matching bases\n");
+	printf("             x: behave like 'h' for XY pairs, and 'a' for the other bases\n");
+	printf("           just the ones that match according to the hairpin structure\n");
 	printf(" -Y        only enable base pairing between XY base pairs\n");
 	printf(" -n        No base pairing interaction at all\n");
 	printf(" -y <path> write random number generator seed to this file\n");
@@ -299,8 +304,10 @@ static void parseArguments(int argc, char **argv)
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
 	/* Unused options:
-	 * jJ o q */
-	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:eu:E:pkhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
+	 * J o q */
+	/* TODO rework option system to something sane. Long options? Read 
+	 * and parse config file? */
+	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yj:ny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:eu:E:pkhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -337,6 +344,32 @@ static void parseArguments(int argc, char **argv)
 		case 'Y':
 			interactionSettings.onlyXYbasePairing = true;
 			printf("Y: Only enabling base pairing between XY pairs\n");
+			break;
+		case 'j':
+			if (optarg[0] == '\0' || optarg[1] != '\0')
+				die("Base pairing: badly formatted base pairing type\n");
+			const char *basePairingDescr;
+			enum BasePairInteraction bpi;
+			switch(optarg[0]) {
+			case 'h':
+				bpi = BASE_PAIR_HAIRPIN;
+				basePairingDescr = "hairpin";
+				break;
+			case 'a':
+				bpi = BASE_PAIR_ALL;
+				basePairingDescr = "all";
+				break;
+			case 'x':
+				bpi = BASE_PAIR_XY_HAIRPIN_REST_ALL;
+				basePairingDescr = "XY:hairpin, rest:all";
+				break;
+			default: die("Unknown base pairing type '%s'\n", optarg);
+				basePairingDescr = "ERROR"; bpi = 0;
+				break;
+			}
+			printf("j: Setting base pairing interaction to: %s\n", 
+						basePairingDescr);
+			interactionSettings.basePairInteraction = bpi;
 			break;
 		case 'n':
 			interactionSettings.enableBasePair = false;

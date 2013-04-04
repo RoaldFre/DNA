@@ -728,6 +728,13 @@ static BasePairInfo getBasePairInfo(Particle *p1, Particle *p2)
 	switch (interactions.basePairInteraction) {
 	case BASE_PAIR_ALL:
 		break;
+	case BASE_PAIR_XY_HAIRPIN_REST_ALL:
+		/* If we don't have an XY pair... */
+		if ( !(    (t1 == BASE_X && t2 == BASE_Y)
+		        || (t1 == BASE_Y && t2 == BASE_X)))
+			break; /* ...then behave like BASE_PAIR_ALL */
+		/* We have an XY pair -> behave like BASE_PAIR_HAIRPIN */
+		/* <Intentional case fall through!> */
 	case BASE_PAIR_HAIRPIN:
 		if (p1->strand != p2->strand)
 			return bpiNULL;
