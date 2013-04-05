@@ -1226,8 +1226,7 @@ static Vec3 momentum(void)
 static void addMomentum(Particle *p, void *data)
 {
 	Vec3 *deltaP = (Vec3*) data;
-	Vec3 P = scale(p->vel, p->m);
-	p->vel = scale(add(P, *deltaP), 1/p->m);
+	p->vel = add(p->vel, scale(*deltaP, 1/p->m));
 }
 
 void killMomentum(void)
