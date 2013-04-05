@@ -293,6 +293,7 @@ typedef struct {
 		RELAXATION_IN_ZIPPED_STATE,
 		WAITING_TO_UNZIP,
 		WAITING_FOR_UNZIPPING_CONFIRMATION,
+		UNZIPPING_CONFIRMED,
 	} status;
 	double zippingPhaseStartTime;
 	double unzippingPhaseStartTime;
@@ -459,12 +460,14 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		hfd->status = WAITING_TO_UNZIP;
 		break;
 	case WAITING_TO_UNZIP:
-		octaveStartComment();
-		printf("[waiting to unzip] %e %d ", time, correctlyBound);
-		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
-		octaveEndComment();
-		if (correctlyBound > allowedBounds)
+		if (correctlyBound > allowedBounds) {
+			/* Not yet unzipped. Just print info and continue. */
+			octaveStartComment();
+			printf("[waiting to unzip] %e %d ", time, correctlyBound);
+			dumpHairpinState(&world.strands[0], hfc->energyThreshold);
+			octaveEndComment();
 			break;
+		}
 
 		/* We have detected initial unzipping! */
 		hfd->confirmationStartTime = time;
@@ -472,7 +475,9 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		octaveComment("Reached unzipping binding threshold of %d base "
 				"pairs at %e after a time %e", allowedBounds,
 				time, time - hfd->unzippingPhaseStartTime);
-		/* Intentional fall through */
+		/* Intentional case fall through
+		 * (if hfc->unzipConfirmationTime == 0 [or smaller than 
+		 * sample interval], we need to stop right now!) */
 	case WAITING_FOR_UNZIPPING_CONFIRMATION:
 		octaveStartComment();
 		printf("[waiting to unzip] %e %d ", time, correctlyBound);
@@ -490,12 +495,20 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 			break; /* need to wait for confirmation */
 
 		/* We have unzipping confirmation! */
+		hfd->status = UNZIPPING_CONFIRMED;
 		double timeTillUnzipping = time - hfd->unzippingPhaseStartTime
 						- hfc->unzipConfirmationTime;
 		octaveComment("Confirmed unzipping at %e", time);
 		octaveScalar("timeTillUnzipping", timeTillUnzipping);
-
-		octaveComment("Successful end! :-)");
+		return SAMPLER_STOP;
+	case UNZIPPING_CONFIRMED:
+		/* This can happen if our SAMPLER_STOP request got blocked 
+		 * because we need to sample longer. In that case, just 
+		 * keep writing state and request to stop again. */
+		octaveStartComment();
+		printf("[after unzipping] %e %d ", time, correctlyBound);
+		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
+		octaveEndComment();
 		return SAMPLER_STOP;
 	default:
 		fprintf(stderr, "Unknown status in hairpinFormationSample!\n");
