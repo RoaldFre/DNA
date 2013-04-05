@@ -370,7 +370,7 @@ static void initializeParticle(Particle *p, void *data)
 #else
 static void initializeParticle(Particle *p)
 {
-	p->prevPos = sub(p->pos, scale(p->vel, timeStep));
+	p->prevPos = sub(p->pos, scale(p->vel, getIntegratorTimeStep()));
 }
 #endif
 
@@ -384,6 +384,8 @@ static void *integratorTaskStart(void *initialData)
 {
 	IntegratorConf *ic = (IntegratorConf*) initialData;
 
+	setIntegratorTimeStep(ic->timeStep);
+
 	calculateForces();
 #ifdef ALTERNATIVE_LANGEVIN
 	forEveryParticleD(&initializeParticle, &ic->integrator.settings.langevin);
@@ -395,8 +397,6 @@ static void *integratorTaskStart(void *initialData)
 	state->integrator = ic->integrator;
 	state->reboxInterval = ic->reboxInterval;
 	state->lastReboxTime = getTime();
-
-	setIntegratorTimeStep(ic->timeStep);
 
 #ifdef ALTERNATIVE_LANGEVIN
 	printf("Built for alternative Langevin integrator\n");

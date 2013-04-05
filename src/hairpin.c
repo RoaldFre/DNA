@@ -765,6 +765,10 @@ int main(int argc, char **argv)
 
 	const char *filenameBase = measurementConf.measureFile;
 
+	/* Set temperature before constructing world so the generated 
+	 * particles get seeded with appropriate velocities. */
+	setHeatBathTemperature(temperature);
+
 	if (initialStateFile != NULL) {
 		readWorld(initialStateFile);
 		/* The read-in file must have a worldsize that is valid, 
@@ -952,7 +956,6 @@ int main(int argc, char **argv)
 	tasks[6] = (measureTemperature ? &temperatureTask : NULL);
 	Task task = sequence(tasks, 7);
 
-	setHeatBathTemperature(temperature);
 	registerInteractions(interactionSettings);
 
 	bool everythingOK = run(&task);
