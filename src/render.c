@@ -421,21 +421,21 @@ static bool handleEvents(void)
 				break;
 			case SDLK_UP:
 				setIntegratorTimeStep(getIntegratorTimeStep() * 1.02);
-				printf("Time step: %f\n", 
+				printf("Time step: %lf\n", 
 						getIntegratorTimeStep() / FEMTOSECONDS);
 				break;
 			case SDLK_DOWN:
 				setIntegratorTimeStep(getIntegratorTimeStep() / 1.02);
-				printf("Time step: %f\n",
+				printf("Time step: %lf\n",
 						getIntegratorTimeStep() / FEMTOSECONDS);
 				break;
 			case SDLK_SPACE:
 				setHeatBathTemperature(getHeatBathTemperature() * 1.02);
-				printf("Temperature: %f\n", getHeatBathTemperature());
+				printf("Temperature: %lf\n", getHeatBathTemperature());
 				break;
 			case SDLK_BACKSPACE:
 				setHeatBathTemperature(getHeatBathTemperature() / 1.02);
-				printf("Temperature: %f\n", getHeatBathTemperature());
+				printf("Temperature: %lf\n", getHeatBathTemperature());
 				break;
 			case SDLK_b:
 				renderSPGridBoxes = !renderSPGridBoxes;
@@ -677,17 +677,17 @@ static void render(RenderConf *rc)
 	const int n = 64;
 	char string[n];
 
-	snprintf(string, n, "T = %f K", getKineticTemperature());
+	snprintf(string, n, "T = %lf K", getKineticTemperature());
 	renderString(string, 10, 40);
 
-	snprintf(string, n, "t = %f µs   (dt = %f fs)",
+	snprintf(string, n, "t = %lf µs   (dt = %lf fs)",
 			getTime() / MICROSECONDS, getIntegratorTimeStep() / FEMTOSECONDS);
 	renderString(string, 10, 25);
 
 	int ips;
 	double tps;
 	getProgressPerSecond(&ips, &tps);
-	snprintf(string, n, "ips = %d   (time/min = %f ns)",
+	snprintf(string, n, "ips = %d   (time/min = %lf ns)",
 			ips, tps / NANOSECONDS * 60);
 	renderString(string, 10, 10);
 

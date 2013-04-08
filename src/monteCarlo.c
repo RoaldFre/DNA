@@ -205,7 +205,7 @@ static void updatePivotParameters(double acc, double targetAcc, void *data)
 	cfg->maxNumPivPts = MAX(cfg->maxNumPivPts, 1);
 	cfg->maxNumPivPts = MIN(cfg->maxNumPivPts, cfg->s->numMonomers);
 
-	//printf("Adjusted parameters: %f %f\n", cfg->angleStdDev / DEGREE, cfg->maxNumPivPts);
+	//printf("Adjusted parameters: %lf %lf\n", cfg->angleStdDev / DEGREE, cfg->maxNumPivPts);
 }
 
 static void *initPivotMove(void)
@@ -296,7 +296,7 @@ static void updateJiggleParameters(double acc, double targetAcc, void *data)
 
 	*h *= parameterFactor;
 
-	//printf("Adjusted parameter: %f\n", *h / ANGSTROM);
+	//printf("Adjusted parameter: %lf\n", *h / ANGSTROM);
 }
 static void *initJiggleMove(void)
 {
@@ -351,7 +351,7 @@ static void updateJiggleSomeParameters(double acc, double targetAcc, void *data)
 
 	jsc->h *= parameterFactor;
 
-	//printf("Adjusted parameter: %f\n", jsc->h / ANGSTROM);
+	//printf("Adjusted parameter: %lf\n", jsc->h / ANGSTROM);
 }
 static void *initJiggleSomeMove(void)
 {
@@ -457,7 +457,7 @@ static void monteCarloMove(MonteCarloState *mcs)
 								m->data);
 	updateAcceptance(&mcs->totalAcceptance, accepted, NULL, NULL);
 
-	snprintf(renderString, RENDER_STRING_CHARS, "acceptance: %f",
+	snprintf(renderString, RENDER_STRING_CHARS, "acceptance: %lf",
 					mcs->totalAcceptance.prevAcceptance);
 
 	advanceTimeBy(mcs->timeStep);

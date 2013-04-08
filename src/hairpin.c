@@ -183,12 +183,12 @@ static void printUsage(void)
 	printf(" -s <str>  base Sequence of the DNA strand to simulate\n");
 	printf("             default: %s\n", DEF_BASE_SEQUENCE);
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
-	printf("             default: %f\n", DEF_TIMESTEP);
+	printf("             default: %lf\n", DEF_TIMESTEP);
 	printf(" -T <flt><C|K>  initial Temperature (example: 20C or 300K)\n");
 	printf("             note: some measurements set their own temperature when sampling!\n");
 	printf("             default: %s\n", DEF_INITIAL_TEMPERATURE);
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
-	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
+	printf("             default: %lf\n", DEF_SALT_CONCENTRATION);
 	printf(" -m <num>  perform the given number of Monte carlo sweeps and then quit\n");
 	printf(" -j <type> base pairing interaction. Values for <type>:\n");
 	printf("             h: matching bases according to hairpin position [default]\n");
@@ -201,19 +201,19 @@ static void printUsage(void)
 	printf(" -z <path> read random number generator seed from this file\n");
 	printf(" -r        Render\n");
 	printf(" -f <flt>  desired Framerate when rendering.\n");
-	printf("             default: %f)\n", DEF_RENDER_FRAMERATE);
+	printf("             default: %lf)\n", DEF_RENDER_FRAMERATE);
 	printf(" -R <flt>  Radius (in Angstrom) of the particles when rendering\n");
-	printf("             default: %f\n", DEF_RENDER_RADIUS);
+	printf("             default: %lf\n", DEF_RENDER_RADIUS);
 	printf(" -F        draw Forces on particles when rendering\n");
 	printf(" -l <flt>  truncation Length of potentials (in Angstrom).\n");
 	printf("             negative value: sets truncation to worldsize/2\n");
-	printf("             default: %f\n", DEF_TRUNCATION_LENGTH);
+	printf("             default: %lf\n", DEF_TRUNCATION_LENGTH);
 	printf(" -S <flt>  Size of world (in Angstrom).\n");
-	printf("             default: (number of monomers + 2) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
+	printf("             default: (number of monomers + 2) * %lf\n", DEF_MONOMER_WORLDSIZE_FACTOR);
 	printf(" -b <num>  number of Boxes per dimension\n");
 	printf("             default: max so that boxsize >= potential truncation length\n");
 	printf(" -x <flt>  time interval between reboXing (in femtoseconds)\n");
-	printf("             default: %f\n", DEF_REBOX_INTERVAL);
+	printf("             default: %lf\n", DEF_REBOX_INTERVAL);
 	printf(" -v <int>  Verbose: dump statistics every <flt> picoseconds\n");
 	printf(" -i <type> Integrator to use. Values for <type>:\n");
 	printf("             l: Langevin (velocity BBK) [default]\n");
@@ -223,7 +223,7 @@ static void printUsage(void)
 	printf("\n");
 	printf("Parameters for Langevin integrator:\n");
 	printf(" -g <flt>  Gamma: friction coefficient for Langevin dynamics\n");
-	printf("             default: %e\n", DEF_LANGEVIN_GAMMA);
+	printf("             default: %le\n", DEF_LANGEVIN_GAMMA);
 	printf("\n");
 	printf("Parameters for velocity Verlet integrator + Berendsen termostat:\n");
 	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
@@ -265,15 +265,15 @@ static void printUsage(void)
 	//TODO parameter names are a mess
 	printf("Parameters for hairpin melting temperature measurement:\n");
 	printf(" -A <flt><C|K> startTemp\n");
-	printf("             default: %fC\n", TO_CELSIUS(hmtc.Tstart));
+	printf("             default: %lfC\n", TO_CELSIUS(hmtc.Tstart));
 	printf(" -B <flt>  stepTemp\n");
-	printf("             default: %f\n", hmtc.Tstep);
+	printf("             default: %lf\n", hmtc.Tstep);
 	printf(" -C <int>  nSteps\n");
 	printf("             default: %d\n", hmtc.numSteps);
 	printf(" -G <flt>  measureTime per step (nanoseconds)\n");
-	printf("             default: %f\n", hmtc.measureTime / NANOSECONDS);
+	printf("             default: %lf\n", hmtc.measureTime / NANOSECONDS);
 	printf(" -L <flt>  reLaxTime per step (nanoseconds)\n");
-	printf("             default: %f\n", hmtc.relaxationTime / NANOSECONDS);
+	printf("             default: %lf\n", hmtc.relaxationTime / NANOSECONDS);
 	printf(" -V        Be verbose: also dump hairpin state to file\n");
 	printf("Parameters for hairpin formation measurement:\n");
 	printf(" -H <int>:<int>  min required bounded base pairs for confirming 'zipped' state,\n");
@@ -281,14 +281,14 @@ static void printUsage(void)
 	printf(" -M <int>  max allowed bounded base pairs for confirming 'unzipped' state\n");
 	printf("             default: %d\n", hfc.allowedBoundBPs);
 	printf(" -O <flt><C|K> zipping temperature\n");
-	printf("             default: %fC\n", TO_CELSIUS(hfc.zippingTemperature));
+	printf("             default: %lfC\n", TO_CELSIUS(hfc.zippingTemperature));
 	printf(" -Q <flt><C|K> unzipping temperature\n");
-	printf("             default: %fC\n", TO_CELSIUS(hfc.unzippingTemperature));
+	printf("             default: %lfC\n", TO_CELSIUS(hfc.unzippingTemperature));
 	printf(" -U <flt>  zipped relaxation phase duration (nanoseconds)\n");
-	printf("             default: %f\n", hfc.zippedRelaxationTime / NANOSECONDS);
+	printf("             default: %lf\n", hfc.zippedRelaxationTime / NANOSECONDS);
 	printf(" -Z <flt>  minimum duration of Zipping+relaxation phase (nanoseconds).\n");
 	printf("           The relaxation phase duration is extended when required.\n");
-	printf("             default: %f\n", hfc.minZippingSamplingTime / NANOSECONDS);
+	printf("             default: %lf\n", hfc.minZippingSamplingTime / NANOSECONDS);
 	printf("Parameters for hairpin state measurement:\n");
 	printf(" -a <flt><C|K> startTemp\n");
 	printf("             default: same as initial temperature\n");
@@ -319,19 +319,19 @@ static void parseArguments(int argc, char **argv)
 			integratorConf.timeStep = atof(optarg) * FEMTOSECONDS;
 			if (integratorConf.timeStep <= 0)
 				die("Invalid timestep %s\n", optarg);
-			printf("t: Setting time step %e\n", integratorConf.timeStep);
+			printf("t: Setting time step %le\n", integratorConf.timeStep);
 			break;
 		case 'T':
 			temperature = parseTemperature(optarg);
 			if (temperature < 0)
 				die("Invalid temperature!\n");
-			printf("T: Setting temperature to %f\n", temperature);
+			printf("T: Setting temperature to %lf\n", temperature);
 			break;
 		case 'N':
 			interactionSettings.saltConcentration = atof(optarg);
 			if (interactionSettings.saltConcentration < 0)
 				die("Invalid salt concentration %s\n", optarg);
-			printf("N: Setting salt concentration to %f\n", 
+			printf("N: Setting salt concentration to %lf\n", 
 					interactionSettings.saltConcentration);
 			break;
 		case 'm':
@@ -389,7 +389,7 @@ static void parseArguments(int argc, char **argv)
 			langevinSettings.gamma = atof(optarg);
 			if (langevinSettings.gamma < 0)
 				die("Invalid friction coefficient %s\n", optarg);
-			printf("g: Setting gamma to %e\n", 
+			printf("g: Setting gamma to %le\n", 
 						langevinSettings.gamma);
 			break;
 		case 'c':
@@ -397,7 +397,7 @@ static void parseArguments(int argc, char **argv)
 			if (verletSettings.tau < 0)
 				die("Invalid thermostat relaxation time %s\n",
 						optarg);
-			printf("c: Setting verlet coupling to %e\n", 
+			printf("c: Setting verlet coupling to %le\n", 
 						verletSettings.tau);
 			break;
 		case 'f':
@@ -415,7 +415,7 @@ static void parseArguments(int argc, char **argv)
 			renderConf.radius = atof(optarg) * ANGSTROM;
 			if (renderConf.radius <= 0)
 				die("Invalid radius %s\n", optarg);
-			printf("R: Setting render radius to %e\n", 
+			printf("R: Setting render radius to %le\n", 
 						renderConf.radius);
 			break;
 		case 'F':
@@ -424,14 +424,14 @@ static void parseArguments(int argc, char **argv)
 			break;
 		case 'l':
 			interactionSettings.truncationLen = atof(optarg) * ANGSTROM;
-			printf("l: Setting truncationLength to %e\n", 
+			printf("l: Setting truncationLength to %le\n", 
 					interactionSettings.truncationLen);
 			break;
 		case 'S':
 			worldSize = atof(optarg) * ANGSTROM;
 			if (worldSize <= 0)
 				die("Invalid world size %s\n", optarg);
-			printf("S: Setting world size to %e\n", worldSize);
+			printf("S: Setting world size to %le\n", worldSize);
 			break;
 		case 'b':
 			numBoxes = atoi(optarg);
@@ -444,7 +444,7 @@ static void parseArguments(int argc, char **argv)
 			integratorConf.reboxInterval = atof(optarg) * FEMTOSECONDS;
 			if (integratorConf.reboxInterval <= 0)
 				die("Invalid rebox interval %s\n", optarg);
-			printf("x: Setting rebox interval to %e\n", 
+			printf("x: Setting rebox interval to %le\n", 
 						integratorConf.reboxInterval);
 			break;
 		case 'v':
@@ -452,7 +452,7 @@ static void parseArguments(int argc, char **argv)
 			if (verboseConf.measureInterval <= 0)
 				die("Verbose: invalid verbose interval %s\n",
 						optarg);
-			printf("v: Setting verbose interval to %e\n", 
+			printf("v: Setting verbose interval to %le\n", 
 						verboseConf.measureInterval);
 			break;
 		case 'i':
@@ -487,28 +487,28 @@ static void parseArguments(int argc, char **argv)
 			measurementConf.measureWait = atof(optarg) * NANOSECONDS;
 			if (measurementConf.measureWait < 0)
 				die("Invalid relaxation time %s\n", optarg);
-			printf("W: Setting measurement wait to %e\n", 
+			printf("W: Setting measurement wait to %le\n", 
 						measurementConf.measureWait);
 			break;
 		case 'I':
 			measurementConf.measureInterval = atof(optarg) * PICOSECONDS;
 			if (measurementConf.measureInterval<= 0)
 				die("Invalid measurement interval %s\n", optarg);
-			printf("I: Setting measurement interval to %e\n", 
+			printf("I: Setting measurement interval to %le\n", 
 						measurementConf.measureInterval);
 			break;
 		case 'P':
 			measurementConf.maxMeasureTime = atof(optarg) * NANOSECONDS;
 			if (measurementConf.maxMeasureTime <= 0)
 				die("Invalid measurement time %s\n", optarg);
-			printf("P: Setting maximum measurement time to %e\n", 
+			printf("P: Setting maximum measurement time to %le\n", 
 						measurementConf.maxMeasureTime);
 			break;
 		case 'K':
 			measurementConf.minMeasureTime = atof(optarg) * NANOSECONDS;
 			if (measurementConf.minMeasureTime <= 0)
 				die("Invalid measurement time %s\n", optarg);
-			printf("P: Setting minimum measurement time to %e\n", 
+			printf("P: Setting minimum measurement time to %le\n", 
 						measurementConf.minMeasureTime);
 			break;
 		case 'D':
@@ -535,12 +535,12 @@ static void parseArguments(int argc, char **argv)
 			hmtc.Tstart = parseTemperature(optarg);
 			if (hmtc.Tstart < 0)
 				die("Invalid starting temperature '%s'\n", optarg);
-			printf("A: Setting melting starting temperature to %f\n", 
+			printf("A: Setting melting starting temperature to %lf\n", 
 						hmtc.Tstart);
 			break;
 		case 'B':
 			hmtc.Tstep = atof(optarg);
-			printf("B: Setting melting temperature step to %f\n", 
+			printf("B: Setting melting temperature step to %lf\n", 
 						hmtc.Tstep);
 			break;
 		case 'C':
@@ -550,12 +550,12 @@ static void parseArguments(int argc, char **argv)
 			break;
 		case 'G':
 			hmtc.measureTime = atof(optarg) * NANOSECONDS;
-			printf("G: Setting melting measure time to %e\n", 
+			printf("G: Setting melting measure time to %le\n", 
 						hmtc.measureTime);
 			break;
 		case 'L':
 			hmtc.relaxationTime = atof(optarg) * NANOSECONDS;
-			printf("L: Setting melting relaxation time to %e\n", 
+			printf("L: Setting melting relaxation time to %le\n", 
 						hmtc.relaxationTime);
 			break;
 		case 'V':
@@ -577,31 +577,31 @@ static void parseArguments(int argc, char **argv)
 			hfc.zippingTemperature = parseTemperature(optarg);
 			if (hfc.zippingTemperature < 0)
 				die("Invalid zipping temperature '%s'\n", optarg);
-			printf("O: Setting formation zipping temperature to %f\n", 
+			printf("O: Setting formation zipping temperature to %lf\n", 
 						hfc.zippingTemperature);
 			break;
 		case 'Q':
 			hfc.unzippingTemperature = parseTemperature(optarg);
 			if (hfc.unzippingTemperature < 0)
 				die("Invalid unzipping temperature '%s'\n", optarg);
-			printf("Q: Setting formation unzipping temperature to %f\n", 
+			printf("Q: Setting formation unzipping temperature to %lf\n", 
 						hfc.unzippingTemperature);
 			break;
 		case 'U':
 			hfc.zippedRelaxationTime = atof(optarg) * NANOSECONDS;
-			printf("U: Setting formation zipped relaxation time to %e\n", 
+			printf("U: Setting formation zipped relaxation time to %le\n", 
 						hfc.zippedRelaxationTime);
 			break;
 		case 'Z':
 			hfc.minZippingSamplingTime = atof(optarg) * NANOSECONDS;
-			printf("Z: Setting min zipping+relax sampling time to %e\n", 
+			printf("Z: Setting min zipping+relax sampling time to %le\n", 
 						hfc.minZippingSamplingTime);
 			break;
 		case 'a':
 			hsc.temperature = parseTemperature(optarg);
 			if (hsc.temperature < 0)
 				die("Invalid starting temperature '%s'\n", optarg);
-			printf("a: Setting state measurement starting temperature to %e\n", 
+			printf("a: Setting state measurement starting temperature to %le\n", 
 						hsc.temperature);
 			break;
 		case 'X':
@@ -636,7 +636,7 @@ static void parseArguments(int argc, char **argv)
 			hetei.K *= ELECTRON_VOLT / SQUARE(ANGSTROM);
 			hetei.Rref *= ANGSTROM;
 			measureEndToEndDistance = true;
-			printf("u: Umbrella potential on end-to-end distance with K=%e and Rref=%e\n",
+			printf("u: Umbrella potential on end-to-end distance with K=%le and Rref=%le\n",
 					hetei.K, hetei.Rref);
 			break;
 		case 'E':
@@ -693,7 +693,7 @@ static void determineIdealNumberOfBoxes(void)
 			&&   worldSize < 3 * MAX(defaultWorldSize, hetei.Rref)) {
 		worldSize = 3 * MAX(defaultWorldSize, hetei.Rref);
 		printf("Need correct end-to-end distance. Increasing world "
-				"size to %f Angstrom\n",
+				"size to %lf Angstrom\n",
 				worldSize / ANGSTROM);
 	}
 
@@ -712,8 +712,8 @@ static void determineIdealNumberOfBoxes(void)
 		 * the potentials and forces up to the requested truncation 
 		 * length. We need twice the truncation length for the same 
 		 * reason as above. */
-		printf("Truncation (%e) > worldSize/2 (%e)\n   => "
-				"Extending worldSize to 2*Truncation (%e).\n",
+		printf("Truncation (%le) > worldSize/2 (%le)\n   => "
+				"Extending worldSize to 2*Truncation (%le).\n",
 				interactionSettings.truncationLen, worldSize/2.0,
 				2.0 * interactionSettings.truncationLen);
 		worldSize = 2.0 * interactionSettings.truncationLen;
@@ -732,8 +732,8 @@ static void determineIdealNumberOfBoxes(void)
 	}
 
 	if (worldSize / numBoxes < interactionSettings.truncationLen)
-		die("The boxsize (%e) is smaller than the potential "
-			"truncation radius (%e)!\n",
+		die("The boxsize (%le) is smaller than the potential "
+			"truncation radius (%le)!\n",
 			worldSize / numBoxes / ANGSTROM,
 			interactionSettings.truncationLen / ANGSTROM);
 

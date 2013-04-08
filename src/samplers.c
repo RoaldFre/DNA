@@ -27,7 +27,7 @@ static SamplerSignal tempSample(SamplerData *sd, void *data)
 {
 	UNUSED(sd);
 	UNUSED(data);
-	printf("%e %f %f\n", getTime(), getHeatBathTemperature(),
+	printf("%le %lf %lf\n", getTime(), getHeatBathTemperature(),
 					getKineticTemperature());
 	return SAMPLER_OK;
 }
@@ -64,7 +64,7 @@ static SamplerSignal avgTempSample(SamplerData *sd, void *data)
 static void avgTempStop(SamplerData *sd, void *data)
 {
 	double *accum = (double*) data;
-	printf("Average temperature: %f\n", *accum / sd->sample);
+	printf("Average temperature: %lf\n", *accum / sd->sample);
 	free(accum);
 }
 Sampler averageTemperatureSampler(void)
@@ -115,7 +115,7 @@ static SamplerSignal particlesCOMSample(SamplerData *sd, void *data)
 	UNUSED(sd);
 	ParticlesCOMSamplerConf *pcsc = (ParticlesCOMSamplerConf*) data;
 	Vec3 COM = getCOM(pcsc->ps, pcsc->num);
-	printf("%e ", getTime());
+	printf("%le ", getTime());
 	printVectorExp(COM);
 	printf("\n");
 	return SAMPLER_OK;
@@ -173,8 +173,8 @@ static SamplerSignal particlesSquaredDisplacementSample(SamplerData *sd, void *s
 	Vec3 COM = getCOM(sdc->ps, sdc->num);
 	Vec3 displacement = sub(COM, sdc->initialPos);
 	double squaredDisplacement = length2(displacement);
-	//printf("%e %e", getTime() - sdc->initialTime, squaredDisplacement);
-	printf("%e ", getTime());
+	//printf("%le %le", getTime() - sdc->initialTime, squaredDisplacement);
+	printf("%le ", getTime());
 	printVectorExp(COM);
 	printf("\n");
 
@@ -229,7 +229,7 @@ static SamplerSignal endToEndDistSample(SamplerData *sd, void *state)
 
 	Vec3 ete = endToEndVector(s);
 
-	printf("%e\t%e\t", getTime(), length(ete));
+	printf("%le\t%le\t", getTime(), length(ete));
 	printVectorExp(ete);
 	printf("\n");
 
@@ -370,7 +370,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 	switch (hfd->status) {
 	case WAITING_TO_ZIP:
 		octaveStartComment();
-		printf("[waiting to zip] %e %d ", time, correctlyBound);
+		printf("[waiting to zip] %le %d ", time, correctlyBound);
 		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
 		octaveEndComment();
 
@@ -388,19 +388,19 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		hfd->confirmationStartTime = time;
 		hfd->status = WAITING_FOR_ZIPPING_CONFIRMATION;
 		octaveComment("Reached zipping binding threshold of %d base "
-				"pairs at %e after a time %e", requiredBounds,
+				"pairs at %le after a time %le", requiredBounds,
 				time, time - hfd->zippingPhaseStartTime);
 		/* Intentional fall through */
 	case WAITING_FOR_ZIPPING_CONFIRMATION:
 		octaveStartComment();
-		printf("[waiting to zip] %e %d ", time, correctlyBound);
+		printf("[waiting to zip] %le %d ", time, correctlyBound);
 		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
 		octaveEndComment();
 		if (correctlyBound < requiredBounds) {
 			/* It was a dud! */
 			hfd->status = WAITING_TO_ZIP;
 			octaveComment("Could not confirm zipping, waiting to "
-					"zip again at %e", time);
+					"zip again at %le", time);
 			break;
 		}
 		if (time - hfd->confirmationStartTime
@@ -413,12 +413,12 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 
 		double timeTillZippingFromNucl = time - hfd->nucleationTime
 						- hfc->zipConfirmationTime;
-		octaveComment("Confirmed zipping at %e", time);
+		octaveComment("Confirmed zipping at %le", time);
 		octaveScalar("timeTillZipping", timeTillZipping);
 		octaveScalar("timeTillZippingFromNucl", timeTillZippingFromNucl);
 		octaveScalar("nucleationTime", hfd->nucleationTime);
 		octaveComment("Starting relaxation phase in zipped state "
-				"at %e", time);
+				"at %le", time);
 		if (timeTillZippingFromNucl + hfc->zippedRelaxationTime
 						< hfc->minZippingSamplingTime) {
 			hfd->relaxationEndTime = time +
@@ -436,7 +436,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		/* Intentional fall through */
 	case RELAXATION_IN_ZIPPED_STATE:
 		octaveStartComment();
-		printf("[zipped relaxation] %e %d ", time, correctlyBound);
+		printf("[zipped relaxation] %le %d ", time, correctlyBound);
 		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
 		octaveEndComment();
 		if (time < hfd->relaxationEndTime)
@@ -448,7 +448,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 			/* Not zipped! */
 			octaveComment("Relaxation in zipped state: passed "
 					"zippedRelaxationTime but not zipped "
-					"anymore at: %e -- total relax time: %e",
+					"anymore at: %le -- total relax time: %le",
 					time, time - hfd->confirmationTime);
 			break; /* Wait to fully zip again */
 		}
@@ -463,7 +463,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		if (correctlyBound > allowedBounds) {
 			/* Not yet unzipped. Just print info and continue. */
 			octaveStartComment();
-			printf("[waiting to unzip] %e %d ", time, correctlyBound);
+			printf("[waiting to unzip] %le %d ", time, correctlyBound);
 			dumpHairpinState(&world.strands[0], hfc->energyThreshold);
 			octaveEndComment();
 			break;
@@ -473,21 +473,21 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		hfd->confirmationStartTime = time;
 		hfd->status = WAITING_FOR_UNZIPPING_CONFIRMATION;
 		octaveComment("Reached unzipping binding threshold of %d base "
-				"pairs at %e after a time %e", allowedBounds,
+				"pairs at %le after a time %le", allowedBounds,
 				time, time - hfd->unzippingPhaseStartTime);
 		/* Intentional case fall through
 		 * (if hfc->unzipConfirmationTime == 0 [or smaller than 
 		 * sample interval], we need to stop right now!) */
 	case WAITING_FOR_UNZIPPING_CONFIRMATION:
 		octaveStartComment();
-		printf("[waiting to unzip] %e %d ", time, correctlyBound);
+		printf("[waiting to unzip] %le %d ", time, correctlyBound);
 		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
 		octaveEndComment();
 		if (correctlyBound > allowedBounds) {
 			/* It was a dud! */
 			hfd->status = WAITING_TO_UNZIP;
 			octaveComment("Could not confirm unzipping, waiting "
-					"to unzip again at %e", time);
+					"to unzip again at %le", time);
 			break;
 		}
 		if (time - hfd->confirmationStartTime
@@ -498,7 +498,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		hfd->status = UNZIPPING_CONFIRMED;
 		double timeTillUnzipping = time - hfd->unzippingPhaseStartTime
 						- hfc->unzipConfirmationTime;
-		octaveComment("Confirmed unzipping at %e", time);
+		octaveComment("Confirmed unzipping at %le", time);
 		octaveScalar("timeTillUnzipping", timeTillUnzipping);
 		return SAMPLER_STOP;
 	case UNZIPPING_CONFIRMED:
@@ -506,7 +506,7 @@ static SamplerSignal hairpinFormationSample(SamplerData *sd, void *state)
 		 * because we need to sample longer. In that case, just 
 		 * keep writing state and request to stop again. */
 		octaveStartComment();
-		printf("[after unzipping] %e %d ", time, correctlyBound);
+		printf("[after unzipping] %le %d ", time, correctlyBound);
 		dumpHairpinState(&world.strands[0], hfc->energyThreshold);
 		octaveEndComment();
 		return SAMPLER_STOP;
@@ -545,17 +545,17 @@ static void* hairpinStateStart(SamplerData *sd, void *conf)
 		die("hairpinStateSampler: no DNA strands in world!\n");
 
 	/* Dump info */
-	octaveComment("temperatureBeforeStart  %e", getHeatBathTemperature());
-	octaveComment("energyThreshold %e",         hsc->energyThreshold);
-	octaveComment("numMonomers %d",             n);
-	octaveComment("integratorTimestep %e",      getIntegratorTimeStep());
-	octaveComment("sampleInterval %e",          sd->sampleInterval);
+	octaveComment("temperatureBeforeStart  %le", getHeatBathTemperature());
+	octaveComment("energyThreshold %le",         hsc->energyThreshold);
+	octaveComment("numMonomers %d",              n);
+	octaveComment("integratorTimestep %le",      getIntegratorTimeStep());
+	octaveComment("sampleInterval %le",          sd->sampleInterval);
 
 	/* Set temperature if necessary */
 	if (hsc->temperature >= 0)
 		setHeatBathTemperature(hsc->temperature);
 
-	octaveComment("temperatureAfterStart  %e",  hsc->temperature);
+	octaveComment("temperatureAfterStart  %le",  hsc->temperature);
 
 	return hsc;
 }
@@ -566,7 +566,7 @@ static SamplerSignal hairpinStateSample(SamplerData *sd, void *state)
 	int correctlyBound = getCorrectlyBoundHairpinBasePairs(
 				&world.strands[0], hsc->energyThreshold);
 
-	printf("%e %d ", getTime(), correctlyBound);
+	printf("%le %d ", getTime(), correctlyBound);
 	dumpHairpinState(&world.strands[0], hsc->energyThreshold);
 	printf("\n");
 
@@ -642,7 +642,7 @@ static void* hairpinMeltingTempStart(SamplerData *sd, void *conf)
 
 	octaveMatrixHeader("temperatures", hmtc->numSteps, 1);
 	for (int i = 0; i < hmtc->numSteps; i++)
-		printf("%e\n", hmtc->Tstart + i * hmtc->Tstep);
+		printf("%le\n", hmtc->Tstart + i * hmtc->Tstep);
 
 	if (hmtc->verbose) {
 		/* Start the header for the 3D matrix of data */
@@ -709,7 +709,7 @@ static SamplerSignal hairpinMeltingTempSample(SamplerData *sd, void *state)
 				octaveMatrixHeader("averageBoundBasePairs", 
 							hmtc->numSteps, 1);
 				for (int i = 0; i < hmtc->numSteps; i++)
-					printf("%e\n", hmtd->averageBPsPerStep[i]);
+					printf("%le\n", hmtd->averageBPsPerStep[i]);
 
 				octaveComment("Successful end! :-)");
 				return SAMPLER_STOP; /* All done! */
@@ -722,7 +722,7 @@ static SamplerSignal hairpinMeltingTempSample(SamplerData *sd, void *state)
 		/* Not at the end of this step yet: just sample */
 		hmtd->accumulatedBoundBasePairs += correctlyBound;
 		if (hmtc->verbose) {
-			printf("%e ", time);
+			printf("%le ", time);
 			dumpHairpinState(&world.strands[0], 
 					hmtc->energyThreshold);
 			printf("\n");
@@ -810,13 +810,13 @@ static SamplerSignal basePairingSample(SamplerData *sd, void *state)
 	}
 
 	if (correctlyBound >= 0) {
-		printf("%e\t%d\t%d\n", getTime(), bpcd.count, correctlyBound);
+		printf("%le\t%d\t%d\n", getTime(), bpcd.count, correctlyBound);
 		if(sd->string != NULL)
 			snprintf(sd->string, sd->strBufSize,
 					"All BPs: %d, Correct BPs: %d",
 					bpcd.count, correctlyBound);
 	} else {
-		printf("%e\t%d\n", getTime(), bpcd.count);
+		printf("%le\t%d\n", getTime(), bpcd.count);
 		if(sd->string != NULL)
 			snprintf(sd->string, sd->strBufSize,
 					"All BPs: %d", bpcd.count);

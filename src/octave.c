@@ -29,7 +29,7 @@ void octaveScalar(const char *name, double value)
 	printf("\n");
 	printf("# name: %s\n", name);
 	printf("# type: scalar\n");
-	printf("%e\n", value);
+	printf("%le\n", value);
 }
 void octaveString(const char *name, const char *string)
 {

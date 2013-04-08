@@ -387,7 +387,7 @@ void writeWorld(const char *filename)
 				filename, strerror(errno));
 
 	fprintf(out, MAGIC "\n");
-	fprintf(out, "%e\n%d\n", world.worldSize, world.numStrands);
+	fprintf(out, "%le\n%d\n", world.worldSize, world.numStrands);
 
 	for (int s = 0; s < world.numStrands; s++)
 		writeStrand(out, &world.strands[s]);

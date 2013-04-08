@@ -1242,10 +1242,10 @@ bool physicsCheck(void)
 {
 	Vec3 P = momentum();
 	double PPP = length(P) / numParticles();
-	//printf("%e\n",PPP);
+	//printf("%le\n",PPP);
 	if (PPP > 1e-20) {
 		fprintf(stderr, "\nMOMENTUM CONSERVATION VIOLATED! "
-				"Momentum per particle: |P| = %e\n", PPP);
+				"Momentum per particle: |P| = %le\n", PPP);
 		return false;
 	}
 	return true;
@@ -1270,19 +1270,19 @@ void dumpStats()
 	double T = getKineticTemperature();
 	double E = K + pe.bond + pe.angle + pe.dihedral + pe.stack + pe.basePair + pe.Coulomb + pe.exclusion;
 
-	printf("Vb = %e, Va = %e, Vd = %e, Vs = %e, Vbp = %e, Vpp = %e, Ve = %e",
+	printf("Vb = %le, Va = %le, Vd = %le, Vs = %le, Vbp = %le, Vpp = %le, Ve = %le",
 			pe.bond, pe.angle, pe.dihedral, pe.stack, pe.basePair, pe.Coulomb, pe.exclusion);
 
 	/* Extra interactions */
 	ExtraIntNode *node = extraIntList;
 	while (node != NULL) {
 		double V = node->i.potential(node->i.data) / ELECTRON_VOLT;
-		printf(", V%s = %e\n", node->i.symbol, V);
+		printf(", V%s = %le\n", node->i.symbol, V);
 		E += V;
 		node = node->next;
 	}
 
-	printf(", E = %e, K = %e, T = %f\n", E, K, T);
+	printf(", E = %le, K = %le, T = %lf\n", E, K, T);
 }
 
 

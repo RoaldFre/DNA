@@ -41,8 +41,8 @@ char *harmonicEndToEndIntHeader(HarmonicEndToEndInt *conf)
 		"#   V = K/2 * (R - Rref)^2,\n"
 		"# with R the end-to-end distance between COM of first\n"
 		"# and last monomer, and parameters:\n"
-		"# K = %e\n"
-		"# Rref = %e\n"
+		"# K = %le\n"
+		"# Rref = %le\n"
 		"#\n",
 		conf->K, conf->Rref);
 }
@@ -83,7 +83,7 @@ char *endToEndForceIntHeader(EndToEndForceInt *conf)
 	return asprintfOrDie(
 		"#\n"
 		"# Constant end-to-end force: -F on first monomer, +F on last monomer.\n"
-		"# F = %e %e %e\n"
+		"# F = %le %le %le\n"
 		"#\n",
 		conf->F.x, conf->F.y, conf->F.z);
 }

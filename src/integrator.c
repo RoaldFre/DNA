@@ -444,13 +444,13 @@ char *integratorInfo(IntegratorConf *conf)
 	case LANGEVIN:
 		integratorTypeAndSettings = asprintfOrDie(
 				"# Integrator: Langevin\n"
-				"# Gamma: %e\n", 
+				"# Gamma: %le\n", 
 				conf->integrator.settings.langevin.gamma);
 		break;
 	case VERLET:
 		integratorTypeAndSettings = asprintfOrDie(
 				"# Integrator: Verlet\n"
-				"# Tau: %e\n", 
+				"# Tau: %le\n", 
 				conf->integrator.settings.verlet.tau);
 		break;
 	default:
@@ -458,7 +458,7 @@ char *integratorInfo(IntegratorConf *conf)
 		return NULL; /* To avoid uninitialized usage warnings */
 	}
 
-	char *ret = asprintfOrDie("%s# Time step: %e\n# Rebox interval: %e\n",
+	char *ret = asprintfOrDie("%s# Time step: %le\n# Rebox interval: %le\n",
 			integratorTypeAndSettings,
 			conf->timeStep, conf->reboxInterval);
 	free(integratorTypeAndSettings);

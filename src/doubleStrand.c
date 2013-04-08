@@ -112,27 +112,27 @@ static void printUsage(void)
 	printf("             default: %s\n", DEF_BASE_SEQUENCE);
 	printf(" -d        don't build a complementary strand that would form a Double helix\n");
 	printf(" -t <flt>  length of Time steps (in femtoseconds)\n");
-	printf("             default: %f\n", DEF_TIMESTEP);
+	printf("             default: %lf\n", DEF_TIMESTEP);
 	printf(" -T <flt><C|K>  initial Temperature (example: 20C or 300K)\n");
 	printf("             note: some measurements set their own temperature when sampling!\n");
 	printf("             default: %s\n", DEF_INITIAL_TEMPERATURE);
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
-	printf("             default: %f\n", DEF_SALT_CONCENTRATION);
+	printf("             default: %lf\n", DEF_SALT_CONCENTRATION);
 	printf(" -r        Render\n");
 	printf(" -f <flt>  desired Framerate when rendering.\n");
-	printf("             default: %f)\n", DEF_RENDER_FRAMERATE);
+	printf("             default: %lf)\n", DEF_RENDER_FRAMERATE);
 	printf(" -R <flt>  Radius (in Angstrom) of the particles when rendering\n");
-	printf("             default: %f\n", DEF_RENDER_RADIUS);
+	printf("             default: %lf\n", DEF_RENDER_RADIUS);
 	printf(" -F        draw Forces on particles when rendering\n");
 	printf(" -l <flt>  truncation Length of potentials (in Angstrom).\n");
 	printf("             negative value: sets truncation to worldsize/2\n");
-	printf("             default: %f\n", DEF_TRUNCATION_LENGTH);
+	printf("             default: %lf\n", DEF_TRUNCATION_LENGTH);
 	printf(" -S <flt>  Size of world (in Angstrom).\n");
-	printf("             default: (number of monomers + 2) * %f\n", DEF_MONOMER_WORLDSIZE_FACTOR);
+	printf("             default: (number of monomers + 2) * %lf\n", DEF_MONOMER_WORLDSIZE_FACTOR);
 	printf(" -b <num>  number of Boxes per dimension\n");
 	printf("             default: max so that boxsize >= potential truncation length\n");
 	printf(" -x <flt>  time interval between reboXing (in femtoseconds)\n");
-	printf("             default: %f\n", DEF_REBOX_INTERVAL);
+	printf("             default: %lf\n", DEF_REBOX_INTERVAL);
 	printf(" -v <int>  Verbose: dump statistics every <flt> picoseconds\n");
 	printf(" -i <type> Integrator to use. Values for <type>:\n");
 	printf("             l: Langevin (velocity BBK) [default]\n");
@@ -140,7 +140,7 @@ static void printUsage(void)
 	printf("\n");
 	printf("Parameters for Langevin integrator:\n");
 	printf(" -g <flt>  Gamma: friction coefficient for Langevin dynamics\n");
-	printf("             default: %e\n", DEF_LANGEVIN_GAMMA);
+	printf("             default: %le\n", DEF_LANGEVIN_GAMMA);
 	printf("\n");
 	printf("Parameters for velocity Verlet integrator + Berendsen termostat:\n");
 	printf(" -c <flt>  thermal bath Coupling: relaxation time (zero to disable)\n");
@@ -326,8 +326,8 @@ static void parseArguments(int argc, char **argv)
 		 * the potentials and forces up to the requested truncation 
 		 * length. We need twice the truncation length for the same 
 		 * reason as above. */
-		printf("Truncation (%e) > worldSize/2 (%e)\n   => "
-				"Extending worldSize to 2*Truncation (%e).\n",
+		printf("Truncation (%le) > worldSize/2 (%le)\n   => "
+				"Extending worldSize to 2*Truncation (%le).\n",
 				interactionSettings.truncationLen, worldSize/2.0,
 				2.0 * interactionSettings.truncationLen);
 		worldSize = 2.0 * interactionSettings.truncationLen;
@@ -345,8 +345,8 @@ static void parseArguments(int argc, char **argv)
 	}
 
 	if (worldSize / numBoxes < interactionSettings.truncationLen)
-		die("The boxsize (%e) is smaller than the potential "
-			"truncation radius (%e)!\n",
+		die("The boxsize (%le) is smaller than the potential "
+			"truncation radius (%le)!\n",
 			worldSize / numBoxes / ANGSTROM,
 			interactionSettings.truncationLen / ANGSTROM);
 
