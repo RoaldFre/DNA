@@ -332,7 +332,7 @@ static void addToBox(Particle *p, Box *b)
  * pointer value for this.
  * However, due to periodic boundary conditions, this ONLY works when there 
  * are AT LEAST 3 boxes in each dimension!  */
-static void visitNeighbours(Box *box, Box *neighbour,
+static void visitNeighbourPairs(Box *box, Box *neighbour,
 		void (*f)(Particle *p1, Particle *p2, void *data), void *data)
 {
 	if (neighbour <= box)
@@ -361,50 +361,50 @@ static void visitNeighbours(Box *box, Box *neighbour,
 	assert(p1 == box->p);
 }
 
-static void visitNeighboursOf(Box *box,
+static void visitNeigbourPairsOf(Box *box,
 		void (*f)(Particle *p1, Particle *p2, void *data), void *data)
 {
 	//TODO: be more smart/elegant
 
 	/* x-1 */
-	visitNeighbours(box, box->prevX->prevY->nextZ, f, data);
-	visitNeighbours(box, box->prevX->prevY,        f, data);
-	visitNeighbours(box, box->prevX->prevY->prevZ, f, data);
+	visitNeighbourPairs(box, box->prevX->prevY->nextZ, f, data);
+	visitNeighbourPairs(box, box->prevX->prevY,        f, data);
+	visitNeighbourPairs(box, box->prevX->prevY->prevZ, f, data);
 
-	visitNeighbours(box, box->prevX->nextZ,        f, data);
-	visitNeighbours(box, box->prevX,               f, data);
-	visitNeighbours(box, box->prevX->prevZ,        f, data);
+	visitNeighbourPairs(box, box->prevX->nextZ,        f, data);
+	visitNeighbourPairs(box, box->prevX,               f, data);
+	visitNeighbourPairs(box, box->prevX->prevZ,        f, data);
 
-	visitNeighbours(box, box->prevX->nextY->nextZ, f, data);
-	visitNeighbours(box, box->prevX->nextY,        f, data);
-	visitNeighbours(box, box->prevX->nextY->prevZ, f, data);
+	visitNeighbourPairs(box, box->prevX->nextY->nextZ, f, data);
+	visitNeighbourPairs(box, box->prevX->nextY,        f, data);
+	visitNeighbourPairs(box, box->prevX->nextY->prevZ, f, data);
 
 
 	/* x */
-	visitNeighbours(box, box->prevY->nextZ, f, data);
-	visitNeighbours(box, box->prevY,        f, data);
-	visitNeighbours(box, box->prevY->prevZ, f, data);
+	visitNeighbourPairs(box, box->prevY->nextZ, f, data);
+	visitNeighbourPairs(box, box->prevY,        f, data);
+	visitNeighbourPairs(box, box->prevY->prevZ, f, data);
 
-	visitNeighbours(box, box->nextZ,        f, data);
-	visitNeighbours(box, box->prevZ,        f, data);
+	visitNeighbourPairs(box, box->nextZ,        f, data);
+	visitNeighbourPairs(box, box->prevZ,        f, data);
 
-	visitNeighbours(box, box->nextY->nextZ, f, data);
-	visitNeighbours(box, box->nextY,        f, data);
-	visitNeighbours(box, box->nextY->prevZ, f, data);
+	visitNeighbourPairs(box, box->nextY->nextZ, f, data);
+	visitNeighbourPairs(box, box->nextY,        f, data);
+	visitNeighbourPairs(box, box->nextY->prevZ, f, data);
 
 
 	/* x+1 */
-	visitNeighbours(box, box->nextX->prevY->nextZ, f, data);
-	visitNeighbours(box, box->nextX->prevY,        f, data);
-	visitNeighbours(box, box->nextX->prevY->prevZ, f, data);
+	visitNeighbourPairs(box, box->nextX->prevY->nextZ, f, data);
+	visitNeighbourPairs(box, box->nextX->prevY,        f, data);
+	visitNeighbourPairs(box, box->nextX->prevY->prevZ, f, data);
 
-	visitNeighbours(box, box->nextX->nextZ,        f, data);
-	visitNeighbours(box, box->nextX,               f, data);
-	visitNeighbours(box, box->nextX->prevZ,        f, data);
+	visitNeighbourPairs(box, box->nextX->nextZ,        f, data);
+	visitNeighbourPairs(box, box->nextX,               f, data);
+	visitNeighbourPairs(box, box->nextX->prevZ,        f, data);
 
-	visitNeighbours(box, box->nextX->nextY->nextZ, f, data);
-	visitNeighbours(box, box->nextX->nextY,        f, data);
-	visitNeighbours(box, box->nextX->nextY->prevZ, f, data);
+	visitNeighbourPairs(box, box->nextX->nextY->nextZ, f, data);
+	visitNeighbourPairs(box, box->nextX->nextY,        f, data);
+	visitNeighbourPairs(box, box->nextX->nextY->prevZ, f, data);
 }
 
 /* ITERATION OVER PAIRS */
@@ -414,8 +414,8 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 		/* Brute force. We can't do anything better anyway with 2 
 		 * boxes or less per dimension, as all particles will have 
 		 * to be checked against each other.
-		 * If we use the method below (with visitNeighbours()), we 
-		 * get into trouble when nb==2. In that case, the 'prev' 
+		 * If we use the method below (with visitNeighbourPairs()), 
+		 * we get into trouble when nb==2. In that case, the 'prev' 
 		 * and the 'next' per dimension will map to the same box, 
 		 * which would lead to double visits per pair! */
 		forEveryPairBruteForce(f, data);
@@ -443,7 +443,7 @@ void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data
 		}
 		assert(p == box->p); /* We went 'full circle' */
 
-		visitNeighboursOf(box, f, data);
+		visitNeigbourPairsOf(box, f, data);
 
 		box = box->nextOccupied;
 	} while (box != occupiedBoxes);
