@@ -7,15 +7,14 @@
 #include "physics.h" //TODO separate in particle.h (= all we need)?
 
 
-/* Allocates a grid [0, size] x [0, size] x [0, size] with 'numBoxes' boxes 
- * in each dimension.
+/* Allocates a grid with 'numBoxes' boxes in each dimension.
  * Precondition: grid can't already be allocated (unless it was freed 
  * afterwards).
  * Returns true on succes, false on failure. */
-bool allocGrid(int numBoxes, double size);
+bool allocGrid(int numBoxes);
 
 /* Allocates a grid (cfr allocGrid()) and adds every particle of the world. */
-bool initGrid(int numBoxes, double size);
+bool initGrid(int numBoxes);
 
 /* All particles are removed from the grid and the memory gets freed. */
 void freeGrid(void);

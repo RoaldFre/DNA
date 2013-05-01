@@ -96,8 +96,8 @@ typedef struct strand
 
 typedef struct world
 {
-	double worldSize; /* World = periodic cube with edges of this length */
-			//TODO: worldsize only really relvant for spgrid, though
+	double worldSize; /* World = periodic cube with edges of this 
+			     length. Change with resizeWorld(). */
 	int numStrands;
 	Strand *strands;
 } World;
@@ -124,6 +124,10 @@ char *getSequence(Strand *s);
 char *getWorldInfo(void);
 void freeWorld(void);
 void freeStrand(Strand *strand);
+
+/* Use this to resize the world: it automatically handles periodic boundary 
+ * conditions correctly. */
+void resizeWorld(double newWorldSize);
 
 /* Write the current state of the world to the given file. Can be read with 
  * readWorld(). If filename == NULL, don't do anything. */
@@ -163,6 +167,10 @@ void translateStrand(Strand *s, Vec3 delta);
  * WARNING: if calling this with space partitioning, you need to rebox the 
  * particles yourself! */
 void centerStrand(Strand *s);
+
+/* If the particle is outside the world: translate it back. Also updates 
+ * the prevPos correctly. */
+void periodicPosition(Particle *p);
 
 /* Undoes periodic boundary conditions. The sugar of the first monomer of 
  * the strand is used as an anchor.

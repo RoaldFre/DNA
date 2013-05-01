@@ -771,19 +771,23 @@ int main(int argc, char **argv)
 
 	if (initialStateFile != NULL) {
 		readWorld(initialStateFile);
-		/* The read-in file must have a worldsize that is valid, 
-		 * i.e. won't get altered by determineIdealNumberOfBoxes(), 
-		 * or else things might go out-of-band. TODO do this more 
-		 * elegantly. */
-		worldSize = world.worldSize;
+
+		if (worldSize < 0)
+			worldSize = world.worldSize; /* from readWorld() */
+		else
+			resizeWorld(worldSize); /* User input */
+
 		determineIdealNumberOfBoxes();
+		/* Resize again in case determineIdealNumberOfBoxes() said 
+		 * we need to go bigger */
+		resizeWorld(worldSize);
 	} else {
 		determineIdealNumberOfBoxes();
 		allocWorld(1, worldSize);
 		fillStrand(&world.strands[0], baseSequence);
 		killMomentum();
 	}
-	initGrid(numBoxes, worldSize);
+	initGrid(numBoxes);
 
 	assert(worldSanityCheck());
 

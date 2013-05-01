@@ -53,11 +53,9 @@ static Box *grid; /* All boxes in the spgrid. */
 static Box *occupiedBoxes; /* First element in linked list of boxes that 
 			      contain particles, or NULL if all boxes are 
 			      empty. */
-static double boxSize = 0; /* Linear length of one box. */
 static int nb = 0; /* Number of Boxes in one dimension. Total number of 
 		      boxes is nb^3. Total volume of the grid is 
 		      (nb*boxSize)^3. */
-static double gridSize; /* nb * boxSize -- cached for performance */
 static int gridNumParticles = 0; /* Total number of particles in the grid. For 
 				consistency checking only! */
 
@@ -115,15 +113,13 @@ static void removeNonOccupiedBox(Box *emptyBox)
 }
 
 
-bool allocGrid(int numBoxes, double size)
+bool allocGrid(int numBoxes)
 {
 	assert(grid == NULL && nb == 0);
 	grid = calloc(numBoxes * numBoxes * numBoxes, sizeof(*grid));
 	if (grid == NULL)
 		return false;
-	gridSize = size;
 	nb = numBoxes;
-	boxSize = size / numBoxes;
 
 	/* set the prev/nextXYZ pointers */
 	for (int ix = 0; ix < nb; ix++)
@@ -143,9 +139,9 @@ bool allocGrid(int numBoxes, double size)
 	return true;
 }
 
-bool initGrid(int numBoxes, double size)
+bool initGrid(int numBoxes)
 {
-	if (!allocGrid(numBoxes, size))
+	if (!allocGrid(numBoxes))
 		return false;
 	forEveryParticle(&addToGrid);
 	return true;
@@ -186,27 +182,12 @@ void freeGrid()
 }
 
 void addToGrid(Particle *p) {
-	p->pos = periodic(gridSize, p->pos);
+	p->pos = periodic(world.worldSize, p->pos);
 	Box *box = boxFromNonPeriodicParticle(p);
 	addToBox(p, box);
 	gridNumParticles++;
 
 	assert(spgridSanityCheck(false, false));
-}
-
-static void periodicPosition(Particle *p)
-{
-	/* We need to watch out and update the previous position as well! */
-	Vec3 diffPos = nearestImageVector(p->pos, p->prevPos);
-
-	/* closePeriodic should suffice. When debugging, it can be useful 
-	 * to use periodic instead if we hang on closePeriodic [but that's 
-	 * a bad sign anyway!]. */
-	p->pos = closePeriodic(gridSize, p->pos);
-	//p->pos = periodic(gridSize, p->pos);
-
-	/* Fix the previous position */
-	p->prevPos = add(p->pos, diffPos);
 }
 
 void reboxParticle(Particle *p)
@@ -242,8 +223,9 @@ static Box *boxFromNonPeriodicParticle(const Particle *p)
 	assert(p != NULL);
 	assert(!isnan(p->pos.x) && !isnan(p->pos.y) && !isnan(p->pos.z));
 
-	double gs = gridSize;
-	Vec3 shifted = add(p->pos, (Vec3) {gs/2.0, gs/2.0, gs/2.0});
+	double ws = world.worldSize;
+	double boxSize = ws / nb;
+	Vec3 shifted = add(p->pos, (Vec3) {ws/2.0, ws/2.0, ws/2.0});
 
 	int ix = shifted.x / boxSize;
 	int iy = shifted.y / boxSize;
@@ -548,12 +530,12 @@ void forEveryConnectionPair(void (*f)(Particle*, Particle*, Particle*, Particle*
 /* PERIODIC VECTOR FUNCTIONS */
 Vec3 nearestImageVector(Vec3 v1, Vec3 v2)
 {
-	return fastPeriodic(gridSize, sub(v2, v1));
+	return fastPeriodic(world.worldSize, sub(v2, v1));
 }
 Vec3 nearestImageVectorSafe(Vec3 v1, Vec3 v2)
 {
-	//return periodic(gridSize, sub(v2, v1));
-	return closePeriodic(gridSize, sub(v2, v1));
+	//return periodic(world.worldSize, sub(v2, v1));
+	return closePeriodic(world.worldSize, sub(v2, v1));
 }
 double nearestImageDistance(Vec3 v1, Vec3 v2)
 {

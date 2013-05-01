@@ -467,6 +467,7 @@ void centerStrand(Strand *s)
 	undoPeriodicBoundaryConditions(s);
 	translateStrand(s, scale(getStrandCOM(s), -1));
 }
+
 char *getWorldInfo(void)
 {
 	int n = world.numStrands;
@@ -483,6 +484,21 @@ char *getWorldInfo(void)
 	}
 
 	return ret;
+}
+
+void periodicPosition(Particle *p)
+{
+	/* We need to watch out and update the previous position as well! */
+	Vec3 diffPos = nearestImageVector(p->pos, p->prevPos);
+
+	/* closePeriodic should suffice. When debugging, it can be useful 
+	 * to use periodic instead if we hang on closePeriodic [but that's 
+	 * a bad sign anyway!]. */
+	p->pos = closePeriodic(world.worldSize, p->pos);
+	//p->pos = periodic(world.worldSize, p->pos);
+
+	/* Fix the previous position */
+	p->prevPos = add(p->pos, diffPos);
 }
 
 void undoPeriodicBoundaryConditions(Strand *s)
@@ -509,6 +525,18 @@ void undoPeriodicBoundaryConditions(Strand *s)
 		if (i < n - 1)
 			anchor = add(anchor, nextSdir);
 	}
+}
+
+void resizeWorld(double newWorldSize)
+{
+	if (world.numStrands > 1)
+		die("Tried to resize a world with more than one strand. "
+				"That is ambiguous!\n");
+
+	Strand *s = &world.strands[0];
+	undoPeriodicBoundaryConditions(s);
+	world.worldSize = newWorldSize;
+	forEveryParticleOf(s, periodicPosition);
 }
 
 
