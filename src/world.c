@@ -492,12 +492,17 @@ void undoPeriodicBoundaryConditions(Strand *s)
 	Vec3 anchor = s->Ss[0].pos;
 
 	for (int i = 0; i < n; i++) {
-		s->Ss[i].pos = anchor;
-		s->Bs[i].pos = add(anchor, nearestImageVector(anchor, s->Bs[i].pos));
-		s->Ps[i].pos = add(anchor, nearestImageVector(anchor, s->Ps[i].pos));
+		Vec3 Bdir, Pdir, nextSdir;
+		Bdir = nearestImageVectorSafe(s->Ss[i].pos, s->Bs[i].pos);
+		Pdir = nearestImageVectorSafe(s->Ss[i].pos, s->Ps[i].pos);
 		if (i < n - 1)
-			anchor = add(s->Ps[i].pos, nearestImageVector(s->Ps[i].pos,
-			                                              s->Ss[i+1].pos));
+			nextSdir = nearestImageVectorSafe(s->Ss[i].pos, s->Ss[i+1].pos);
+
+		s->Ss[i].pos = anchor;
+		s->Bs[i].pos = add(anchor, Bdir);
+		s->Ps[i].pos = add(anchor, Pdir);
+		if (i < n - 1)
+			anchor = add(anchor, nextSdir);
 	}
 }
 

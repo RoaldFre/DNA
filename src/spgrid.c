@@ -550,7 +550,11 @@ Vec3 nearestImageVector(Vec3 v1, Vec3 v2)
 {
 	return fastPeriodic(gridSize, sub(v2, v1));
 }
-
+Vec3 nearestImageVectorSafe(Vec3 v1, Vec3 v2)
+{
+	//return periodic(gridSize, sub(v2, v1));
+	return closePeriodic(gridSize, sub(v2, v1));
+}
 double nearestImageDistance(Vec3 v1, Vec3 v2)
 {
 	return length(nearestImageVector(v1, v2));

@@ -98,5 +98,8 @@ Vec3 nearestImageVector(Vec3 v1, Vec3 v2);
 Vec3 nearestImageUnitVector(Vec3 v1, Vec3 v2);
 double nearestImageDistance(Vec3 v1, Vec3 v2);
 double nearestImageDistance2(Vec3 v1, Vec3 v2);
+/* Like nearestImageVector, but also works if the vectors are off by more 
+ * than a 'grid length'. */
+Vec3 nearestImageVectorSafe(Vec3 v1, Vec3 v2);
 
 #endif
