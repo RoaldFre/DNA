@@ -268,6 +268,7 @@ static __inline__ void sinCosDihedral(Vec3 v1, Vec3 v2, Vec3 v3,
 /* Helper for function below */
 static __inline__ double _periodic(double period, double val)
 {
+	assert(period > 0);
 	double hp = period / 2.0; /* Half Period */
 	double shiftedAndScaled = (val + hp) / period;
 	double ret = (shiftedAndScaled - floor(shiftedAndScaled)) * period - hp;
@@ -299,6 +300,7 @@ static __inline__ Vec3 periodic(double period, Vec3 v)
 /* Helper for function below */
 static __inline__ double _closePeriodic(double period, double val)
 {
+	assert(period > 0);
 	if (UNLIKELY(val < -period/2.0)) {
 		do val += period; while (UNLIKELY(val < -period/2.0));
 		return val;
@@ -339,6 +341,8 @@ static __inline__ Vec3 closePeriodic(double period, Vec3 v)
 /* Helper for function below */
 static __inline__ double _fastPeriodic(double period, double val)
 {
+	assert(period > 0);
+
 	//attempt to minimise branches, but still slower:
 	//return val + period * ((2*val >= period) - (2*val < -period));
 
