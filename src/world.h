@@ -43,7 +43,9 @@ typedef struct particle
 	Vec3 prevPos; /* Position at previous time step. This gets managed 
 			 by the integrator task.
 			 NOTE: even with ALTERNATIVE_LANGEVIN, we still 
-			 need this for the monte carlo dynamics! */
+			 need this for the monte carlo dynamics!
+			 NOTE2: translations in world.c also know of this, 
+			 TODO nicer way? */
 	Vec3 vel; /* Velocity */
 	Vec3 F;   /* Force */
 #ifdef ALTERNATIVE_LANGEVIN
@@ -151,7 +153,16 @@ void forEveryParticleOfD(Strand *s,
  */
 Particle *getConnectedParticle(Particle *p);
 
+/* Translate the strand over the given vector.
+ * WARNING: if calling this with space partitioning, you need to rebox the 
+ * particles yourself! */
 void translateStrand(Strand *s, Vec3 delta);
+
+/* Center the given strand in the world so that its center of mass is the 
+ * zero vector. Periodic boundary wrapping gets undone prior to shifting.
+ * WARNING: if calling this with space partitioning, you need to rebox the 
+ * particles yourself! */
+void centerStrand(Strand *s);
 
 /* Undoes periodic boundary conditions. The sugar of the first monomer of 
  * the strand is used as an anchor.

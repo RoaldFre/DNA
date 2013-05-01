@@ -226,6 +226,8 @@ Vec3 getCOM(Particle *ps, int num);
 /* Returns the position vector of the Center Of Mass of the given monomer 
  * in the given strand. */
 Vec3 getMonomerCOM(Strand *s, int monomer);
+/* Returns the position vector of the Center Of Mass of the given strand */ 
+Vec3 getStrandCOM(Strand *s);
 /* Distributes the force over the monomer. The force is assumed to be 
  * applied to the COM of the monomer. */
 void distributeForceOverMonomer(Vec3 F, Strand *s, int monomer);

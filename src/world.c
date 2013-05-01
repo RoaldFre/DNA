@@ -462,6 +462,11 @@ void translateStrand(Strand *s, Vec3 delta)
 {
 	forEveryParticleOfD(s, translateParticle, (void*) &delta);
 }
+void centerStrand(Strand *s)
+{
+	undoPeriodicBoundaryConditions(s);
+	translateStrand(s, scale(getStrandCOM(s), -1));
+}
 char *getWorldInfo(void)
 {
 	int n = world.numStrands;

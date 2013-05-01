@@ -1314,6 +1314,11 @@ Vec3 getCOM(Particle *ps, int num)
 	return scale(COM, 1/M);
 }
 
+Vec3 getStrandCOM(Strand *s)
+{
+	return getCOM(s->all, 3*s->numMonomers);
+}
+
 Vec3 getMonomerCOM(Strand *s, int monomer)
 {
 	Particle *base      = &s->Bs[monomer];
