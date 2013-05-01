@@ -789,6 +789,8 @@ int main(int argc, char **argv)
 	}
 	initGrid(numBoxes);
 
+	centerStrand(&world.strands[0]);
+
 	assert(worldSanityCheck());
 
 	/* Integrator config */
