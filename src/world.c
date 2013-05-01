@@ -456,6 +456,7 @@ static void translateParticle(Particle *p, void *data)
 {
 	Vec3 *delta = (Vec3*) data;
 	p->pos = add(p->pos, *delta);
+	p->prevPos = add(p->prevPos, *delta);
 }
 void translateStrand(Strand *s, Vec3 delta)
 {
