@@ -21,7 +21,7 @@ typedef struct {
 } MonteCarloMoves;
 
 
-/* Pivot mover: Randomly pivot the strand around random positions. */
+/* Pivot mover: Randomly pivot the strand around randomly chosen positions. */
 extern MonteCarloMover pivotMover;
 
 /* Jiggle mover: Randomly perturb the positions of the particles in the strand. */
