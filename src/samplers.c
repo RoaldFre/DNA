@@ -255,8 +255,8 @@ Sampler endToEndDistSampler(Strand *strand)
 
 
 /* HAIR PIN FORMATION */
-/* Print (half of) the hairpin config and return  the number of correctly 
- * bound base pairs. */
+/* Print (half of) the hairpin config (bound or unbound base matching 
+ * pairs) and return the number of correctly bound base pairs. */
 static int dumpHairpinState(Strand *s, double energyThreshold)
 {
 	int correctlyBound = 0;
@@ -272,6 +272,17 @@ static int dumpHairpinState(Strand *s, double energyThreshold)
 		}
 	}
 	return correctlyBound;
+}
+/* Print (half of) the hairpin config (distance between base pairs). Note: 
+ * watch out for periodic boundary conditions, which limit the maximum base 
+ * pair length! */
+static void dumpHairpinDistanceState(Strand *s)
+{
+	int n = s->numMonomers;
+	for (int i = 0; i < n/2; i++) {
+		int j = n - 1 - i;
+		printf("%le ", nearestImageDistance(s->Bs[i].pos, s->Bs[j].pos));
+	}
 }
 static int getCorrectlyBoundHairpinBasePairs(Strand *s, double energyThreshold)
 {
@@ -550,6 +561,7 @@ static void* hairpinStateStart(SamplerData *sd, void *conf)
 	octaveComment("numMonomers %d",              n);
 	octaveComment("integratorTimestep %le",      getIntegratorTimeStep());
 	octaveComment("sampleInterval %le",          sd->sampleInterval);
+	octaveComment("dumpDistances %d",            hsc->dumpDistances);
 
 	/* Set temperature if necessary */
 	if (hsc->temperature >= 0)
@@ -563,11 +575,17 @@ static SamplerSignal hairpinStateSample(SamplerData *sd, void *state)
 {
 	UNUSED(sd);
 	HairpinStateSamplerConfig *hsc = (HairpinStateSamplerConfig*) state;
+
 	int correctlyBound = getCorrectlyBoundHairpinBasePairs(
 				&world.strands[0], hsc->energyThreshold);
 
 	printf("%le %d ", getTime(), correctlyBound);
-	dumpHairpinState(&world.strands[0], hsc->energyThreshold);
+
+	if (hsc->dumpDistances)
+		dumpHairpinDistanceState(&world.strands[0]);
+	else
+		dumpHairpinState(&world.strands[0], hsc->energyThreshold);
+
 	printf("\n");
 
 	return SAMPLER_OK;
@@ -805,8 +823,14 @@ static SamplerSignal basePairingSample(SamplerData *sd, void *state)
 	/* Matching base pairs if one strands in the world (assumed to be a 
 	 * hairpin) */
 	if (world.numStrands == 1) {
-		correctlyBound = dumpHairpinState(&world.strands[0], 
-				bpc->energyThreshold);
+		if (bpc->dumpDistances) {
+			correctlyBound = getCorrectlyBoundHairpinBasePairs(
+					&world.strands[0], bpc->energyThreshold);
+			dumpHairpinDistanceState(&world.strands[0]);
+		} else {
+			correctlyBound = dumpHairpinState(&world.strands[0], 
+					bpc->energyThreshold);
+		}
 	}
 
 	if (correctlyBound >= 0) {

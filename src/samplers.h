@@ -34,6 +34,11 @@ typedef struct {
 	/* A pair is 'bound' if its base pair potential is lower than the 
 	 * given threshold. */
 	double energyThreshold;
+
+	/* If this is true: dump the distance between base pairs instead of 
+	 * just whether they are bound or not according to energyThreshold.
+	 * This can only be used in 'hairpin' measuring mode. */
+	bool dumpDistances;
 } BasePairingConfig;
 /* Sampler that counts the number of base pair bindings. */
 Sampler basePairingSampler(BasePairingConfig *bpc);
@@ -136,6 +141,10 @@ typedef struct {
 	 * a negative value here if you don't want to change the 
 	 * temperature. */
 	double temperature;
+
+	/* If this is true: dump the distance between base pairs instead of 
+	 * just whether they are bound or not according to energyThreshold. */
+	bool dumpDistances;
 } HairpinStateSamplerConfig;
 
 Sampler hairpinStateSampler(HairpinStateSamplerConfig *hssc);
