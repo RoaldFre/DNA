@@ -20,6 +20,7 @@
 #define END_TO_END_DIST_FILE_SUFFIX "_endToEnd"
 #define BASE_PAIRING_FILE_SUFFIX "_basePairing"
 #define DISTANCE_BASE_PAIRING_FILE_SUFFIX "_basePairingDistance"
+#define ENERGY_BASE_PAIRING_FILE_SUFFIX "_basePairingEnergy"
 #define TEMPERATURE_FILE_SUFFIX "_temperature"
 #define ZIPPED_STATE_FILE_SUFFIX "_zippedState"
 
@@ -69,6 +70,7 @@ static MeasurementConf measurementConf =
 static BasePairingConfig bpc =
 {
 	.energyThreshold = -0.1 * EPSILON,
+	.mode = BPSM_BOOLEAN,
 };
 static HairpinFormationSamplerConfig hfc =
 {
@@ -110,6 +112,7 @@ static enum {
 static bool measureEndToEndDistance = false;
 static bool measureBasePairing = false;
 static bool measureDistanceBasePairing = false;
+static bool measureEnergyBasePairing = false;
 static bool measureTemperature = false;
 
 static RenderConf renderConf =
@@ -653,9 +656,10 @@ static void parseArguments(int argc, char **argv)
 			printf("\n");
 			break;
 		case 'p':
-			//TODO: still use the non-distance as well?
+			//TODO: Clean this up asap
 			//measureBasePairing = true;
 			measureDistanceBasePairing = true;
+			measureEnergyBasePairing = true;
 			printf("p: measuring base pairing\n");
 			break;
 		case 'k':
@@ -903,15 +907,27 @@ int main(int argc, char **argv)
 	basePairing.measConf.measureFile = basePairFile;
 	Task basePairingTask = measurementTask(&basePairing);
 
-	/* Distance base pairing task TODO: do this cleaner with less duplication */
+	/* TODO: do the things below cleaner with less duplication (this is 
+	 * just a quick hack to test things atm) */
+	/* Distance base pairing task */
 	char *distanceBasePairFile = asprintfOrDie("%s%s", filenameBase,
 						DISTANCE_BASE_PAIRING_FILE_SUFFIX);
 	Measurement distanceBasePairing;
-	bpc.dumpDistances = true;
+	bpc.mode = BPSM_DISTANCE;
 	distanceBasePairing.sampler = basePairingSampler(&bpc);
 	distanceBasePairing.measConf = additionalMeasConf; /* struct copy */
 	distanceBasePairing.measConf.measureFile = distanceBasePairFile;
 	Task distanceBasePairingTask = measurementTask(&distanceBasePairing);
+
+	/* Energy base pairing task */
+	char *energyBasePairFile = asprintfOrDie("%s%s", filenameBase,
+						ENERGY_BASE_PAIRING_FILE_SUFFIX);
+	Measurement energyBasePairing;
+	bpc.mode = BPSM_ENERGY;
+	energyBasePairing.sampler = basePairingSampler(&bpc);
+	energyBasePairing.measConf = additionalMeasConf; /* struct copy */
+	energyBasePairing.measConf.measureFile = energyBasePairFile;
+	Task energyBasePairingTask = measurementTask(&energyBasePairing);
 
 	/* End to end task */
 	char *endToEndFile = asprintfOrDie("%s%s", filenameBase,
@@ -969,7 +985,7 @@ int main(int argc, char **argv)
 		integratorTask = makeMonteCarloTask(&monteCarloConfig);
 
 	/* Combined task */
-	Task *tasks[8];
+	Task *tasks[9];
 	tasks[0] = (render ? &renderTask : NULL);
 	tasks[1] = (noDynamics ? NULL : &integratorTask);
 	tasks[2] = &verboseTask;
@@ -977,8 +993,9 @@ int main(int argc, char **argv)
 	tasks[4] = (measureEndToEndDistance ? &endToEndTask : NULL);
 	tasks[5] = (measureBasePairing ? &basePairingTask : NULL);
 	tasks[6] = (measureDistanceBasePairing ? &distanceBasePairingTask : NULL);
-	tasks[7] = (measureTemperature ? &temperatureTask : NULL);
-	Task task = sequence(tasks, 8);
+	tasks[7] = (measureEnergyBasePairing ? &energyBasePairingTask : NULL);
+	tasks[8] = (measureTemperature ? &temperatureTask : NULL);
+	Task task = sequence(tasks, 9);
 
 	registerInteractions(interactionSettings);
 
@@ -990,6 +1007,7 @@ int main(int argc, char **argv)
 	freeWorld();
 	free(basePairFile);
 	free(distanceBasePairFile);
+	free(energyBasePairFile);
 	free(endToEndFile);
 	free(temperatureFile);
 	free(zippedStateFile);

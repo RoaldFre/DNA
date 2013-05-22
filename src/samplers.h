@@ -30,15 +30,21 @@ Sampler strandCOMSquaredDisplacementSampler(Strand *s);
 Sampler endToEndDistSampler(Strand *strand);
 
 
+typedef enum
+{
+	BPSM_BOOLEAN,  /* Dump bound/unbound data, based on energyThreshold */
+	BPSM_DISTANCE, /* Dump the distance between corresponding base pairs */
+	BPSM_ENERGY,   /* Dump the energy of corresponding base pairs */
+	/* TODO< Currently, the boolean mode is the only one that works for 
+	 * arbitrary configs. For hairpin-type configurations, all three 
+	 * modes work. */
+} BasePairingSamplerMode;
 typedef struct {
+	BasePairingSamplerMode mode;
+
 	/* A pair is 'bound' if its base pair potential is lower than the 
 	 * given threshold. */
 	double energyThreshold;
-
-	/* If this is true: dump the distance between base pairs instead of 
-	 * just whether they are bound or not according to energyThreshold.
-	 * This can only be used in 'hairpin' measuring mode. */
-	bool dumpDistances;
 } BasePairingConfig;
 /* Sampler that counts the number of base pair bindings. */
 Sampler basePairingSampler(BasePairingConfig *bpc);
@@ -144,6 +150,8 @@ typedef struct {
 
 	/* If this is true: dump the distance between base pairs instead of 
 	 * just whether they are bound or not according to energyThreshold. */
+	/* TODO this is redundant with basePairingSampler! Use that for the 
+	 * sampling? */
 	bool dumpDistances;
 } HairpinStateSamplerConfig;
 

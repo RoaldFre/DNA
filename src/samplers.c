@@ -273,6 +273,21 @@ static int dumpHairpinState(Strand *s, double energyThreshold)
 	}
 	return correctlyBound;
 }
+/* Print (half of) the hairpin config (energy of matching base pairings)
+ * and return the number of correctly bound base pairs. */
+static int dumpHairpinEnergyState(Strand *s, double energyThreshold)
+{
+	int correctlyBound = 0;
+	int n = s->numMonomers;
+	for (int i = 0; i < n/2; i++) {
+		int j = n - 1 - i;
+		double V = VbasePair(&s->Bs[i], &s->Bs[j]);
+		printf("%le ", V);
+		if (V < energyThreshold)
+			correctlyBound++;
+	}
+	return correctlyBound;
+}
 /* Print (half of) the hairpin config (distance between base pairs). Note: 
  * watch out for periodic boundary conditions, which limit the maximum base 
  * pair length! */
@@ -820,16 +835,23 @@ static SamplerSignal basePairingSample(SamplerData *sd, void *state)
 		correctlyBound = dumpDualStrandState(&world.strands[0], 
 				&world.strands[1], bpc->energyThreshold);
 	}
-	/* Matching base pairs if one strands in the world (assumed to be a 
-	 * hairpin) */
+	/* Matching base pairs if one strands in the world (ASSUMED TO BE A 
+	 * HAIRPIN!) -- TODO define via the mode enum in the config? */
 	if (world.numStrands == 1) {
-		if (bpc->dumpDistances) {
+		switch (bpc->mode) {
+		case BPSM_BOOLEAN:
+			correctlyBound = dumpHairpinState(&world.strands[0], 
+					bpc->energyThreshold);
+			break;
+		case BPSM_DISTANCE:
 			correctlyBound = getCorrectlyBoundHairpinBasePairs(
 					&world.strands[0], bpc->energyThreshold);
 			dumpHairpinDistanceState(&world.strands[0]);
-		} else {
-			correctlyBound = dumpHairpinState(&world.strands[0], 
+			break;
+		case BPSM_ENERGY:
+			correctlyBound = dumpHairpinEnergyState(&world.strands[0], 
 					bpc->energyThreshold);
+			break;
 		}
 	}
 
