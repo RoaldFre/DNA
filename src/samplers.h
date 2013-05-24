@@ -29,6 +29,9 @@ Sampler strandCOMSquaredDisplacementSampler(Strand *s);
  * first monomer and the COM of the last monomer. */
 Sampler endToEndDistSampler(Strand *strand);
 
+/* Sampler that dumps the gyration radius of the given strand. */
+Sampler gyrationRadiusSampler(Strand *strand);
+
 
 typedef enum
 {

@@ -254,6 +254,55 @@ Sampler endToEndDistSampler(Strand *strand)
 
 
 
+/* GYRATION RADIUS */
+typedef struct
+{
+	Strand *strand;
+} GyrationRadiusConf;
+static SamplerSignal gyrationRadiusSample(SamplerData *sd, void *state)
+{
+	UNUSED(sd);
+	GyrationRadiusConf *grc = (GyrationRadiusConf*) state;
+	Strand *s = grc->strand;
+
+	/* To get the mean position correctly, we need to undo the periodic boundary conditions! */
+	undoPeriodicBoundaryConditions(s);
+
+	Vec3 meanPosition = {0, 0, 0};
+	for (int i = 0; i < 3*s->numMonomers; i++)
+		meanPosition = add(meanPosition, s->all[i].pos);
+	meanPosition = scale(meanPosition, 1.0/(3 * s->numMonomers));
+
+	double gyrationRadius = 0;
+	for (int i = 0; i < 3*s->numMonomers; i++)
+		gyrationRadius += distance2(s->all[i].pos, meanPosition);
+	gyrationRadius = sqrt(gyrationRadius / (3 * s->numMonomers));
+
+	printf("%le\t%le\n", getTime(), gyrationRadius);
+
+	redoPeriodicBoundaryConditions(s);
+
+	return SAMPLER_OK;
+}
+Sampler gyrationRadiusSampler(Strand *strand)
+{
+	GyrationRadiusConf *grc = malloc(sizeof(*grc));
+	memset(grc, 0, sizeof(*grc));
+	grc->strand = strand;
+
+	Sampler sampler;
+	sampler.samplerConf = grc;
+	sampler.start  = &passConf;
+	sampler.sample = &gyrationRadiusSample;
+	sampler.stop   = &freeState;
+	sampler.header = "# <time> <gyration radius>\n";
+	return sampler;
+}
+
+
+
+
+
 /* HAIR PIN FORMATION */
 /* Print (half of) the hairpin config (bound or unbound base matching 
  * pairs) and return the number of correctly bound base pairs. */

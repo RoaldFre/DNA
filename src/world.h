@@ -177,6 +177,10 @@ void periodicPosition(Particle *p);
  * The prevPos gets updated to keep the same difference (pos - prevPos) as 
  * before changing the positions */
 void undoPeriodicBoundaryConditions(Strand *s);
+/* This undoes undoPeriodicBoundaryConditions(). It won't change the boxes 
+ * of the space partitioning grid, as it is assumed that these were correct 
+ * before undoPeriodicBoundaryConditions() was called! */
+void redoPeriodicBoundaryConditions(Strand *s);
 
 /* Checks whether particles of strands are properly associated with their 
  * type, monomer and strand. */

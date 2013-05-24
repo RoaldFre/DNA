@@ -539,6 +539,10 @@ void undoPeriodicBoundaryConditions(Strand *s)
 		s->Ps[i].prevPos = add(s->Ps[i].pos, dPprev);
 	}
 }
+void redoPeriodicBoundaryConditions(Strand *s)
+{
+	forEveryParticleOf(s, periodicPosition);
+}
 
 void resizeWorld(double newWorldSize)
 {
