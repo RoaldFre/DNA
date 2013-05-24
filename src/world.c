@@ -513,17 +513,30 @@ void undoPeriodicBoundaryConditions(Strand *s)
 	Vec3 anchor = s->Ss[0].pos;
 
 	for (int i = 0; i < n; i++) {
+		/* Store the difference with prevPos to restore it 
+		 * correctly for the new position */
+		Vec3 dBprev = sub(s->Bs[i].prevPos, s->Bs[i].pos);
+		Vec3 dSprev = sub(s->Ss[i].prevPos, s->Ss[i].pos);
+		Vec3 dPprev = sub(s->Ps[i].prevPos, s->Ps[i].pos);
+
+		/* Get the connecting directions */
 		Vec3 Bdir, Pdir, nextSdir;
 		Bdir = nearestImageVectorSafe(s->Ss[i].pos, s->Bs[i].pos);
 		Pdir = nearestImageVectorSafe(s->Ss[i].pos, s->Ps[i].pos);
 		if (i < n - 1)
 			nextSdir = nearestImageVectorSafe(s->Ss[i].pos, s->Ss[i+1].pos);
 
+		/* Update to the new positions */
 		s->Ss[i].pos = anchor;
 		s->Bs[i].pos = add(anchor, Bdir);
 		s->Ps[i].pos = add(anchor, Pdir);
 		if (i < n - 1)
 			anchor = add(anchor, nextSdir);
+
+		/* Restore prevPos */
+		s->Ss[i].prevPos = add(s->Ss[i].pos, dSprev);
+		s->Bs[i].prevPos = add(s->Bs[i].pos, dBprev);
+		s->Ps[i].prevPos = add(s->Ps[i].pos, dPprev);
 	}
 }
 

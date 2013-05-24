@@ -174,7 +174,8 @@ void periodicPosition(Particle *p);
 
 /* Undoes periodic boundary conditions. The sugar of the first monomer of 
  * the strand is used as an anchor.
- * TODO WARNING: prevPos gets corrupted! */
+ * The prevPos gets updated to keep the same difference (pos - prevPos) as 
+ * before changing the positions */
 void undoPeriodicBoundaryConditions(Strand *s);
 
 /* Checks whether particles of strands are properly associated with their 
