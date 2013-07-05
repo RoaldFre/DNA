@@ -943,6 +943,7 @@ typedef struct
 } ForceVelFricConf;
 static SamplerSignal forceVelFricSample(SamplerData *sd, void *state)
 {
+	UNUSED(sd);
 	ForceVelFricConf *fvfc = (ForceVelFricConf*) state;
 	Strand *s = fvfc->strand;
 
