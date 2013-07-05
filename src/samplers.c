@@ -936,6 +936,47 @@ Sampler basePairingSampler(BasePairingConfig *bpc)
 
 
 
+/* FORCE, VELOCITY, FRICTION SAMPLER */
+typedef struct
+{
+	Strand *strand;
+} ForceVelFricConf;
+static SamplerSignal forceVelFricSample(SamplerData *sd, void *state)
+{
+	ForceVelFricConf *fvfc = (ForceVelFricConf*) state;
+	Strand *s = fvfc->strand;
+
+	printf("%le", getTime());
+
+	for (int i = 0; i < s->numMonomers; i++) {
+		Vec3 F = getMonomerForce(s, i);
+		Vec3 v = getMonomerVelocity(s, i);
+		printf("\t%le %le %le", 
+				length(F), length(v), dot(F,v)/length2(F));
+	}
+	printf("\n");
+
+	return SAMPLER_OK;
+}
+
+Sampler forceVelFricSampler(Strand *strand)
+{
+	ForceVelFricConf *fvfc = malloc(sizeof(*fvfc));
+	memset(fvfc, 0, sizeof(*fvfc));
+	fvfc->strand = strand;
+
+	Sampler sampler;
+	sampler.samplerConf = fvfc;
+	sampler.start  = &passConf;
+	sampler.sample = &forceVelFricSample;
+	sampler.stop   = &freeState;
+	sampler.header = "# <time> {for the COM of each monomer: <force |F|> <velocity |v|> <(F dot v) / |F|^2>}\n";
+	return sampler;
+}
+
+
+
+
 /* TRIVIAL SAMPLER */
 
 Sampler trivialSampler(void) {

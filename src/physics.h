@@ -223,9 +223,20 @@ Vec3 endToEndDirection(Strand *s);
 double endToEndDistance(Strand *s);
 /* Returns the position vector of the Center Of Mass. */
 Vec3 getCOM(Particle *ps, int num);
+/* Returns the total mass of the given monomer in the given strand. */
+double getMonomerMass(Strand *s, int monomer);
 /* Returns the position vector of the Center Of Mass of the given monomer 
  * in the given strand. */
 Vec3 getMonomerCOM(Strand *s, int monomer);
+/* Returns the momentum vector of the Center Of Mass of the given monomer 
+ * in the given strand. */
+Vec3 getMonomerMomentum(Strand *s, int monomer);
+/* Returns the velocity vector of the Center Of Mass of the given monomer 
+ * in the given strand. */
+Vec3 getMonomerVelocity(Strand *s, int monomer);
+/* Returns the force vector acting on the Center Of Mass of the given 
+ * monomer in the given strand. */
+Vec3 getMonomerForce(Strand *s, int monomer);
 /* Returns the position vector of the Center Of Mass of the given strand */ 
 Vec3 getStrandCOM(Strand *s);
 /* Distributes the force over the monomer. The force is assumed to be 

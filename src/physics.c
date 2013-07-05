@@ -1319,6 +1319,14 @@ Vec3 getStrandCOM(Strand *s)
 	return getCOM(s->all, 3*s->numMonomers);
 }
 
+double getMonomerMass(Strand *s, int monomer)
+{
+	Particle *base      = &s->Bs[monomer];
+	Particle *sugar     = &s->Ss[monomer];
+	Particle *phosphate = &s->Ps[monomer];
+	return base->m + sugar->m + phosphate->m;
+}
+
 Vec3 getMonomerCOM(Strand *s, int monomer)
 {
 	Particle *base      = &s->Bs[monomer];
@@ -1330,6 +1338,34 @@ Vec3 getMonomerCOM(Strand *s, int monomer)
 	               scale(phosphate->pos, phosphate->m)));
 
 	return scale(COM, 1/(base->m + sugar->m + phosphate->m));
+}
+
+Vec3 getMonomerMomentum(Strand *s, int monomer)
+{
+	Particle *base      = &s->Bs[monomer];
+	Particle *sugar     = &s->Ss[monomer];
+	Particle *phosphate = &s->Ps[monomer];
+
+	Vec3 P = add(scale(base->vel,      base->m),
+	         add(scale(sugar->vel,     sugar->m),
+	             scale(phosphate->vel, phosphate->m)));
+
+	return P;
+}
+
+Vec3 getMonomerVelocity(Strand *s, int monomer)
+{
+	return scale(getMonomerMomentum(s, monomer),
+			1/getMonomerMass(s, monomer));
+}
+
+Vec3 getMonomerForce(Strand *s, int monomer)
+{
+	Particle *base      = &s->Bs[monomer];
+	Particle *sugar     = &s->Ss[monomer];
+	Particle *phosphate = &s->Ps[monomer];
+
+	return add(add(base->F, sugar->F), phosphate->F);
 }
 
 void distributeForceOverMonomer(Vec3 F, Strand *strand, int monomer)

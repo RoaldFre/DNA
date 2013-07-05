@@ -23,6 +23,7 @@
 #define ENERGY_BASE_PAIRING_FILE_SUFFIX "_basePairingEnergy"
 #define TEMPERATURE_FILE_SUFFIX "_temperature"
 #define GYRATION_FILE_SUFFIX "_gyrationRadius"
+#define FORCE_VEL_FRIC_FILE_SUFFIX "_forceVelFric"
 #define ZIPPED_STATE_FILE_SUFFIX "_zippedState"
 
 /* Defaults */
@@ -116,6 +117,7 @@ static bool measureDistanceBasePairing = false;
 static bool measureEnergyBasePairing = false;
 static bool measureTemperature = false;
 static bool measureGyrationRadius = false;
+static bool measureForceVelFric = false;
 
 static RenderConf renderConf =
 {
@@ -273,6 +275,9 @@ static void printUsage(void)
 	printf(" -q        also measure the gyration radius of the strand\n");
 	printf("             output: the data filename (see -D) with suffix: '%s'\n",
 							GYRATION_FILE_SUFFIX);
+	printf(" -J        also measure the force, velocity, and friction for each monomer of the strand\n");
+	printf("             output: the data filename (see -D) with suffix: '%s'\n",
+							FORCE_VEL_FRIC_FILE_SUFFIX);
 	printf("\n");
 	printf("For more info and default values of params below: see code :P\n");
 	//TODO parameter names are a mess
@@ -317,10 +322,10 @@ static void parseArguments(int argc, char **argv)
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
 	/* Unused options:
-	 * J o */
+	 * o */
 	/* TODO rework option system to something sane. Long options? Read 
 	 * and parse config file? */
-	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yj:ny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:eu:E:pkqhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
+	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yj:ny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:eu:E:pkqJhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -675,6 +680,10 @@ static void parseArguments(int argc, char **argv)
 			measureGyrationRadius = true;
 			printf("q: measuring gyration radius\n");
 			break;
+		case 'J':
+			measureForceVelFric = true;
+			printf("J: measuring force, velocity and friction per monomer\n");
+			break;
 		case ':':
 			printUsage();
 			die("Option -%c requires an argument\n", optopt);
@@ -945,7 +954,7 @@ int main(int argc, char **argv)
 	endToEnd.sampler = endToEndDistSampler(&world.strands[0]);
 	endToEnd.measConf = additionalMeasConf; /* struct copy */
 	endToEnd.measConf.measureFile = endToEndFile;
-	Task endToEndTask = measurementTask(&endToEnd);	
+	Task endToEndTask = measurementTask(&endToEnd);
 
 	/* Temperature task */
 	char *temperatureFile = asprintfOrDie("%s%s", filenameBase,
@@ -954,7 +963,7 @@ int main(int argc, char **argv)
 	tempMeas.sampler = temperatureSampler();
 	tempMeas.measConf = additionalMeasConf; /* struct copy */
 	tempMeas.measConf.measureFile = temperatureFile;
-	Task temperatureTask = measurementTask(&tempMeas);	
+	Task temperatureTask = measurementTask(&tempMeas);
 
 	/* Gyration radius task */
 	char *gyradFile = asprintfOrDie("%s%s", filenameBase,
@@ -963,7 +972,16 @@ int main(int argc, char **argv)
 	gyradMeas.sampler = gyrationRadiusSampler(&world.strands[0]);
 	gyradMeas.measConf = additionalMeasConf; /* struct copy */
 	gyradMeas.measConf.measureFile = gyradFile;
-	Task gyrationRadiusTask = measurementTask(&gyradMeas);	
+	Task gyrationRadiusTask = measurementTask(&gyradMeas);
+
+	/* Force, velocity, friction task */
+	char *fvfFile = asprintfOrDie("%s%s", filenameBase,
+						FORCE_VEL_FRIC_FILE_SUFFIX);
+	Measurement fvfMeas;
+	fvfMeas.sampler = forceVelFricSampler(&world.strands[0]);
+	fvfMeas.measConf = additionalMeasConf; /* struct copy */
+	fvfMeas.measConf.measureFile = fvfFile;
+	Task forceVelFricTask = measurementTask(&fvfMeas);
 
 	/* Hairpin task */
 	Measurement hairpin;
@@ -1002,18 +1020,19 @@ int main(int argc, char **argv)
 		integratorTask = makeMonteCarloTask(&monteCarloConfig);
 
 	/* Combined task */
-	Task *tasks[10];
-	tasks[0] = (render ? &renderTask : NULL);
-	tasks[1] = (noDynamics ? NULL : &integratorTask);
-	tasks[2] = &verboseTask;
-	tasks[3] = &hairpinTask;;
-	tasks[4] = (measureEndToEndDistance ? &endToEndTask : NULL);
-	tasks[5] = (measureBasePairing ? &basePairingTask : NULL);
-	tasks[6] = (measureDistanceBasePairing ? &distanceBasePairingTask : NULL);
-	tasks[7] = (measureEnergyBasePairing ? &energyBasePairingTask : NULL);
-	tasks[8] = (measureTemperature ? &temperatureTask : NULL);
-	tasks[9] = (measureGyrationRadius ? &gyrationRadiusTask : NULL);
-	Task task = sequence(tasks, 10);
+	Task *tasks[11];
+	tasks[0]  = (render ? &renderTask : NULL);
+	tasks[1]  = (noDynamics ? NULL : &integratorTask);
+	tasks[2]  = &verboseTask;
+	tasks[3]  = &hairpinTask;;
+	tasks[4]  = (measureEndToEndDistance ? &endToEndTask : NULL);
+	tasks[5]  = (measureBasePairing ? &basePairingTask : NULL);
+	tasks[6]  = (measureDistanceBasePairing ? &distanceBasePairingTask : NULL);
+	tasks[7]  = (measureEnergyBasePairing ? &energyBasePairingTask : NULL);
+	tasks[8]  = (measureTemperature ? &temperatureTask : NULL);
+	tasks[9]  = (measureGyrationRadius ? &gyrationRadiusTask : NULL);
+	tasks[10] = (measureForceVelFric ? &forceVelFricTask : NULL);
+	Task task = sequence(tasks, 11);
 
 	registerInteractions(interactionSettings);
 
@@ -1029,6 +1048,7 @@ int main(int argc, char **argv)
 	free(endToEndFile);
 	free(temperatureFile);
 	free(gyradFile);
+	free(fvfFile);
 	free(zippedStateFile);
 	free(measHeader);
 
