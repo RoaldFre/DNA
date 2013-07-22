@@ -679,6 +679,7 @@ static void Fstack(Particle *p1, Particle *p2, int monomerDistance)
 typedef struct {
 	double coupling; /* Coupling strength */
 	double distance2; /* Coupling distance squared */
+	bool onlyRepulsive; /* Use only repulsive part of interaction? */
 } BasePairInfo;
 /* Returns the BasePairInfo for the given types. If the given types do not 
  * constitute a valid base pair, then coupling and distance are set to -1. */
@@ -690,25 +691,26 @@ static void initBasePairInfoLUT(void) {
 
 	bpiGC.coupling = BASE_PAIR_COUPLING_G_C;
 	bpiGC.distance2 = SQUARE(BASE_PAIR_DISTANCE_G_C);
+	bpiGC.onlyRepulsive = interactions.onlyXYbasePairing;	
 
 	bpiAT.coupling = BASE_PAIR_COUPLING_A_T;
 	bpiAT.distance2 = SQUARE(BASE_PAIR_DISTANCE_A_T);
+	bpiAT.onlyRepulsive = interactions.onlyXYbasePairing;	
 
 	bpiXY.coupling = BASE_PAIR_COUPLING_X_Y;
 	bpiXY.distance2 = SQUARE(BASE_PAIR_DISTANCE_X_Y);
+	bpiGC.onlyRepulsive = false;
 
 	/* Initialize to null */
 	for (int b1 = 0; b1 < NUM_BASE_TYPES; b1++)
 		for (int b2 = 0; b2 < NUM_BASE_TYPES; b2++)
 			basePairInfoLUT[b1][b2] = bpiNULL;
-	
-	if (interactions.onlyXYbasePairing == false) {
-		basePairInfoLUT[BASE_A][BASE_T] = bpiAT;
-		basePairInfoLUT[BASE_T][BASE_A] = bpiAT;
 
-		basePairInfoLUT[BASE_G][BASE_C] = bpiGC;
-		basePairInfoLUT[BASE_C][BASE_G] = bpiGC;
-	}
+	basePairInfoLUT[BASE_A][BASE_T] = bpiAT;
+	basePairInfoLUT[BASE_T][BASE_A] = bpiAT;
+
+	basePairInfoLUT[BASE_G][BASE_C] = bpiGC;
+	basePairInfoLUT[BASE_C][BASE_G] = bpiGC;
 
 	basePairInfoLUT[BASE_X][BASE_Y] = bpiXY;
 	basePairInfoLUT[BASE_Y][BASE_X] = bpiXY;
@@ -767,13 +769,15 @@ static bool canFormBasePair(Particle *p1, Particle *p2)
 }
 static double calcVbasePair(BasePairInfo bpi, double rsquared)
 {
+	/* Note: in VbasePair, we assume that this potential is zero for 
+	 * rsquared == bpi.distance2 ! */
 	double rfrac2 = bpi.distance2 / rsquared;
 	double rfrac4 = rfrac2 * rfrac2;
 	double rfrac8 = rfrac4 * rfrac4;
 	double rfrac10 = rfrac8 * rfrac2;
 	double rfrac12 = rfrac8 * rfrac4;
 	
-	return bpi.coupling * (5*rfrac12 - 6*rfrac10 + 1);
+	return bpi.coupling * (5*rfrac12 - 6*rfrac10);
 }
 double VbasePair(Particle *p1, Particle *p2)
 {
@@ -783,12 +787,16 @@ double VbasePair(Particle *p1, Particle *p2)
 	BasePairInfo bpi = getBasePairInfo(p1, p2);
 	if (bpi.coupling < 0)
 		return 0; /* Wrong pair */
+
+	double truncSq = truncationLenSq;
+	if (bpi.onlyRepulsive)
+		truncSq = MIN(truncSq, bpi.distance2);
 	
 	double rsq = nearestImageDistance2(p1->pos, p2->pos);
-	if (rsq > truncationLenSq)
+	if (rsq > truncSq)
 		return 0; /* Too far away */
 
-	return calcVbasePair(bpi, rsq) - calcVbasePair(bpi, truncationLenSq);
+	return calcVbasePair(bpi, rsq) - calcVbasePair(bpi, truncSq);
 }
 
 static double calcFbasePair(BasePairInfo bpi, double r)
@@ -813,7 +821,8 @@ static void FbasePair(Particle *p1, Particle *p2)
 	
 	Vec3 rVec = nearestImageVector(p1->pos, p2->pos);
 	double r = length(rVec);
-	if (r > interactions.truncationLen)
+	if (   (r > interactions.truncationLen)
+	    || (bpi.onlyRepulsive && SQUARE(r) >= bpi.distance2))
 		return; /* Too far away */
 
 	Vec3 direction = scale(rVec, 1/r);

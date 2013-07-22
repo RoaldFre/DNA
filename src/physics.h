@@ -173,7 +173,15 @@ typedef struct {
 		 * pairing. */
 		BASE_PAIR_DOUBLE_STRAND,
 	} basePairInteraction;
-	bool onlyXYbasePairing; /* Only enable base pairing for XY pairs */
+
+	/* Only enable base pairing for XY pairs. The interaction between 
+	 * other base pairs that would normally form bonds is now reduced 
+	 * to only the repulsive part. Effectively, this behaves as if 
+	 * truncationLen would be the distance of the potential minimum (or 
+	 * the original truncationLen, if this is smaller than the 
+	 * potential minimum distance -- but you probably don't want that 
+	 * to happen). */
+	bool onlyXYbasePairing;
 
 	double saltConcentration; /* Na+ concentration, in mol/m^3 */
 	double truncationLen; /* Length at which potentials are truncated */
