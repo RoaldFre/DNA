@@ -200,11 +200,10 @@ static void printUsage(void)
 	printf(" -N <flt>  concentration of Na+ in the environment (in mol/m^3)\n");
 	printf("             default: %lf\n", DEF_SALT_CONCENTRATION);
 	printf(" -m <num>  perform the given number of Monte carlo sweeps and then quit\n");
-	printf(" -j <type> base pairing interaction. Values for <type>:\n");
+	printf(" -j <type> base pairing interaction only between bases of <type>:\n");
 	printf("             h: matching bases according to hairpin position [default]\n");
 	printf("             a: all matching bases\n");
 	printf("             x: behave like 'h' for XY pairs, and 'a' for the other bases\n");
-	printf("           just the ones that match according to the hairpin structure\n");
 	printf(" -Y        only enable base pairing between XY base pairs\n");
 	printf(" -n        No base pairing interaction at all\n");
 	printf(" -y <path> write random number generator seed to this file\n");
