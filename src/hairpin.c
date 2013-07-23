@@ -268,6 +268,8 @@ static void printUsage(void)
 							BASE_PAIRING_FILE_SUFFIX);
 	printf("                     the distance file gets suffix: '%s'\n",
 							DISTANCE_BASE_PAIRING_FILE_SUFFIX);
+	printf("                     the energy file gets suffix: '%s'\n",
+							ENERGY_BASE_PAIRING_FILE_SUFFIX);
 	printf(" -k        also measure the Kinetic temperature\n");
 	printf("             output: the data filename (see -D) with suffix: '%s'\n",
 							TEMPERATURE_FILE_SUFFIX);
