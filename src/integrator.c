@@ -15,49 +15,6 @@ __inline__ void setIntegratorTimeStep(double dt)
 }
 
 
-/* ===== TEMPERATURE TASK ===== */
-typedef struct {
-	TemperatureTable table;
-	/* Index of the next entry in the table that still needs to 
-	 * executed. */
-	int index;
-} TemperatureState;
-
-static TaskSignal temperatureTaskTick(void *state)
-{
-	TemperatureState *ts = (TemperatureState*) state;
-	if (ts->index >= ts->table.numSetpoints)
-		return TASK_OK;
-
-	TemperatureSetpoint setpoint = ts->table.setpoints[ts->index];
-	if (setpoint.time < getTime())
-		return TASK_OK;
-
-	setHeatBathTemperature(setpoint.temperature);
-	ts->index++;
-
-	return TASK_OK;
-}
-
-Task makeTemperatureTask(TemperatureTable table)
-{
-	Task task;
-	TemperatureState *state = malloc(sizeof(*state));
-	state->table = table;
-	state->index = 0;
-
-	task.initialData = state;
-	task.start = &passPointer;
-	task.tick  = &temperatureTaskTick;
-	task.stop  = &freePointer;
-
-	return task;
-}
-
-
-
-/* ===== INTEGRATOR ===== */
-
 static void thermostatHelper(Particle *p, void *data)
 {
 	double lambda = *(double*) data;

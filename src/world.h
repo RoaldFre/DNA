@@ -108,6 +108,24 @@ typedef struct world
 void setHeatBathTemperature(double temperature);
 double getHeatBathTemperature(void);
 
+typedef struct {
+	/* Set the heat bath temperature to <temperature> at time <time>. */
+	double time;
+	double temperature;
+} TemperatureSetpoint;
+
+typedef struct {
+	/* <setpoints> is a list that is SORTED ON INCREASING TIME and 
+	 * consists in total of <numSetpoints> temperature setpoints. The 
+	 * pointer must remain valid throughout the simulation run. */
+	TemperatureSetpoint* setpoints;
+	int numSetpoints;
+} TemperatureTable;
+
+Task makeTemperatureTask(TemperatureTable table);
+
+
+
 extern World world;
 
 bool allocWorld(int numStrands, double worldSize);
