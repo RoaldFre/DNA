@@ -103,6 +103,8 @@ typedef struct world
 } World;
 
 
+/* Sets the heat bath temperature. This automatically calls syncPhysics() 
+ * afterwards. */
 void setHeatBathTemperature(double temperature);
 double getHeatBathTemperature(void);
 

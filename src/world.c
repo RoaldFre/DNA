@@ -18,6 +18,7 @@ void setHeatBathTemperature(double temperature)
 		die("Trying to set a negative temperature!\n");
 
 	heatBathTemperature = temperature;
+	syncPhysics();
 }
 double getHeatBathTemperature(void)
 {
