@@ -1,5 +1,6 @@
 #include "monteCarlo.h"
 #include "spgrid.h"
+#include "physics.h"
 #include "render.h"
 #include <string.h>
 

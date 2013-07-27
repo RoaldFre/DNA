@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "integrator.h"
 #include "spgrid.h"
+#include "physics.h"
 
 static double timeStep;
 
@@ -265,7 +266,13 @@ static void langevinBBKhelper(Particle *p, void *data)
 /* BBK integrator for Langevin dynamics.
  * See http://localscf.com/LangevinDynamics.aspx 
  * (relocated to http://localscf.com/localscf.com/LangevinDynamics.aspx.html atm)
- * Warning, only accurate up to first order! */
+ * Warning, only accurate up to first order! (for harmonic 
+ * oscillator), see:
+ * Wang, Wei, and Robert D. Skeel. "Analysis of a few numerical integration 
+ * methods for the Langevin equation." Molecular Physics 101.14 (2003): 
+ * 2149-2156.
+ *
+ * Approximation used: gamma*dt << 1 */
 static void langevinBBK(LangevinSettings *settings)
 {
 	calculateForces();
