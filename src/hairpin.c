@@ -770,7 +770,7 @@ static void determineIdealNumberOfBoxes(void)
 
 	renderConf.numBoxes = numBoxes;
 	printf("Worldsize: %e\nNumber of boxes: %d\nBox volume: %e\n",
-			worldSize, numBoxes, worldSize / CUBE(numBoxes));
+			worldSize, numBoxes, CUBE(worldSize / numBoxes));
 }
 
 int main(int argc, char **argv)
