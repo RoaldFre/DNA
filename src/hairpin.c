@@ -714,7 +714,8 @@ static void parseArguments(int argc, char **argv)
 
 static void determineIdealNumberOfBoxes(void)
 {
-	double defaultWorldSize = ((strlen(baseSequence) + 2)
+	int Nmonomers = strlen(baseSequence);
+	double defaultWorldSize = ((Nmonomers  + 2)
 				* DEF_MONOMER_WORLDSIZE_FACTOR) * ANGSTROM;
 	if (worldSize < 0)
 		worldSize = defaultWorldSize;
@@ -768,6 +769,8 @@ static void determineIdealNumberOfBoxes(void)
 			interactionSettings.truncationLen / ANGSTROM);
 
 	renderConf.numBoxes = numBoxes;
+	printf("Worldsize: %e\nNumber of boxes: %d\nBox volume: %e\n",
+			worldSize, numBoxes, worldSize / CUBE(numBoxes));
 }
 
 int main(int argc, char **argv)
