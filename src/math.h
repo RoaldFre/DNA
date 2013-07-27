@@ -124,6 +124,12 @@ static __inline__ bool equalsEpsilon(double a, double b, double eps)
 
 	return fabs((a-b) / (a+b)) < eps;
 }
+/* Check if a is strictly smaller than b, up to some small error for 
+ * equality. */
+static __inline__ bool smallerThanEpsilon(double a, double b, double eps)
+{
+	return a < b && !equalsEpsilon(a, b, eps);
+}
 
 /* Check for equality of vectors (up to some small error). */
 static __inline__ bool vecEqualsEpsilon(Vec3 a, Vec3 b, double eps)
