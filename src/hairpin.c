@@ -762,7 +762,9 @@ static void determineIdealNumberOfBoxes(void)
 				numBoxes);
 	}
 
-	if (worldSize / numBoxes < interactionSettings.truncationLen)
+	if (smallerThanEpsilon(worldSize / numBoxes,
+	                       interactionSettings.truncationLen,
+			       1e-5))
 		die("The boxsize (%le) is smaller than the potential "
 			"truncation radius (%le)!\n",
 			worldSize / numBoxes / ANGSTROM,
