@@ -89,7 +89,6 @@ void allocStrand(Strand *s, int numMonomers) {
 	s->Ps = &s->all[2 * numMonomers];
 
 	s->numMonomers = numMonomers;
-	return true;
 }
 
 
