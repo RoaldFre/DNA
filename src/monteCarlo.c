@@ -188,6 +188,12 @@ static void generateAndApplyPivotMove(Strand *s, int *indices, int numIndices,
 	}
 }
 
+/* NOTE: This update rule probably screws up true reversibility over time, 
+ * so strictly speaking, the sampling can be off. Nonetheless, the results 
+ * should (especially after the parameters have converged to a fixed value) 
+ * be good enough to generate independent inital conditions (especially if 
+ * they are followed by an extra short relaxation phase with the Lanevin 
+ * (or Verlet) molecular dynamics integrator). */
 static void updatePivotParameters(double acc, double targetAcc, void *data)
 {
 	PivotConfig *cfg = (PivotConfig *) data;
@@ -284,6 +290,12 @@ static void undoJiggleMove(void *data)
 	UNUSED(data);
 	forEveryParticle(&undoJiggleWorker);
 }
+/* NOTE: This update rule probably screws up true reversibility over time, 
+ * so strictly speaking, the sampling can be off. Nonetheless, the results 
+ * should (especially after the parameters have converged to a fixed value) 
+ * be good enough to generate independent inital conditions (especially if 
+ * they are followed by an extra short relaxation phase with the Lanevin 
+ * (or Verlet) molecular dynamics integrator). */
 static void updateJiggleParameters(double acc, double targetAcc, void *data)
 {
 	double *h = (double*) data;
@@ -339,6 +351,12 @@ static void jiggleSomeMove(void *data)
 	for (int i = 0; i < jsc->n; i++)
 		jiggleWorker(&jsc->s->all[indices[i]], &jsc->h);
 }
+/* NOTE: This update rule probably screws up true reversibility over time, 
+ * so strictly speaking, the sampling can be off. Nonetheless, the results 
+ * should (especially after the parameters have converged to a fixed value) 
+ * be good enough to generate independent inital conditions (especially if 
+ * they are followed by an extra short relaxation phase with the Lanevin 
+ * (or Verlet) molecular dynamics integrator). */
 static void updateJiggleSomeParameters(double acc, double targetAcc, void *data)
 {
 	JiggleSomeConfig *jsc = (JiggleSomeConfig*) data;
