@@ -128,8 +128,12 @@ Task makeTemperatureTask(TemperatureTable table);
 
 extern World world;
 
-bool allocWorld(int numStrands, double worldSize);
-bool allocStrand(Strand *s, int numMonomers);
+/* Allocates the world to hold the given number of strands, and sets this 
+ * value in global world variable.
+ * Precondition: allocWorld must not already have been called (unless 
+ * followed by a freeWorld). */
+void allocWorld(int numStrands, double worldSize);
+void allocStrand(Strand *s, int numMonomers);
 /* Allocates the strand and fills it up with the given base sequence. The 
  * strand will be <3'-sequence-5'>, ie the 3' matches the first char of 
  * the string, and the last char of the sequence is the 5' end */

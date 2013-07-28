@@ -9,12 +9,11 @@
 
 /* Allocates a grid with 'numBoxes' boxes in each dimension.
  * Precondition: grid can't already be allocated (unless it was freed 
- * afterwards).
- * Returns true on succes, false on failure. */
-bool allocGrid(int numBoxes);
+ * afterwards). */
+void allocGrid(int numBoxes);
 
 /* Allocates a grid (cfr allocGrid()) and adds every particle of the world. */
-bool initGrid(int numBoxes);
+void initGrid(int numBoxes);
 
 /* All particles are removed from the grid and the memory gets freed. */
 void freeGrid(void);

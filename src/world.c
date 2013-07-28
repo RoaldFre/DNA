@@ -67,28 +67,21 @@ Task makeTemperatureTask(TemperatureTable table)
 
 
 
-/* Allocates the world to hold the given number of strands, and sets this 
- * value in world.
- * Precondition: allocWorld must not already have been called (unless 
- * followed by a freeWorld). */
-bool allocWorld(int numStrands, double worldSize)
+void allocWorld(int numStrands, double worldSize)
 {
 	assert(world.strands == NULL);
 	world.strands = calloc(numStrands, sizeof(*world.strands));
 	if (world.strands == NULL)
-		return false;
+		die("Couldn't allocate memory for the world!\n");
 	world.worldSize = worldSize;
 	world.numStrands = numStrands;
-	return true;
 }
 
-/* Returns true on success, false on failure. In the case of failure, 
- * nothing will be allocated */
-bool allocStrand(Strand *s, int numMonomers) {
+void allocStrand(Strand *s, int numMonomers) {
 	/* Allocate one big continuous list */
 	s->all = calloc(3 * numMonomers, sizeof(*s->all));
 	if (s->all == NULL)
-		return false;
+		die("Couldn't allocate memory for a strand!\n");
 	
 	/* Split the list in three sublists */
 	s->Ss = &s->all[0];
@@ -96,7 +89,6 @@ bool allocStrand(Strand *s, int numMonomers) {
 	s->Ps = &s->all[2 * numMonomers];
 
 	s->numMonomers = numMonomers;
-	return true;
 }
 
 

@@ -113,12 +113,12 @@ static void removeNonOccupiedBox(Box *emptyBox)
 }
 
 
-bool allocGrid(int numBoxes)
+void allocGrid(int numBoxes)
 {
 	assert(grid == NULL && nb == 0);
 	grid = calloc(numBoxes * numBoxes * numBoxes, sizeof(*grid));
 	if (grid == NULL)
-		return false;
+		die("Couldn't allocate memory for space partitioning grid!\n");
 	nb = numBoxes;
 
 	/* set the prev/nextXYZ pointers */
@@ -136,15 +136,12 @@ bool allocGrid(int numBoxes)
 	}
 
 	assert(spgridSanityCheck(true, false));
-	return true;
 }
 
-bool initGrid(int numBoxes)
+void initGrid(int numBoxes)
 {
-	if (!allocGrid(numBoxes))
-		return false;
+	allocGrid(numBoxes);
 	forEveryParticle(&addToGrid);
-	return true;
 }
 
 void freeGrid()
