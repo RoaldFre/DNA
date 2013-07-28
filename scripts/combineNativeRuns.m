@@ -6,13 +6,16 @@
 % column. It should be idential for all data sets, and it is returned 
 % separately (and only once).
 % If there is only one remaining column in the data file, the returned combined matrix is 2D instead of 3D.
+% The optional 'columns' argument should contain a list of column indices 
+% that should be extracted instead of extracting the full data. Index 1 
+% means the first data column (so excluding the time column in the 
+% indexing).
 %
-% function [time, combinedData] = combineNativeRuns(filesglob, singlePrecision);
-function [time, combinedData] = combineNativeRuns(filesglob, singlePrecision);
+% function [time, combinedData] = combineNativeRuns(filesglob, singlePrecision, columns);
+function [time, combinedData, files] = combineNativeRuns(filesglob, singlePrecision, columns);
 
-if nargin < 2
-	singlePrecision = false;
-end
+if nargin < 2; singlePrecision = false; end
+allColumns = nargin < 3;
 
 files = glob(filesglob);
 if (isempty(files))
@@ -25,14 +28,20 @@ nRuns = numel(files);
 load(files{1});
 time = data(:, 1);
 nSamples = numel(time);
-nColumns = size(data,2) - 1;
+
+if allColumns
+	nColumns = size(data,2) - 1;
+	columns = 1:nColumns;
+else
+	nColumns = numel(columns);
+end
 
 if singlePrecision
 	precisionString = "single";
 else
 	precisionString = "double";
 end
-combinedData = zeros(nRuns, nColumns, nSamples, precisionString);
+combinedData = zeros(nRuns, nSamples, nColumns, precisionString);
 
 moreWasOn = page_screen_output;
 more off
@@ -41,9 +50,10 @@ for run = 1:nRuns
 	load(files{run});
 	thisTime = data(:, 1);
 	if not(isequal(time, thisTime))
+		printf("\nError reading file %s\n", files{run})
 		error "Reading datasets with different number of samples or time samples!"
 	end
-	combinedData(run,:,:) = data(:, 2:end);
+	combinedData(run,:,:) = data(:, 1 + columns);
 end
 printf("\n");
 if moreWasOn
