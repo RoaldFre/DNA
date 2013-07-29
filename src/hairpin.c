@@ -712,6 +712,12 @@ static void parseArguments(int argc, char **argv)
 						* integratorConf.timeStep;
 }
 
+/* Ideal number of boxes: as many as we can cram into the world, without 
+ * getting the box size smaller than the truncation distance. This may not 
+ * be beneficial with large world sizes (necessary for long strands), as 
+ * the memory complexity scales roughly as N^3 (assuming world size scales 
+ * as N). Nonetheless, we only visit occupied boxes, so time complexity is 
+ * linear for looping over pairs. */
 static void determineIdealNumberOfBoxes(void)
 {
 	int Nmonomers = strlen(baseSequence);
@@ -750,15 +756,11 @@ static void determineIdealNumberOfBoxes(void)
 		worldSize = 2.0 * interactionSettings.truncationLen;
 		numBoxes = 1; /* No space partitioning */
 	} else if (numBoxes == -1) {
-		/* Automatically determine ideal number of boxes.
-		 * Formula is fitted for N between 100 and 1000 on a Core2 
-		 * Duo E8500.
-		 * (+ 0.5 for correct rounding to int) */
-		int ideal = 0.5 + 2.73 * pow(strlen(baseSequence), 0.446);
-		numBoxes = MIN(ideal, worldSize / interactionSettings.truncationLen);
+		/* Automatically determine ideal number of boxes. */
+		numBoxes = worldSize / interactionSettings.truncationLen;
 		if (numBoxes < 1)
 			numBoxes = 1;
-		printf("Number of boxes per dimension: %d\n",
+		printf("Automatically determined number of boxes per dimension: %d\n",
 				numBoxes);
 	}
 
