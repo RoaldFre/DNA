@@ -80,7 +80,9 @@ for i = 1 : numClusters
 	%[xOffsets yOffsets]
 end
 
-opt = opts{1}; % TODO QUICK HACK
+% TODO QUICK HACK
+opt = opts{1}; 
+opt.Ns = Ns;
 
 clustNs = zeros(numClusters, 1);
 for i = 1 : numClusters
