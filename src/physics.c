@@ -699,7 +699,7 @@ static void initBasePairInfoLUT(void) {
 
 	bpiXY.coupling = BASE_PAIR_COUPLING_X_Y;
 	bpiXY.distance2 = SQUARE(BASE_PAIR_DISTANCE_X_Y);
-	bpiGC.onlyRepulsive = false;
+	bpiXY.onlyRepulsive = false;
 
 	/* Initialize to null */
 	for (int b1 = 0; b1 < NUM_BASE_TYPES; b1++)
@@ -821,7 +821,7 @@ static void FbasePair(Particle *p1, Particle *p2)
 	
 	Vec3 rVec = nearestImageVector(p1->pos, p2->pos);
 	double r = length(rVec);
-	if (   (r > interactions.truncationLen)
+	if (   (r >= interactions.truncationLen)
 	    || (bpi.onlyRepulsive && SQUARE(r) >= bpi.distance2))
 		return; /* Too far away */
 
