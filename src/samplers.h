@@ -164,6 +164,8 @@ Sampler hairpinStateSampler(HairpinStateSamplerConfig *hssc);
  * and the velocity |v| of (the COM of) the monomer, as well as an estimate 
  * of the 'friction' on the monomer equal to (F dot v)/(|F|^2).  */
 Sampler forceVelFricSampler(Strand *strand);
+/* Analogous, but for the backbone phosphates only */
+Sampler forceVelFricPSampler(Strand *strand);
 
 /* A trivial sampler that does nothing. Useful for debugging purposes. */
 Sampler trivialSampler(void);

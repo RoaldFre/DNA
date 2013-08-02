@@ -975,6 +975,41 @@ Sampler forceVelFricSampler(Strand *strand)
 	return sampler;
 }
 
+/* similar, but sample on the backbone phosphates */
+static SamplerSignal forceVelFricPSample(SamplerData *sd, void *state)
+{
+	UNUSED(sd);
+	ForceVelFricConf *fvfc = (ForceVelFricConf*) state;
+	Strand *s = fvfc->strand;
+
+	printf("%le", getTime());
+
+	for (int i = 0; i < s->numMonomers; i++) {
+		Vec3 F = s->Ps[i].F;
+		Vec3 v = s->Ps[i].vel;
+		printf("\t%le %le %le", 
+				length(F), length(v), dot(F,v)/length2(F));
+	}
+	printf("\n");
+
+	return SAMPLER_OK;
+}
+
+Sampler forceVelFricPSampler(Strand *strand)
+{
+	ForceVelFricConf *fvfc = malloc(sizeof(*fvfc));
+	memset(fvfc, 0, sizeof(*fvfc));
+	fvfc->strand = strand;
+
+	Sampler sampler;
+	sampler.samplerConf = fvfc;
+	sampler.start  = &passConf;
+	sampler.sample = &forceVelFricPSample;
+	sampler.stop   = &freeState;
+	sampler.header = "# <time> {for the phosphate of each monomer: <force |F|> <velocity |v|> <(F dot v) / |F|^2>}\n";
+	return sampler;
+}
+
 
 
 
