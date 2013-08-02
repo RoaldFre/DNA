@@ -24,6 +24,7 @@
 #define TEMPERATURE_FILE_SUFFIX "_temperature"
 #define GYRATION_FILE_SUFFIX "_gyrationRadius"
 #define FORCE_VEL_FRIC_FILE_SUFFIX "_forceVelFric"
+#define FORCE_VEL_FRIC_P_FILE_SUFFIX "_forceVelFricP"
 #define ZIPPED_STATE_FILE_SUFFIX "_zippedState"
 
 /* Defaults */
@@ -277,7 +278,9 @@ static void printUsage(void)
 	printf("             output: the data filename (see -D) with suffix: '%s'\n",
 							GYRATION_FILE_SUFFIX);
 	printf(" -J        also measure the force, velocity, and friction for each monomer of the strand\n");
-	printf("             output: the data filename (see -D) with suffix: '%s'\n",
+	printf("             output: the data filename (see -D) with suffix: '%s' for the monomers\n",
+							FORCE_VEL_FRIC_FILE_SUFFIX);
+	printf("                     the data filename (see -D) with suffix: '%s' for the backbone phosphates\n",
 							FORCE_VEL_FRIC_FILE_SUFFIX);
 	printf("\n");
 	printf("For more info and default values of params below: see code :P\n");
@@ -990,6 +993,14 @@ int main(int argc, char **argv)
 	fvfMeas.measConf = additionalMeasConf; /* struct copy */
 	fvfMeas.measConf.measureFile = fvfFile;
 	Task forceVelFricTask = measurementTask(&fvfMeas);
+	/* For the backbone phosphate */
+	char *fvfPFile = asprintfOrDie("%s%s", filenameBase,
+						FORCE_VEL_FRIC_P_FILE_SUFFIX);
+	Measurement fvfPMeas;
+	fvfPMeas.sampler = forceVelFricPSampler(&world.strands[0]);
+	fvfPMeas.measConf = additionalMeasConf; /* struct copy */
+	fvfPMeas.measConf.measureFile = fvfPFile;
+	Task forceVelFricPTask = measurementTask(&fvfPMeas);
 
 	/* Hairpin task */
 	Measurement hairpin;
@@ -1028,7 +1039,7 @@ int main(int argc, char **argv)
 		integratorTask = makeMonteCarloTask(&monteCarloConfig);
 
 	/* Combined task */
-	Task *tasks[11];
+	Task *tasks[12];
 	tasks[0]  = (render ? &renderTask : NULL);
 	tasks[1]  = (noDynamics ? NULL : &integratorTask);
 	tasks[2]  = &verboseTask;
@@ -1040,7 +1051,8 @@ int main(int argc, char **argv)
 	tasks[8]  = (measureTemperature ? &temperatureTask : NULL);
 	tasks[9]  = (measureGyrationRadius ? &gyrationRadiusTask : NULL);
 	tasks[10] = (measureForceVelFric ? &forceVelFricTask : NULL);
-	Task task = sequence(tasks, 11);
+	tasks[11] = (measureForceVelFric ? &forceVelFricPTask : NULL);
+	Task task = sequence(tasks, 12);
 
 	registerInteractions(interactionSettings);
 
@@ -1057,6 +1069,7 @@ int main(int argc, char **argv)
 	free(temperatureFile);
 	free(gyradFile);
 	free(fvfFile);
+	free(fvfPFile);
 	free(zippedStateFile);
 	free(measHeader);
 
