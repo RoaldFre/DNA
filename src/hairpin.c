@@ -25,6 +25,8 @@
 #define GYRATION_FILE_SUFFIX "_gyrationRadius"
 #define FORCE_VEL_FRIC_FILE_SUFFIX "_forceVelFric"
 #define FORCE_VEL_FRIC_P_FILE_SUFFIX "_forceVelFricP"
+#define FORCE_VEL_P_FILE_SUFFIX "_forceVelP"
+#define FORCE_VEL_S_FILE_SUFFIX "_forceVelS"
 #define ZIPPED_STATE_FILE_SUFFIX "_zippedState"
 
 /* Defaults */
@@ -281,7 +283,11 @@ static void printUsage(void)
 	printf("             output: the data filename (see -D) with suffix: '%s' for the monomers\n",
 							FORCE_VEL_FRIC_FILE_SUFFIX);
 	printf("                     the data filename (see -D) with suffix: '%s' for the backbone phosphates\n",
-							FORCE_VEL_FRIC_FILE_SUFFIX);
+							FORCE_VEL_FRIC_P_FILE_SUFFIX);
+	printf("                     the data filename (see -D) with suffix: '%s' for the phosphates (relative to backbone)\n",
+							FORCE_VEL_P_FILE_SUFFIX);
+	printf("                     the data filename (see -D) with suffix: '%s' for the sugars (relative to backbone)\n",
+							FORCE_VEL_S_FILE_SUFFIX);
 	printf("\n");
 	printf("For more info and default values of params below: see code :P\n");
 	//TODO parameter names are a mess
@@ -1001,6 +1007,22 @@ int main(int argc, char **argv)
 	fvfPMeas.measConf = additionalMeasConf; /* struct copy */
 	fvfPMeas.measConf.measureFile = fvfPFile;
 	Task forceVelFricPTask = measurementTask(&fvfPMeas);
+	/* For the phosphates relative to backbone */
+	char *fvPFile = asprintfOrDie("%s%s", filenameBase,
+						FORCE_VEL_P_FILE_SUFFIX);
+	Measurement fvPMeas;
+	fvPMeas.sampler = forceVelPSampler(&world.strands[0]);
+	fvPMeas.measConf = additionalMeasConf; /* struct copy */
+	fvPMeas.measConf.measureFile = fvPFile;
+	Task forceVelPTask = measurementTask(&fvPMeas);
+	/* For the sugars relative to backbone */
+	char *fvSFile = asprintfOrDie("%s%s", filenameBase,
+						FORCE_VEL_S_FILE_SUFFIX);
+	Measurement fvSMeas;
+	fvSMeas.sampler = forceVelSSampler(&world.strands[0]);
+	fvSMeas.measConf = additionalMeasConf; /* struct copy */
+	fvSMeas.measConf.measureFile = fvSFile;
+	Task forceVelSTask = measurementTask(&fvSMeas);
 
 	/* Hairpin task */
 	Measurement hairpin;
@@ -1039,7 +1061,7 @@ int main(int argc, char **argv)
 		integratorTask = makeMonteCarloTask(&monteCarloConfig);
 
 	/* Combined task */
-	Task *tasks[12];
+	Task *tasks[14];
 	tasks[0]  = (render ? &renderTask : NULL);
 	tasks[1]  = (noDynamics ? NULL : &integratorTask);
 	tasks[2]  = &verboseTask;
@@ -1052,7 +1074,9 @@ int main(int argc, char **argv)
 	tasks[9]  = (measureGyrationRadius ? &gyrationRadiusTask : NULL);
 	tasks[10] = (measureForceVelFric ? &forceVelFricTask : NULL);
 	tasks[11] = (measureForceVelFric ? &forceVelFricPTask : NULL);
-	Task task = sequence(tasks, 12);
+	tasks[12] = (measureForceVelFric ? &forceVelPTask : NULL);
+	tasks[13] = (measureForceVelFric ? &forceVelSTask : NULL);
+	Task task = sequence(tasks, 14);
 
 	registerInteractions(interactionSettings);
 
@@ -1070,6 +1094,8 @@ int main(int argc, char **argv)
 	free(gyradFile);
 	free(fvfFile);
 	free(fvfPFile);
+	free(fvPFile);
+	free(fvSFile);
 	free(zippedStateFile);
 	free(measHeader);
 
