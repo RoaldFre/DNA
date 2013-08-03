@@ -166,6 +166,12 @@ Sampler hairpinStateSampler(HairpinStateSamplerConfig *hssc);
 Sampler forceVelFricSampler(Strand *strand);
 /* Analogous, but for the backbone phosphates only */
 Sampler forceVelFricPSampler(Strand *strand);
+/* Dump force and velocity information for each phosphate (except the 
+ * last), relative to the backbone */
+Sampler forceVelPSampler(Strand *strand);
+/* Dump force and velocity information for each sugar (except the first), 
+ * relative to the backbone and sugar-base direction */
+Sampler forceVelSSampler(Strand *strand);
 
 /* A trivial sampler that does nothing. Useful for debugging purposes. */
 Sampler trivialSampler(void);

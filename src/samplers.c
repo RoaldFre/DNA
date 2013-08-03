@@ -959,7 +959,6 @@ static SamplerSignal forceVelFricSample(SamplerData *sd, void *state)
 
 	return SAMPLER_OK;
 }
-
 Sampler forceVelFricSampler(Strand *strand)
 {
 	ForceVelFricConf *fvfc = malloc(sizeof(*fvfc));
@@ -994,7 +993,6 @@ static SamplerSignal forceVelFricPSample(SamplerData *sd, void *state)
 
 	return SAMPLER_OK;
 }
-
 Sampler forceVelFricPSampler(Strand *strand)
 {
 	ForceVelFricConf *fvfc = malloc(sizeof(*fvfc));
@@ -1007,6 +1005,109 @@ Sampler forceVelFricPSampler(Strand *strand)
 	sampler.sample = &forceVelFricPSample;
 	sampler.stop   = &freeState;
 	sampler.header = "# <time> {for the phosphate of each monomer: <force |F|> <velocity |v|> <(F dot v) / |F|^2>}\n";
+	return sampler;
+}
+
+/* FORCE VELOCITY SAMPLER OF PHOSPHATE RELATIVE TO BACKBONE */
+static SamplerSignal forceVelPSample(SamplerData *sd, void *state)
+{
+	UNUSED(sd);
+	ForceVelFricConf *fvfc = (ForceVelFricConf*) state;
+	Strand *s = fvfc->strand;
+
+	printf("%le", getTime());
+
+	for (int i = 0; i < s->numMonomers - 1; i++) {
+		Vec3 F = s->Ps[i].F;
+		Vec3 v = s->Ps[i].vel;
+		Vec3 d = nearestImageUnitVector(s->Ss[i].pos, s->Ss[i+1].pos);
+		double Fpara = dot(F, d);
+		double vpara = dot(v, d);
+		double Fperp = length(sub(F, scale(d, Fpara)));
+		double vperp = length(sub(v, scale(d, vpara)));
+		printf("\t%le %le %le %le", Fpara, Fperp, vpara, vperp);
+
+		assert(equalsEpsilon(length2(F), SQUARE(Fpara) + SQUARE(Fperp), 1e-5));
+		assert(equalsEpsilon(length2(v), SQUARE(vpara) + SQUARE(vperp), 1e-5));
+	}
+	printf("\n");
+
+	return SAMPLER_OK;
+}
+Sampler forceVelPSampler(Strand *strand)
+{
+	ForceVelFricConf *fvfc = malloc(sizeof(*fvfc));
+	memset(fvfc, 0, sizeof(*fvfc));
+	fvfc->strand = strand;
+
+	Sampler sampler;
+	sampler.samplerConf = fvfc;
+	sampler.start  = &passConf;
+	sampler.sample = &forceVelPSample;
+	sampler.stop   = &freeState;
+	sampler.header = "#  F_para : component of force parallel to the backbone\n"
+	                 "# |F_perp|: component of force perpendicular to the backbone\n"
+	                 "#  v_para : component of velocity parallel to the backbone\n"
+	                 "# |v_perp|: component of velocity perpendicular to the backbone\n"
+	                 "# The direction of the backbone is defined as the vector linking the surrounding sugars of the phosphate, in the direction of increasing monomer number.\n"
+	                 "# This means that the last monomer has no data (there is no sugar beyond its phosphate)\n"
+	                 "# <time> {for the phosphate of each monomer except the last: <F_para> <|F_perp|> <v_para> <|v_perp|>}\n";
+	return sampler;
+}
+
+/* FORCE VELOCITY SAMPLER OF SUGAR RELATIVE TO BACKBONE AND BASE */
+static SamplerSignal forceVelSSample(SamplerData *sd, void *state)
+{
+	UNUSED(sd);
+	ForceVelFricConf *fvfc = (ForceVelFricConf*) state;
+	Strand *s = fvfc->strand;
+
+	printf("%le", getTime());
+
+	for (int i = 1; i < s->numMonomers; i++) {
+		Vec3 F = s->Ps[i].F;
+		Vec3 v = s->Ps[i].vel;
+		Vec3 bb, base, perp;
+		bb = nearestImageUnitVector(s->Ss[i-1].pos, s->Ss[i].pos);
+		base = nearestImageVector(s->Ss[i].pos, s->Bs[i].pos);
+		base = normalize(sub(base, scale(bb, dot(base,bb))));
+		perp = cross(bb, base);
+
+		printf("\t%le %le %le %le %le %le",
+				dot(F, bb), dot(F, base), dot(F, perp),
+				dot(v, bb), dot(v, base), dot(v, perp));
+
+		assert(fabs(cosAngle(bb, base)) < 1e-5);
+		assert(fabs(cosAngle(bb, perp)) < 1e-5);
+		assert(fabs(cosAngle(perp, base)) < 1e-5);
+		assert(equalsEpsilon(length(bb), 1, 1e-5));
+		assert(equalsEpsilon(length(base), 1, 1e-5));
+		assert(equalsEpsilon(length(perp), 1, 1e-5));
+	}
+	printf("\n");
+
+	return SAMPLER_OK;
+}
+Sampler forceVelSSampler(Strand *strand)
+{
+	ForceVelFricConf *fvfc = malloc(sizeof(*fvfc));
+	memset(fvfc, 0, sizeof(*fvfc));
+	fvfc->strand = strand;
+
+	Sampler sampler;
+	sampler.samplerConf = fvfc;
+	sampler.start  = &passConf;
+	sampler.sample = &forceVelSSample;
+	sampler.stop   = &freeState;
+	sampler.header = "# F_bb:   component of force parallel to the backbone\n"
+	                 "# F_base: component of force perpendicular to the backbone in the direction of the base\n"
+	                 "# F_perp: component of force perpendicular to the backbone in the other perpendicular direction\n"
+	                 "# v_*: analogous for the velocity\n"
+	                 "# The 'bb' direction of the backbone is defined as the vector linking the surrounding phosphates of the sugar, in the direction of increasing monomer number.\n"
+	                 "# The 'base' direction perpendiculal to the backbone is defined as the component perpendicular to bb of the vector pointing from the sugar to its base.\n"
+	                 "# The third perpendicular direction is the cross product of 'bb' with 'base'.\n"
+	                 "# This means that the first monomer has no data (there is no phosphate before its sugar)\n"
+	                 "# <time> {for the sugar of each monomer except the first: <F_bb> <F_base> <F_perp> <v_bb> <v_base> <v_perp>}\n";
 	return sampler;
 }
 
