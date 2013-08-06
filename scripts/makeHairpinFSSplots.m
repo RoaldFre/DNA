@@ -29,6 +29,7 @@ opt.twoTimescales = false;
 opt.loglog = true;
 
 opt.bootstrapSamples = 15;
+opt.bootstrapSamples = 10;
 opt.simulatedAnnealing = false;
 %opt.bootstrapSamples = 5;
 %opt.simulatedAnnealing = true;
@@ -42,15 +43,21 @@ opt.guessEta = 1;
 opt.delta = delta;
 
 baseOpt = opt;
-
+basePlotopt = plotopt;
 
 for T = [10 30]
+    #BIT HACKY, but we need to get the temperature in the filename to discriminate the data sets...
+    plotopt = basePlotopt;
+    plotopt.resultFilePrefix = [plotopt.resultFilePrefix,'T',num2str(T)];
+
     for singleExponent = [false, true]
 
 	if T == 10
 		Ns = [5, 6, 7, 8, 10, 12, 14, 17, 20, 24, 28, 34, 40, 48];
+		%Ns = [5, 6, 7, 8, 10, 12, 14, 17, 20, 24, 28, 34, 40];
 	elseif T == 30
-		Ns = [5, 6, 7, 8, 10, 12, 14, 17, 20, 24, 28, 34, 40, 48, 57, 67, 80];
+		%Ns = [5, 6, 7, 8, 10, 12, 14, 17, 20, 24, 28, 34, 40, 48, 57, 67, 80];
+		Ns = [5, 6, 7, 8, 10, 12, 14, 17, 20, 24, 28, 34, 40, 48];
 	else
 		error "Unknown T"
 	end

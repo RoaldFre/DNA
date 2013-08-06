@@ -8,6 +8,7 @@ graphFilePrefixBase = 'state';
 
 plotopt.destDir = '../../thesis/latex/images/plots';
 plotopt.relImgDir = 'images/plots';
+plotopt.resultFilePrefix = 'results/state';
 plotopt.measurement = 'the number of bound base pairs';
 plotopt.quantity = '\nb';
 plotopt.delta = 1;
