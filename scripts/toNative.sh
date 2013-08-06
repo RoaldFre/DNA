@@ -12,36 +12,47 @@ fi
 # Ok, this is really really REALLY ugly, but it looks like sometimes octave 
 # gets stuck. So we spawn it off in the background, wait for a sufficiently 
 # long time and if it still hasn't completed yet -> kill it and try again.
-while true
+octave -q -p $scriptsdir --eval "toNative('$file')" &
+PID=$!
+
+sleep 1s
+
+while true # keep polling CPU usage
 do
-	#octave -q -p $scriptsdir --eval "toNative('$file')" &
-	octave-3.6.4 -q -p $scriptsdir --eval "toNative('$file')" &
-	PID=$!
-
-	sleep 1s
-
-	for sleeptime in 1s 2s 4s 8s 15s 30s 1m 2m 3m 4m 5m 10m
-	do
-		if ps -p $PID
-		then
-			#still running! Sleep some more.
-			sleep 1m
-		else
-			exit 0
-		fi
-	done
-
-	
-	if ps -p $PID
+	cpuPerMil=`ps --cumulative S h o 'cp' p $PID`
+	# I can't seem to get the total CPU time (including children [gzip]) in here ...
+	if [ -z "$cpuPerMil" ]
 	then
-		#still running! KILL, KILL, KILL!
+		echo "Exiting cleanly! :-)"
+		# We couldn't find octave, so it stopped cleanly!
+		exit 0
+	fi
+
+	#echo "Still running!"
+
+	# Still running! Check if we are actually using CPU 
+	# cycles, or if we are stuck
+	#echo "cpuPerMil: $cpuPerMil"
+	if [ $cpuPerMil -lt 5 ] # less than 0.5% cpu average usage (sufficiently low, because we can't detect child cpu usage!)
+	then
+		echo "Seems stuck! :-( KILLING!!!!!"
+		# Seems stuck: KILL, KILL, KILL!
 		kill $PID
+		echo "Sent SIGTERM, waiting..."
 		sleep 5s
 		kill -9 $PID
+		echo "Sent SIGKILL, waiting..."
 		sleep 5s
-		#next iteration in infinite loop
-	else
-		exit 0 # It stopped nicely after waiting for the last time!
+
+		echo "Recursive call to try again!"
+		# Call ourselves again, then exit cleanly
+		$scriptsdir/toNative.sh "$file"
+		#./$0 "$file"
+		exit 0
 	fi
+
+	#echo "Still running: sleeping for a bit"
+	#Sleep some more.
+	sleep 0.8s
 done
 
