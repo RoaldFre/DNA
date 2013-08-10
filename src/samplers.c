@@ -303,7 +303,7 @@ Sampler gyrationRadiusSampler(Strand *strand)
 
 
 
-/* HAIR PIN FORMATION */
+/* HAIRPIN FORMATION */
 /* Print (half of) the hairpin config (bound or unbound base matching 
  * pairs) and return the number of correctly bound base pairs. */
 static int dumpHairpinState(Strand *s, double energyThreshold)
@@ -609,7 +609,7 @@ Sampler hairpinFormationSampler(HairpinFormationSamplerConfig *hfc)
 
 
 
-/* HAIR PIN STATE */
+/* HAIRPIN STATE */
 static void* hairpinStateStart(SamplerData *sd, void *conf)
 {
 	UNUSED(sd);
@@ -673,7 +673,56 @@ Sampler hairpinStateSampler(HairpinStateSamplerConfig *hsc)
 
 
 
-/* HAIR PIN MELTING TEMPERATURE */
+/* HAIRPIN CONFIG SAMPLER */
+typedef struct {
+	Strand *s;
+	char *configFilePrefix;
+	double energyThreshold;
+	int maxPrevBound;
+} ConfigSamplerData;
+static SamplerSignal hairpinConfigSample(SamplerData *sd, void *state)
+{
+	UNUSED(sd);
+	ConfigSamplerData *csd = (ConfigSamplerData*) state;
+
+	int numBound = getCorrectlyBoundHairpinBasePairs(csd->s, 
+						csd->energyThreshold);
+	if (numBound <= csd->maxPrevBound)
+		return SAMPLER_OK;
+
+	csd->maxPrevBound = numBound;
+	char *configFile = asprintfOrDie("%s%d", csd->configFilePrefix, numBound);
+	writeWorld(configFile);
+	free(configFile);
+
+	printf("%d\t%le\n", numBound, getTime());
+
+	return SAMPLER_OK;
+}
+Sampler hairpinConfigSampler(HairpinConfigSamplerConfig *hcsc)
+{
+	Sampler sampler;
+	ConfigSamplerData *csd = malloc(sizeof(*csd));
+	csd->s = hcsc->s;
+	csd->energyThreshold = hcsc->energyThreshold;
+	csd->configFilePrefix = hcsc->configFilePrefix;
+	csd->maxPrevBound = 0;
+
+	sampler.samplerConf = csd;
+	sampler.start  = &passConf;
+	sampler.sample = &hairpinConfigSample;
+	sampler.stop   = &freeState;
+	sampler.header = "# Hairpin config measurement. This file holds "
+			"extra data that accompany the dumped world "
+			"configurations.\n"
+			"# <number of bound base pairs == config file suffix> <time>\n";
+	return sampler;
+}
+
+
+
+
+/* HAIRPIN MELTING TEMPERATURE */
 typedef struct {
 	enum {
 		START_RELAXATION,

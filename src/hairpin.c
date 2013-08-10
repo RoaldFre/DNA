@@ -27,6 +27,7 @@
 #define FORCE_VEL_FRIC_P_FILE_SUFFIX "_forceVelFricP"
 #define FORCE_VEL_P_FILE_SUFFIX "_forceVelP"
 #define FORCE_VEL_S_FILE_SUFFIX "_forceVelS"
+#define STATE_SUFFIX "_state"
 #define ZIPPED_STATE_FILE_SUFFIX "_zippedState"
 
 /* Defaults */
@@ -106,6 +107,10 @@ static HairpinStateSamplerConfig hsc =
 	.energyThreshold = -0.1 * EPSILON,
 	.temperature = -1.0,
 	.dumpDistances = false,
+};
+static HairpinConfigSamplerConfig hcsc =
+{
+	.energyThreshold = -0.1 * EPSILON,
 };
 static enum {
 	HAIRPIN_MELTING_TEMPERATURE,
@@ -1024,6 +1029,17 @@ int main(int argc, char **argv)
 	fvSMeas.measConf.measureFile = fvSFile;
 	Task forceVelSTask = measurementTask(&fvSMeas);
 
+	/* Hairpin config task */
+	char *stateFile = asprintfOrDie("%s%s", filenameBase,
+						STATE_SUFFIX);
+	hcsc.configFilePrefix = stateFile;
+	hcsc.s = &world.strands[0];
+	Measurement stateMeas;
+	stateMeas.sampler = hairpinConfigSampler(&hcsc);
+	stateMeas.measConf = additionalMeasConf; /* struct copy */
+	stateMeas.measConf.measureFile = stateFile;
+	Task stateTask = measurementTask(&stateMeas);
+
 	/* Hairpin task */
 	Measurement hairpin;
 	char *zippedStateFile = NULL;
@@ -1061,7 +1077,7 @@ int main(int argc, char **argv)
 		integratorTask = makeMonteCarloTask(&monteCarloConfig);
 
 	/* Combined task */
-	Task *tasks[14];
+	Task *tasks[15];
 	tasks[0]  = (render ? &renderTask : NULL);
 	tasks[1]  = (noDynamics ? NULL : &integratorTask);
 	tasks[2]  = &verboseTask;
@@ -1076,7 +1092,8 @@ int main(int argc, char **argv)
 	tasks[11] = (measureForceVelFric ? &forceVelFricPTask : NULL);
 	tasks[12] = (measureForceVelFric ? &forceVelPTask : NULL);
 	tasks[13] = (measureForceVelFric ? &forceVelSTask : NULL);
-	Task task = sequence(tasks, 14);
+	tasks[14] = (hairpinMeasurementType == HAIRPIN_STATE ? &stateTask : NULL);
+	Task task = sequence(tasks, 15);
 
 	registerInteractions(interactionSettings);
 
@@ -1096,6 +1113,7 @@ int main(int argc, char **argv)
 	free(fvfPFile);
 	free(fvPFile);
 	free(fvSFile);
+	free(stateFile);
 	free(zippedStateFile);
 	free(measHeader);
 

@@ -160,6 +160,18 @@ typedef struct {
 
 Sampler hairpinStateSampler(HairpinStateSamplerConfig *hssc);
 
+/* This sampler dumps the configuration of the world each time it detects 
+ * that the number of bound monomers has increased. The output file is the 
+ * given prefix with as suffix the number of bound base pairs of the 
+ * configuration. */
+typedef struct {
+	Strand *s;
+	double energyThreshold;
+	char *configFilePrefix; /* Pointer must remain valid during 
+				   measurement! */
+} HairpinConfigSamplerConfig;
+Sampler hairpinConfigSampler(HairpinConfigSamplerConfig *hcsc);
+
 /* A sampler that, for each monomer, dumps the magnitude of the force |F| 
  * and the velocity |v| of (the COM of) the monomer, as well as an estimate 
  * of the 'friction' on the monomer equal to (F dot v)/(|F|^2).  */
