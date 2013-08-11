@@ -170,6 +170,7 @@ static InteractionSettings interactionSettings = {
 	.enableCoulomb	= true,
 	.mutuallyExclusivePairForces = true,
 	.onlyXYbasePairing = false,
+	.basePairFactor = 1.0,
 	.basePairInteraction = BASE_PAIR_HAIRPIN,
 	.saltConcentration   = DEF_SALT_CONCENTRATION,
 	.truncationLen       = DEF_TRUNCATION_LENGTH * ANGSTROM,
@@ -213,7 +214,7 @@ static void printUsage(void)
 	printf("             a: all matching bases\n");
 	printf("             x: behave like 'h' for XY pairs, and 'a' for the other bases\n");
 	printf(" -Y        only enable base pairing between XY base pairs\n");
-	printf(" -o        disable dihedral interaction\n");
+	printf(" -o <fact> disable dihedral interaction and modify base pairing interaction by the given factor\n");
 	printf(" -n        No base pairing interaction at all\n");
 	printf(" -y <path> write random number generator seed to this file\n");
 	printf(" -z <path> read random number generator seed from this file\n");
@@ -341,7 +342,7 @@ static void parseArguments(int argc, char **argv)
 	 * [All letters have been used >_<] */
 	/* TODO rework option system to something sane. Long options? Read 
 	 * and parse config file? */
-	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yoj:ny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:eu:E:pkqJhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
+	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yo:j:ny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:eu:E:pkqJhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -381,7 +382,9 @@ static void parseArguments(int argc, char **argv)
 			break;
 		case 'o':
 			interactionSettings.enableDihedral = false;
-			printf("o: Disabling dihedral interation\n");
+			interactionSettings.basePairFactor = atof(optarg);
+			printf("o: Disabling dihedral interation and modifying base pairing with factor %f\n",
+					interactionSettings.basePairFactor);
 			break;
 		case 'j':
 			if (optarg[0] == '\0' || optarg[1] != '\0')

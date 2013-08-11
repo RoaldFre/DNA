@@ -685,19 +685,21 @@ typedef struct {
  * constitute a valid base pair, then coupling and distance are set to -1. */
 static BasePairInfo basePairInfoLUT[NUM_BASE_TYPES][NUM_BASE_TYPES];
 static void initBasePairInfoLUT(void) {
+	double factor = interactions.basePairFactor;
+
 	BasePairInfo bpiGC, bpiAT, bpiXY, bpiNULL;
 	bpiNULL.coupling = -1;
 	bpiNULL.distance2 = -1;
 
-	bpiGC.coupling = BASE_PAIR_COUPLING_G_C;
+	bpiGC.coupling = BASE_PAIR_COUPLING_G_C * factor;
 	bpiGC.distance2 = SQUARE(BASE_PAIR_DISTANCE_G_C);
 	bpiGC.onlyRepulsive = interactions.onlyXYbasePairing;	
 
-	bpiAT.coupling = BASE_PAIR_COUPLING_A_T;
+	bpiAT.coupling = BASE_PAIR_COUPLING_A_T * factor;
 	bpiAT.distance2 = SQUARE(BASE_PAIR_DISTANCE_A_T);
 	bpiAT.onlyRepulsive = interactions.onlyXYbasePairing;	
 
-	bpiXY.coupling = BASE_PAIR_COUPLING_X_Y;
+	bpiXY.coupling = BASE_PAIR_COUPLING_X_Y * factor;
 	bpiXY.distance2 = SQUARE(BASE_PAIR_DISTANCE_X_Y);
 	bpiXY.onlyRepulsive = false;
 

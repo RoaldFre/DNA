@@ -174,6 +174,12 @@ typedef struct {
 		BASE_PAIR_DOUBLE_STRAND,
 	} basePairInteraction;
 
+	/* Scale de default base pairing strengths with this factor. This 
+	 * is useful when disabling, for instance, the dihedral 
+	 * interaction, as that also reduces the base pairing stability and 
+	 * hence modifies the melting temperatures. */
+	double basePairFactor;
+
 	/* Only enable base pairing for XY pairs. The interaction between 
 	 * other base pairs that would normally form bonds is now reduced 
 	 * to only the repulsive part. Effectively, this behaves as if 
