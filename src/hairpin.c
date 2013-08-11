@@ -213,6 +213,7 @@ static void printUsage(void)
 	printf("             a: all matching bases\n");
 	printf("             x: behave like 'h' for XY pairs, and 'a' for the other bases\n");
 	printf(" -Y        only enable base pairing between XY base pairs\n");
+	printf(" -o        disable dihedral interaction\n");
 	printf(" -n        No base pairing interaction at all\n");
 	printf(" -y <path> write random number generator seed to this file\n");
 	printf(" -z <path> read random number generator seed from this file\n");
@@ -337,10 +338,10 @@ static void parseArguments(int argc, char **argv)
 	temperature = parseTemperature(DEF_INITIAL_TEMPERATURE);
 
 	/* Unused options:
-	 * o */
+	 * [All letters have been used >_<] */
 	/* TODO rework option system to something sane. Long options? Read 
 	 * and parse config file? */
-	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yj:ny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:eu:E:pkqJhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
+	while ((c = getopt(argc, argv, ":s:t:T:N:m:Yoj:ny:z:g:c:f:rR:Fl:S:b:x:v:i:W:I:P:K:D:w:d:X:eu:E:pkqJhA:B:C:G:L:VH:M:O:Q:U:Z:a:")) != -1)
 	{
 		switch (c)
 		{
@@ -377,6 +378,10 @@ static void parseArguments(int argc, char **argv)
 		case 'Y':
 			interactionSettings.onlyXYbasePairing = true;
 			printf("Y: Only enabling base pairing between XY pairs\n");
+			break;
+		case 'o':
+			interactionSettings.enableDihedral = false;
+			printf("o: Disabling dihedral interation\n");
 			break;
 		case 'j':
 			if (optarg[0] == '\0' || optarg[1] != '\0')
