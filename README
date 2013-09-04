@@ -4,9 +4,12 @@ The model is based on the three beads per nucleotide model due to Knotts et
 al [1], with extensions by the same group [2] and later by Florescu & 
 Joyeux [3]. 
 
-Authors:
+Author:
   Roald Frederickx
+
+Contributors:
   Thomas in't Veld
+  Kasper Meerts
 
 
 [1] T. Knotts IV, N. Rathore, D. Schwartz, and J. De Pablo, "A coarse grain 
