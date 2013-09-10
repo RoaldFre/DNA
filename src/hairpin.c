@@ -170,6 +170,7 @@ static InteractionSettings interactionSettings = {
 	.enableCoulomb	= true,
 	.mutuallyExclusivePairForces = true,
 	.onlyXYbasePairing = false,
+	.onlyRepulsiveBasePairing = false,
 	.basePairFactor = 1.0,
 	.basePairInteraction = BASE_PAIR_HAIRPIN,
 	.saltConcentration   = DEF_SALT_CONCENTRATION,
@@ -215,7 +216,7 @@ static void printUsage(void)
 	printf("             x: behave like 'h' for XY pairs, and 'a' for the other bases\n");
 	printf(" -Y        only enable base pairing between XY base pairs\n");
 	printf(" -o <fact> disable dihedral interaction and modify base pairing interaction by the given factor\n");
-	printf(" -n        No base pairing interaction at all\n");
+	printf(" -n        No attractive base pairing interaction: only repulsive part\n");
 	printf(" -y <path> write random number generator seed to this file\n");
 	printf(" -z <path> read random number generator seed from this file\n");
 	printf(" -r        Render\n");
@@ -413,7 +414,7 @@ static void parseArguments(int argc, char **argv)
 			interactionSettings.basePairInteraction = bpi;
 			break;
 		case 'n':
-			interactionSettings.enableBasePair = false;
+			interactionSettings.onlyRepulsiveBasePairing = true;
 			printf("n: Disabling base pairing\n");
 			break;
 		case 'y':
