@@ -86,7 +86,9 @@ typedef struct stringList {
 static StringList *strings = NULL;
 
 /* Render the space partitioning boxes? */
-static double renderSPGridBoxes = false;
+static bool renderSPGridBoxes = false;
+static bool renderWorldLoops = true;
+static bool autorotate = false;
 
 
 static void drawPoint(Vec3 p)
@@ -440,6 +442,12 @@ static bool handleEvents(void)
 			case SDLK_b:
 				renderSPGridBoxes = !renderSPGridBoxes;
 				break;
+			case SDLK_l:
+				renderWorldLoops = !renderWorldLoops;
+				break;
+			case SDLK_r:
+				autorotate = !autorotate;
+				break;
 			case SDLK_RETURN:
 				SDL_WM_ToggleFullScreen(surface);
 				break;
@@ -645,10 +653,13 @@ static void render(RenderConf *rc)
 	glMultMatrixd(m4);
 	glTranslatef(-cam_position.x, -cam_position.y, -cam_position.z);
 
+	if (autorotate)
+		camOrbit(5, 0);
 
-	if (renderSPGridBoxes) {
+	if (renderSPGridBoxes)
 		renderBoxes(rc->numBoxes);
-	} else {
+
+	if (renderWorldLoops) {
 		/* Line loops for world box */
 		glColor3f(0.0, 1.0, 0.0);
 		glBegin(GL_LINE_LOOP);
