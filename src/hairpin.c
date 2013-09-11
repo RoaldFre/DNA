@@ -30,6 +30,9 @@
 #define STATE_SUFFIX "_state"
 #define ZIPPED_STATE_FILE_SUFFIX "_zippedState"
 
+//#define ENERGY_THRESHOLD (-0.1 * EPSILON)
+#define ENERGY_THRESHOLD (-EPSILON)
+
 /* Defaults */
 #define DEF_BASE_SEQUENCE		"GCCTATTTTTTAATAGGC" /* N=4 in Kuznetsov nov 2001 */
 #define DEF_TIMESTEP 			15.0
@@ -75,12 +78,12 @@ static MeasurementConf measurementConf =
 };
 static BasePairingConfig bpc =
 {
-	.energyThreshold = -0.1 * EPSILON,
+	.energyThreshold = ENERGY_THRESHOLD,
 	.mode = BPSM_BOOLEAN,
 };
 static HairpinFormationSamplerConfig hfc =
 {
-	.energyThreshold = -0.1 * EPSILON,
+	.energyThreshold = ENERGY_THRESHOLD,
 	.requiredBoundBPs = -1, /* guard */
 	.nucleationBoundBPs = -1, /* guard */
 	.zipConfirmationTime = 0,
@@ -94,7 +97,7 @@ static HairpinFormationSamplerConfig hfc =
 };
 static HairpinMeltingTempSamplerConfig hmtc =
 {
-	.energyThreshold = -0.1 * EPSILON,
+	.energyThreshold = ENERGY_THRESHOLD,
 	.Tstart = CELSIUS(20),
 	.Tstep = 10,
 	.numSteps = 10,
@@ -104,13 +107,13 @@ static HairpinMeltingTempSamplerConfig hmtc =
 };
 static HairpinStateSamplerConfig hsc =
 {
-	.energyThreshold = -0.1 * EPSILON,
+	.energyThreshold = ENERGY_THRESHOLD,
 	.temperature = -1.0,
 	.dumpDistances = false,
 };
 static HairpinConfigSamplerConfig hcsc =
 {
-	.energyThreshold = -0.1 * EPSILON,
+	.energyThreshold = ENERGY_THRESHOLD,
 };
 static enum {
 	HAIRPIN_MELTING_TEMPERATURE,
