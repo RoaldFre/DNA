@@ -40,7 +40,10 @@ typedef enum
 	BPSM_ENERGY,   /* Dump the energy of corresponding base pairs */
 	/* TODO< Currently, the boolean mode is the only one that works for 
 	 * arbitrary configs. For hairpin-type configurations, all three 
-	 * modes work. */
+	 * modes work.
+	 * Update: Boolean mode also works for non-hairpin configs. In 
+	 * hairpin configs, misbindings are represented by a '2' if the 
+	 * base pairing mode is anything but BASE_PAIR_HAIRPIN. */
 } BasePairingSamplerMode;
 typedef struct {
 	BasePairingSamplerMode mode;

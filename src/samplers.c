@@ -306,7 +306,7 @@ Sampler gyrationRadiusSampler(Strand *strand)
 /* HAIRPIN FORMATION */
 /* Print (half of) the hairpin config (bound or unbound base matching 
  * pairs) and return the number of correctly bound base pairs. */
-static int dumpHairpinState(Strand *s, double energyThreshold)
+static int dumpHairpinStateOnlyCorrect(Strand *s, double energyThreshold)
 {
 	int correctlyBound = 0;
 	int n = s->numMonomers;
@@ -322,6 +322,59 @@ static int dumpHairpinState(Strand *s, double energyThreshold)
 	}
 	return correctlyBound;
 }
+typedef struct {
+	double bestEnergy;
+	Particle *p;
+} DumpHairpinStateFullData;
+static void dumpHairpinStateFullWorker(Particle *p1, Particle *p2, void *data)
+{
+	DumpHairpinStateFullData *dhsfData = (DumpHairpinStateFullData*) data;
+	double V = VbasePair(p1, p2);
+	if (V >= dhsfData->bestEnergy)
+		return;
+
+	dhsfData->bestEnergy = V;
+	dhsfData->p = p2;
+}
+static int dumpHairpinStateFull(Strand *s, double energyThreshold)
+{
+	int correctlyBound = 0;
+	int n = s->numMonomers;
+	DumpHairpinStateFullData dhsfData;
+	for (int i = 0; i < n; i++) {
+		dhsfData.bestEnergy = INFINITY;
+		dhsfData.p = NULL;
+		forEveryNeighbourOf(&s->Bs[i], &dumpHairpinStateFullWorker, 
+								&dhsfData);
+		int j = n - 1 - i; /* Matching base */
+		if (dhsfData.p == NULL) {
+			/* No particles nearby */
+			printf("0 ");
+		} else if (dhsfData.bestEnergy > energyThreshold) {
+			/* No (sufficient) binding */
+			printf("0 ");
+		} else {
+			if (dhsfData.p == &s->Bs[j]) {
+				/* Correctly bound */
+				printf("1 ");
+				correctlyBound++;
+			} else {
+				/* Misbound */
+				printf("2 ");
+			}
+		}
+
+	}
+	return correctlyBound;
+}
+static int dumpHairpinState(Strand *s, double energyThreshold)
+{
+	if (getInteractionSettings().basePairInteraction == BASE_PAIR_HAIRPIN)
+		return dumpHairpinStateOnlyCorrect(s, energyThreshold);
+	else
+		return dumpHairpinStateFull(s, energyThreshold);
+}
+
 /* Print (half of) the hairpin config (energy of matching base pairings)
  * and return the number of correctly bound base pairs. */
 static int dumpHairpinEnergyState(Strand *s, double energyThreshold)
