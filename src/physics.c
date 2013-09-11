@@ -693,15 +693,18 @@ static void initBasePairInfoLUT(void) {
 
 	bpiGC.coupling = BASE_PAIR_COUPLING_G_C * factor;
 	bpiGC.distance2 = SQUARE(BASE_PAIR_DISTANCE_G_C);
-	bpiGC.onlyRepulsive = interactions.onlyXYbasePairing;	
+	bpiGC.onlyRepulsive = (interactions.onlyXYbasePairing ||
+	                       interactions.onlyRepulsiveBasePairing);
 
 	bpiAT.coupling = BASE_PAIR_COUPLING_A_T * factor;
 	bpiAT.distance2 = SQUARE(BASE_PAIR_DISTANCE_A_T);
-	bpiAT.onlyRepulsive = interactions.onlyXYbasePairing;	
+	bpiAT.onlyRepulsive = (interactions.onlyXYbasePairing ||
+	                       interactions.onlyRepulsiveBasePairing);
+
 
 	bpiXY.coupling = BASE_PAIR_COUPLING_X_Y * factor;
 	bpiXY.distance2 = SQUARE(BASE_PAIR_DISTANCE_X_Y);
-	bpiXY.onlyRepulsive = false;
+	bpiXY.onlyRepulsive = interactions.onlyRepulsiveBasePairing;
 
 	/* Initialize to null */
 	for (int b1 = 0; b1 < NUM_BASE_TYPES; b1++)

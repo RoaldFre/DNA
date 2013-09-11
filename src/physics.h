@@ -189,6 +189,10 @@ typedef struct {
 	 * to happen). */
 	bool onlyXYbasePairing;
 
+	/* All base pairing interactions only have the repulsive part. The 
+	 * attractive part is ignored. */
+	bool onlyRepulsiveBasePairing;
+
 	double saltConcentration; /* Na+ concentration, in mol/m^3 */
 	double truncationLen; /* Length at which potentials are truncated */
 } InteractionSettings;
