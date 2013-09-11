@@ -55,6 +55,13 @@ void reboxParticle(Particle *p);
 void forEveryPairD(void (*f)(Particle *p1, Particle *p2, void *data), void *data);
 void forEveryPair(void (*f)(Particle *p1, Particle *p2));
 
+/* Execute the given function for the given particle and each of its direct 
+ * neigbours. It is guaranteed that the first argument supplied to f is the 
+ * given particle p. The second argument is one of its neighbours.
+ * See forEveryPairD() for more info. */
+void forEveryNeighbourOf(Particle *p,
+		void (*f)(Particle *p1, Particle *p2, void *data), void *data);
+
 /* Runs over all connections of particles that are within the same box, or 
  * in adjacent boxes. The first connection is from particle a1 to a2, the 
  * second is from b1 to b2. It is guaranteed that

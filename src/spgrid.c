@@ -306,6 +306,103 @@ static void addToBox(Particle *p, Box *b)
 	p->myBox = b;
 }
 
+
+
+
+
+
+/* ITERATIONS OVER NEIGHBOURS OF A GIVEN PARTICLE */
+/* Loop over all pairs (p,q), where q is a particle in the given box, and p 
+ * is the given particle. The case p==q is ignored. */
+static void matchAgainstBox(Particle *p, Box *box,
+		void (*f)(Particle *p1, Particle *p2, void *data), void *data)
+{
+	if (box->n == 0)
+		return;
+
+	int n = box->n;
+	Particle *q = box->p;
+	for (int j = 0; j < n; j++) {
+		if (p != q)
+			f(p, q, data);
+		q = q->next;
+	}
+	assert(q == box->p);
+}
+
+typedef struct {
+	Particle *p;
+	void (*f)(Particle *p1, Particle *p2, void *data);
+	void *data;
+} FenbfData;
+static void forEveryNeighBruteForceWrapper(Particle *p, void *data)
+{
+	FenbfData *bfData = (FenbfData*) data;
+	bfData->f(p, bfData->p, bfData->data);
+}
+
+/* Visit all neighbouring particles of the given particle. */
+void forEveryNeighbourOf(Particle *p,
+		void (*f)(Particle *p1, Particle *p2, void *data), void *data)
+{
+	if (nb < 3) {
+		/* Reason: see forEveryPairD() */
+		/* Anonimous lambda functions would be really nice here */
+		FenbfData bfData;
+		bfData.p = p;
+		bfData.f = f;
+		bfData.data = data;
+		forEveryParticleD(&forEveryNeighBruteForceWrapper, &bfData);
+	}
+
+	Box *box = p->myBox;
+
+	/* x-1 */
+	matchAgainstBox(p, box->prevX->prevY->nextZ, f, data);
+	matchAgainstBox(p, box->prevX->prevY,        f, data);
+	matchAgainstBox(p, box->prevX->prevY->prevZ, f, data);
+
+	matchAgainstBox(p, box->prevX->nextZ,        f, data);
+	matchAgainstBox(p, box->prevX,               f, data);
+	matchAgainstBox(p, box->prevX->prevZ,        f, data);
+
+	matchAgainstBox(p, box->prevX->nextY->nextZ, f, data);
+	matchAgainstBox(p, box->prevX->nextY,        f, data);
+	matchAgainstBox(p, box->prevX->nextY->prevZ, f, data);
+
+
+	/* x */
+	matchAgainstBox(p, box->prevY->nextZ, f, data);
+	matchAgainstBox(p, box->prevY,        f, data);
+	matchAgainstBox(p, box->prevY->prevZ, f, data);
+
+	matchAgainstBox(p, box->nextZ,        f, data);
+	matchAgainstBox(p, box,               f, data);
+	matchAgainstBox(p, box->prevZ,        f, data);
+
+	matchAgainstBox(p, box->nextY->nextZ, f, data);
+	matchAgainstBox(p, box->nextY,        f, data);
+	matchAgainstBox(p, box->nextY->prevZ, f, data);
+
+
+	/* x+1 */
+	matchAgainstBox(p, box->nextX->prevY->nextZ, f, data);
+	matchAgainstBox(p, box->nextX->prevY,        f, data);
+	matchAgainstBox(p, box->nextX->prevY->prevZ, f, data);
+
+	matchAgainstBox(p, box->nextX->nextZ,        f, data);
+	matchAgainstBox(p, box->nextX,               f, data);
+	matchAgainstBox(p, box->nextX->prevZ,        f, data);
+
+	matchAgainstBox(p, box->nextX->nextY->nextZ, f, data);
+	matchAgainstBox(p, box->nextX->nextY,        f, data);
+	matchAgainstBox(p, box->nextX->nextY->prevZ, f, data);
+}
+
+
+
+
+
 /* Loop between particles of adjacent boxes of box.  We need a total 
  * ordering on the boxes so we don't check the same box twice. We use the 
  * pointer value for this.
