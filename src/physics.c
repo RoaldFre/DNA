@@ -1316,6 +1316,10 @@ void registerInteractions(InteractionSettings interactionSettings)
 
 	syncPhysics();
 }
+InteractionSettings getInteractionSettings(void)
+{
+	return interactions;
+}
 
 Vec3 getCOM(Particle *ps, int num)
 {

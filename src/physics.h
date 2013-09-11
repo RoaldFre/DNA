@@ -199,6 +199,8 @@ typedef struct {
 
 /* This needs to be called before doing any physics calculations! */
 void registerInteractions(InteractionSettings interactionSettings);
+/* Returns the current interaction settings */
+InteractionSettings getInteractionSettings(void);
 
 typedef struct {
 	/* Short (one word) description of the interaction. */
