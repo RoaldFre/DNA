@@ -12,10 +12,14 @@
 % indexing).
 %
 % function [time, combinedData] = combineNativeRuns(filesglob, singlePrecision, columns);
-function [time, combinedData, files] = combineNativeRuns(filesglob, singlePrecision, columns);
+function [time, combinedData, files] = combineNativeRuns(filesglob, singlePrecision, dropLogFactor, DLdataStartIndex, columns);
+
+addpath generic
 
 if nargin < 2; singlePrecision = false; end
-allColumns = nargin < 3;
+if nargin < 3; dropLogFactor = -1; end
+if nargin < 4; DLdataStartIndex = 1; end
+allColumns = nargin < 5;
 
 files = glob(filesglob);
 if (isempty(files))
@@ -26,7 +30,11 @@ nRuns = numel(files);
 
 % read first file for the time and the number of samples
 load(files{1});
-time = data(:, 1);
+if exist("data") != 1
+	error(["Couldn't find a 'data' variable in ",files{1}]);
+end
+fullTime = data(:, 1);
+time = [fullTime(1:DLdataStartIndex-1); dropDataLogspace(fullTime(DLdataStartIndex:end), dropLogFactor)];
 nSamples = numel(time);
 
 if allColumns
@@ -45,19 +53,34 @@ combinedData = zeros(nRuns, nSamples, nColumns, precisionString);
 
 moreWasOn = page_screen_output;
 more off
+loadedRuns = false(nRuns,1);
 for run = 1:nRuns
-	printf("\rReading file %d of %d", run, nRuns)
-	load(files{run});
-	thisTime = data(:, 1);
-	if not(isequal(time, thisTime))
+	try
+		printf("\rReading file %d of %d", run, nRuns)
+		load(files{run});
+		if exist("data") != 1
+			error(["Couldn't find a 'data' variable in ",files{run}]);
+		end
+		thisTime = data(:, 1);
+		if not(equalsEpsilon(fullTime, thisTime, 1e-5))
+			printf("\nError reading file %s\n", files{run})
+			error "Reading datasets with different number of samples or time samples!"
+		end
+		thisData = data(:, 1 + columns);
+		thisData = [thisData(1:DLdataStartIndex-1,:); dropDataLogspace(thisData(DLdataStartIndex:end,:)', dropLogFactor)'];
+	catch
+		% Notify user of the error with that file, but carry on reading the rest
 		printf("\nError reading file %s\n", files{run})
-		error "Reading datasets with different number of samples or time samples!"
+		continue;
 	end
-	combinedData(run,:,:) = data(:, 1 + columns);
+
+	loadedRuns(run) = true;
+	combinedData(run,:,:) = thisData;
 end
 printf("\n");
 if moreWasOn
 	more on;
 end
 
-combinedData = squeeze(combinedData);
+combinedData = squeeze(combinedData(loadedRuns, :, :));
+files = files{loadedRuns};

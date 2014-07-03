@@ -9,15 +9,25 @@ offsetErrs = [];
 amplFracs = [];
 amplFracErrs = [];
 
-dir="~/clusterdata/endToEnd/CACTCAGAGAGTGACTGACTCTCAGACTCACACAGAGAGTCACTGTCTGACTCTCTCTGAGACACTGAGAGTGAGAGTGACTCTGAGTGAGTCACAGTGA/T90C"
+rootdir="~/clusterdata/endToEnd/CACTCAGAGAGTGACTGACTCTCAGACTCACACAGAGAGTCACTGTCTGACTCTCTCTGAGACACTGAGAGTGAGAGTGACTCTGAGTGAGTCACAGTGA/T90C"
 
-Ss = 30:10:50; % Stem lengths (ignore S=20)
-Ss = []
+%table of simulation Time and Stem lengths
+timeSs = [...
+          %500,  20;...
+          500,  30;...
+          500,  40;...
+          2000, 50;...
+          2000, 60;...
+          4000, 70;...
+          4000, 80;...
+          4000, 90;...
+          4000, 100;...
+          ];
 decimateFactor = 11;
 
-for i = 1 : numel(Ss)
-	Ss(i)
-	[tau1, tau1Stddev, tau2, tau2Stddev, offset, offsetStddev, amplFrac, amplFracStddev] = averageEndToEndDist2times([dir, "/dt15_time500/N", num2str(Ss(i)), "/endToEnd*itf11"], decimateFactor);
+for i = 1 : numel(timeSs(:,1))
+	N = timeSs(i,2)
+	[tau1, tau1Stddev, tau2, tau2Stddev, offset, offsetStddev, amplFrac, amplFracStddev] = averageEndToEndDist2times([rootdir, "/dt15_time",num2str(timeSs(i,1)),"/N",num2str(timeSs(i,2)),"/endToEnd*itf11"], decimateFactor);
 	tau1s(i) = tau1;
 	tau1Errs(i) = tau1Stddev;
 	tau2s(i) = tau2;
@@ -28,26 +38,7 @@ for i = 1 : numel(Ss)
 	amplFracErrs(i) = amplFracStddev;
 end
 
-% Quick addition: from N=60 onwards, we have simulated a longer period, so 
-% append these results separately here.
-extraSs = 60:10:100;
-for i = 1 : numel(extraSs)
-	extraSs(i)
-	[tau1, tau1Stddev, tau2, tau2Stddev, offset, offsetStddev, amplFrac, amplFracStddev] = averageEndToEndDist2times([dir, "/dt15_time2000/N", num2str(extraSs(i)), "/endToEnd*itf11"], decimateFactor);
-	tau1s = [tau1s tau1];
-	tau1Errs = [tau1Errs tau1Stddev];
-	tau2s = [tau2s tau2];
-	tau2Errs = [tau2Errs tau2Stddev];
-	offsets = [offsets offset];
-	offsetErrs = [offsetErrs offsetStddev];
-	amplFracs = [amplFracs amplFrac];
-	amplFracErrs = [amplFracErrs amplFracStddev];
-end
-
-Ss = [Ss extraSs];
-
-Ns = 2*Ss + 4; %Total number of monomers!!
-
+Ns = 2*timeSs(:,2)' + 4; %Total number of monomers!!
 
 
 

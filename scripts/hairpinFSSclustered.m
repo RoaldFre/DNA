@@ -24,12 +24,10 @@ numNs = numel(Ns);
 % Full data of all runs
 times  = cell(numNs, 1);
 datas  = cell(numNs, 1);
-timesDecim  = cell(numNs, 1);
-datasDecim  = cell(numNs, 1);
 
 
 for i = 1:numNs
-	filename = [filenamePrefix,'N',num2str(Ns(i))];
+	filename = [filenamePrefix,'N',num2str(Ns(i)),'droplog',num2str(dropLogFactor)];
 	load(filename);
 
 	if exist('bound')
@@ -47,12 +45,6 @@ for i = 1:numNs
 
 	times{i}  = time';
 	eval(['datas{i} = ',variableName,';'])
-
-	times{i} = times{i}(dataStartIndex:end);
-	datas{i} = datas{i}(:, dataStartIndex:end);
-
-	timesDecim{i}  = dropDataLogspace(times{i}, dropLogFactor);
-	datasDecim{i} = dropDataLogspace(datas{i}, dropLogFactor);
 end
 
 
@@ -63,11 +55,14 @@ clustQualErrs = zeros(numClusters, 1);
 opts = cell(numClusters, 1);
 for i = 1 : numClusters
 	selectedNs = Ns(i : i+clusterSize-1);
-	clustXsDecim = timesDecim(i : i+clusterSize-1);
-	clustYsDecim = datasDecim(i : i+clusterSize-1);
+	clustXs = times(i : i+clusterSize-1);
+	clustYs = datas(i : i+clusterSize-1);
+
+	clustXs = cellfun(@(x) x(dataStartIndex:end), clustXs, 'UniformOutput', false);
+	clustYs = cellfun(@(x) x(:,dataStartIndex:end), clustYs, 'UniformOutput', false);
 
 	[exponentsAndOffsets, quality, exponentsAndOffsetsErr, qualityErr, newOpt] = ...
-		finiteSizeScaling(selectedNs, clustXsDecim, clustYsDecim, [], opt, plotopt);
+		finiteSizeScaling(selectedNs, clustXs, clustYs, [], opt, plotopt);
 
 	
 	clustQuals(i) = quality;

@@ -1,22 +1,21 @@
 %filename  = 'hairpinStemScaling_combined' %destination file
 filename  = 'hairpinStemScaling' %destination file
 
-dir="/home/other/roald/clusterdata/hairpinFormation/CACTCAGAGAGTGACTGACTCTCAGACTCACACAGAGAGTCACTGTCTGACTCTCTCTGAGACACTGAGAGTGAGAGTGACTCTGAGTGAGTCACAGTGA/relaxT90C_zipT10C_unzipT90C_allowUnb0.1_zippedRel100/dt15/";
+%oude runs, foutieve dihedrals, geen XY
+%dir="/home/other/roald/clusterdata/FOUTIEVE_DIHEDRALS/hairpinFormation/CACTCAGAGAGTGACTGACTCTCAGACTCACACAGAGAGTCACTGTCTGACTCTCTCTGAGACACTGAGAGTGAGAGTGACTCTGAGTGAGTCACAGTGA/relaxT90C_zipT10C_unzipT90C_allowUnb0.1_zippedRel100/dt15/";
 
-%dir="/home/other/roald/clusterdata/oldHairpinFormation/hairpinFormation/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time10000*/";
+%dir="/home/other/roald/clusterdata/hairpinFormation/CACTCAGAGAGTGACTGACTCTCAGACTCACACAGAGAGTCACTGTCTGACTCTCTCTGAGACACTGAGAGTGAGAGTGACTCTGAGTGAGTCACAGTGA/relaxT90C_zipT10C_unzipT90C_allowUnb0.1_zippedRel100_NXY4/dt15/";
+%dir="/home/other/roald/clusterdata/hairpinFormation_noExcl/CACTCAGAGAGTGACTGACTCTCAGACTCACACAGAGAGTCACTGTCTGACTCTCTCTGAGACACTGAGAGTGAGAGTGACTCTGAGTGAGTCACAGTGA/relaxT90C_zipT10C_unzipT90C_allowUnb0.1_zippedRel100_NXY4/dt15/";
 
-%NO EXCLUSION, 180C
-%dir="/home/other/roald/clusterdata/oldHairpinFormation/hairpinFormationNoExcl/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/";
-%NO EXCLUSION, 100C
-%dir="/home/other/roald/clusterdata/oldHairpinFormation/hairpinFormationNoExcl/formation_zipT20_unzipT100_allowUnb2_allowB2_zippedRel10/dt15_time100000/";
-%Ns = [5 10 15 20 30 40 50 60 80 100];
-%Ns = [10 15 20 30 40 50 60 80 100];
-Ns = [15 20 30 40 50 60 80 100];
+Ns = [10 15 20 30 40 50 60 80 100];
+%Ns = [30 40 50 60 80 100];
+%Ns = [30 40 50 60];
 fitstart = 1; %start at this index for fitting
-%Ns = [15 20 30 40 50 60 80];
-%Ns = [30 40 50 60 80];
+
 zippingTimes = zeros(size(Ns));
 zippingTimeErrs = zeros(size(Ns));
+zippingFromNuclTimes = zeros(size(Ns));
+zippingFromNuclTimeErrs = zeros(size(Ns));
 unzippingTimes = zeros(size(Ns));
 unzippingTimeErrs = zeros(size(Ns));
 for i = 1 : numel(Ns)

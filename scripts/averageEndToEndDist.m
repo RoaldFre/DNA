@@ -33,12 +33,12 @@ set(h1, "linewidth", 1);
 
 initialLength = meanEndToEndDist(1); % This should have no error, as all strands have the same initial length!
 
-[tau, offset, beta, tauStddev, offsetStddev, betaStddev] = exponentialRelaxationFixedInitial(time, meanEndToEndDist, initialLength, 4e-8, 1.3e-8, 0.75, errEndToEndDist);
+[tau, offset, amplitude, tauStddev, offsetStddev, amplitudeStddev] = exponentialRelaxation(time, meanEndToEndDist, 4e-8, initialLength / 2, initialLength / 2, errEndToEndDist);
 tauInfo = [tau, tauStddev]
 offsetInfo = [offset, offsetStddev]
-betaInfo = [beta, betaStddev]
+amplitudeInfo = [amplitude, amplitudeStddev]
 
-fit = offset + (initialLength - offset) * exp(-(time/tau).^beta);
+fit = offset + amplitude * exp(-(time/tau));
 
 plot(time, fit, "k", "linewidth", 4);
 pause(1e-9);

@@ -1,7 +1,20 @@
 #!/bin/bash
 
 file=$1
+singlePrecision=$2 # if this equals "s", then use single precision
+
 scriptsdir="$HOME/DNA/scripts"
+
+# Check if we have a .bz2 file, in that case: decompress first
+fileBase=`basename $file`
+fileBaseNoBzip=`basename $file .bz2`
+if [ "$fileBaseNoBzip" != "$fileBase" ]
+then
+	# We have a bz2 file -> decompress first
+	bzip2 -d $file
+	file="`dirname $file`/$fileBaseNoBzip"
+fi
+
 
 if [ `file $file -b --mime-type` != 'text/plain' ]
 then
@@ -12,8 +25,14 @@ fi
 # Ok, this is really really REALLY ugly, but it looks like sometimes octave 
 # gets stuck. So we spawn it off in the background, wait for a sufficiently 
 # long time and if it still hasn't completed yet -> kill it and try again.
-octave -q -p $scriptsdir --eval "toNative('$file')" &
-PID=$!
+if [ "$singlePrecision" == "s" ]
+then
+	octave -q -p $scriptsdir --eval "toNative('$file', true)" &
+	PID=$!
+else
+	octave -q -p $scriptsdir --eval "toNative('$file', false)" &
+	PID=$!
+fi
 
 sleep 1s
 
@@ -33,7 +52,7 @@ do
 	# Still running! Check if we are actually using CPU 
 	# cycles, or if we are stuck
 	#echo "cpuPerMil: $cpuPerMil"
-	if [ $cpuPerMil -lt 5 ] # less than 0.5% cpu average usage (sufficiently low, because we can't detect child cpu usage!)
+	if [ $cpuPerMil -lt 2 ] # less than 0.2% cpu average usage (sufficiently low, because we can't detect child cpu usage!)
 	then
 		echo "Seems stuck! :-( KILLING!!!!!"
 		# Seems stuck: KILL, KILL, KILL!

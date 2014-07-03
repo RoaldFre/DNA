@@ -29,7 +29,7 @@ echo "Wait time: $wait"
 
 outputBaseDir=`mktemp -d`
 outputFile="$outputBaseDir/outputFrom_${suffix}"
-destinationDir="$destinationDirRoot/$fullSequence/relaxT${relaxTemp}_sampleT${samplingTemp}_NXY${NXY}/dt${timestep}/N${N}"
+destinationDir="$destinationDirRoot/$fullSequence/relaxT${relaxTemp}_sampleT${samplingTemp}_time${samplingTime}_NXY${NXY}/dt${timestep}/N${N}"
 destinationFile="$destinationDir/state_${suffix}"
 
 echo "Temporary directory is $outputBaseDir"
@@ -43,6 +43,8 @@ echo "Starting main program!"
 
 $main -t $timestep -T $relaxTemp -I $interval -W $wait -P $samplingTime -s $seq -D $outputFile -a $samplingTemp -X s
 
+echo "Converting output to native Octave format"
+octave -p $scriptsdir --eval "toNative('${outputFile}')"
 
 echo "Making destination directory: $destinationDir"
 mkdir -p $destinationDir

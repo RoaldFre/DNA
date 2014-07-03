@@ -15,10 +15,10 @@
 %file="/home/other/roald/clusterdata/hairpinFormationNoExcl/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12914.itf11";
 %file="/home/other/roald/clusterdata/hairpinFormationNoExcl/formation_zipT20_unzipT180_allowUnb2_allowB2_zippedRel10/dt15_time100000/N100/formation_12712.itf11";
 
-file = "~/clusterdata/hairpinFormation/CACTCAGAGAGTGACTGACTCTCAGACTCACACAGAGAGTCACTGTCTGACTCTCTCTGAGACACTGAGAGTGAGAGTGACTCTGAGTGAGTCACAGTGA/relaxT90C_zipT10C_unzipT90C_allowUnb0.1_zippedRel100/dt15/N40/formation_local_itf25_y";
+file = "~/clusterdata/hairpinFormation/CACTCAGAGAGTGACTGACTCTCAGACTCACACAGAGAGTCACTGTCTGACTCTCTCTGAGACACTGAGAGTGAGAGTGACTCTGAGTGAGTCACAGTGA/relaxT90C_zipT10C_unzipT90C_allowUnb0.1_zippedRel100_NXY4/dt15/N80/formation_49977.itf11";
 
 %fileNameBase = "stateInTimeN100_1";
-fileNameBase = "stateInTimeN100_4_noExl";
+%fileNameBase = "stateInTimeN100_4_noExl";
 
 
 %XXX Decimate because otherwise gives errors when plotting (data set too large??)

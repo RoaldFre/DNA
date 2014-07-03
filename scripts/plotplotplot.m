@@ -1,0 +1,17 @@
+plotZippingWithoutForcedNucleation
+plotZippingWithNucleationAndQuench
+
+equilibriumEndToEnd
+bpAndRg
+frayingEnds2plots
+
+makeHairpinStatePlots
+makeHairpinEnergyPlots
+makeHairpinEndToEndPlots
+makeHairpinGyradPlots
+
+makeHairpinThresholdPlotDriver
+
+
+cd "benchmark/idealBoxVolumeLog/"
+plotIdealNumberOfBoxes

@@ -4,7 +4,11 @@
 %
 % All comments in the file are saved to the 'comments' variable. A comment 
 % is a line that starts with a '#'.
-function toNative(file)
+function toNative(file, singlePrecision)
+
+if nargin < 2
+	singlePrecision = false;
+end
 
 [_, comments] = system(["grep '^#' ",file]);
 if not(isempty(comments))
@@ -12,8 +16,12 @@ if not(isempty(comments))
 	comments = comments(1 : end-1);
 end
 data = load(file);
-save("-binary", file, "data", "comments");
+if singlePrecision
+	save("-float-binary", file, "data", "comments");
+else
+	save("-binary",       file, "data", "comments");
+end
 % manually compress with best compression instead of giving '-z' flag in 
 % save() command
-system(['gzip --best ',file,'; mv ',file,'.gz ',file]);
+system(['gzip --best ',file,'&& mv ',file,'.gz ',file]);
 

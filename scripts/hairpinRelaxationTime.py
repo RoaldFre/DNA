@@ -12,7 +12,18 @@ except:
     exit(1)
 
 N = 2*S + 4 # total number of monomers in the strand
-tau1 = 1.07e-7 * (N / 84.0) ** 2.088
-tau2 = 3.7e-12 * (N ** 2.29)
 
-print (5*tau2) * 1e9
+#tau1C =
+#
+#   2.7908e-12   4.9614e-12
+#
+#tau1E =
+#
+#   2.37458   0.34041
+tau = 2.79e-12 * (N ** 2.37)
+
+relaxtime = (5*tau) * 1e9
+if relaxtime < 200:
+    relaxtime = 200
+
+print relaxtime
